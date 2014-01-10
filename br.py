@@ -245,17 +245,17 @@ class Method:
         oss = self.resultsFor(voters, self.ossBallot)
         return (hon, strat, oss)
         
-    def brOn(self, voters):
-        """Finds honest and strategic Baysian regret (br) for this method
-        on the given electorate.
+    def vseOn(self, voters):
+        """Finds honest and strategic voter satisfaction efficiency (VSE) 
+        for this method on the given electorate.
         """
-        (hon, strat, oss) = self.multiResults(voters)
+        multiResults = self.multiResults(voters)
         utils = voters.socUtils
         best = max(utils)
-        honBr = utils[self.winner(hon)] - best
-        stratBr = utils[self.winner(strat)] - best
-        ossBr = utils[self.winner(oss)] - best
-        return (honBr, stratBr, ossBr, self.__class__.__name__)
+        rand = mean(utils)
+        
+        return (((utils[self.winner(result)] - rand) / (best - rand)) 
+                for result in results) + (self.__class__.__name__,)
     
     @staticmethod #cls is provided explicitly, not through binding
     def ossBallot(cls, voter):
@@ -528,27 +528,27 @@ class Bucklin(Method):
         return stratBallot
     
         
-def doBr(model, methods, nvot, ncand, niter):
+def doVse(model, methods, nvot, ncand, niter):
     """A harness function which creates niter elections from model and finds three kinds
-    of BR for all methods given.
+    of VSE for all methods given.
     
     for instance:
-    brs = br.doBr(br.PolyaModel(), [br.Score(), br.Mav()], 100, 4, 100)
+    vses = br.doVse(br.PolyaModel(), [br.Score(), br.Mav()], 100, 4, 100)
     """
-    brs = []
+    vses = []
     for i in range(niter):
         electorate = model(nvot, ncand)
-        br = []
+        vse = []
         for method in methods:
-            br.append(method.brOn(electorate))
-        brs.append(br)
-        print(i,br)
-    return brs
+            vse.append(method.vseOn(electorate))
+        vses.append(vse)
+        print(i,vse)
+    return vses
             
-def printBr(results):
-    """print the result of doBr in an accessible format.
+def printVse(results):
+    """print the result of doVse in an accessible format.
     for instance:
-    br.printBr(brs)
+    br.printVse(vses)
     """
     for i in range(len(results[0])):
         print(results[0][i][3], 
