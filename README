@@ -1,0 +1,6 @@
+These are some methods for running VSE (Voter Satisfaction Efficiency)
+simulations for various voting systems. 
+
+Requirements: python3, scipy, pydoc
+
+Testing uses pydoc, which should make most things pretty self-documenting.
