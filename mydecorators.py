@@ -4,6 +4,13 @@ from itertools import starmap
 
 _missing = object()
 
+def setdefaultattr(obj, name, value):
+    try:
+        return getattr(obj, name)
+    except AttributeError:
+        setattr(obj, name, value)
+    return value
+
 def autoassign(*names, **kwargs):
     """
     autoassign(function) -> method

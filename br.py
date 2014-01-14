@@ -1,9 +1,10 @@
-from mydecorators import autoassign, cached_property, curried
+from mydecorators import autoassign, cached_property, setdefaultattr
 import random
 from numpy.lib.scimath import sqrt
 from numpy.core.fromnumeric import mean, std
 from numpy.lib.function_base import median
 from numpy.ma.core import floor
+from test.test_binop import isnum
 
 class Voter(tuple):
     """A tuple of candidate utilities.
@@ -72,16 +73,13 @@ class Voter(tuple):
             >>> for i in range(30):
             ...     v100 = v100.mutantChild(random.random())
             ... 
-            >>> -0.3 < mean(v100) < 0.3
+            >>> -0.3 < mean(v100) < 0.3 #3 sigma
             True
-            >>> 0.8 < std(v100) < 1.2
+            >>> 0.8 < std(v100) < 1.2 #meh that's roughly 3 sigma
             True
 
         """
         return self.hybridWith(self.__class__.rand(len(self)), muteWeight)
-    
-    def isNormal(self):
-        pass
     
 class PersonalityVoter(Voter):
     
@@ -124,6 +122,21 @@ class RandomModel:
     """
     def __call__(self, nvot, ncand, vType=Voter):
         return Electorate(vType.rand(ncand) for i in range(nvot))
+    
+class DeterministicModel:
+    """Basically, a somewhat non-boring stub for testing.
+    
+        >>> DeterministicModel(3)(4, 3)
+        [(0, 1, 2), (1, 2, 0), (2, 0, 1), (0, 1, 2)]
+    """
+    
+    @autoassign
+    def __init__(self, modulo):
+        pass
+    
+    def __call__(self, nvot, ncand, vType=Voter):
+        return Electorate(vType((i+j)%self.modulo for i in range(ncand))
+                          for j in range(nvot))
     
 class ReverseModel(RandomModel):
     """Creates an even number of voters in two diametrically-opposed camps
@@ -199,7 +212,7 @@ class PolyaModel(RandomModel):
 
 class Method:
     """Base class for election methods. Holds the duct tape."""
-    
+        
     def results(self, ballots):
         """Combines ballots into results. Override for comparative
         methods.
@@ -210,7 +223,8 @@ class Method:
             ballots = list(ballots)
         return list(map(self.candScore,zip(*ballots)))
     
-    def winner(self, results):
+    @staticmethod
+    def winner(results):
         """Simply find the winner once scores are already calculated. Override for
         ranked methods.
         
@@ -220,7 +234,7 @@ class Method:
         >>> 2 < Method().winner([1,2,1,3,3,3,2,1,2]) < 6
         True
         """
-        winScore = max(results)
+        winScore = max([result for result in results if isnum(result)])
         winners = [cand for (cand, score) in enumerate(results) if score==winScore]
         return random.choice(winners)
     
@@ -231,46 +245,118 @@ class Method:
         """
         return self.results(makeBallot(self.__class__, voter) for voter in voters)
         
-    def multiResults(self, voters, media=lambda x:x):
-        """Runs two elections: first with honest votes, then
+    def multiResults(self, voters, chooserFuns=(), media=lambda x:x):
+        """Runs two base elections: first with honest votes, then
         with strategic results based on the first results (filtered by
-        the media).
+        the media). Then, runs a series of elections using each chooserFun
+        in chooserFuns to select the votes for each voter.
         
-        Returns a tuple of (honResults, stratResults). The stratresults
+        Returns a tuple of (honResults, stratResults, ...). The stratresults
         are based on common information, which is given by media(honresults).
         """
         hon = self.resultsFor(voters, self.honBallot)
         info = media(hon)
         strat = self.resultsFor(voters, self.stratBallotFor(info))
-        oss = self.resultsFor(voters, self.ossBallot)
-        return (hon, strat, oss)
+        extras = [self.resultsFor(voters, self.ballotChooserFor(chooserFun))
+                  for chooserFun in chooserFuns]
+        return [hon, strat] + extras
         
-    def vseOn(self, voters):
+    def vseOn(self, voters, chooserFuns=(), **args):
         """Finds honest and strategic voter satisfaction efficiency (VSE) 
         for this method on the given electorate.
         """
-        multiResults = self.multiResults(voters)
+        multiResults = self.multiResults(voters, chooserFuns, **args)
         utils = voters.socUtils
         best = max(utils)
         rand = mean(utils)
         
-        return (((utils[self.winner(result)] - rand) / (best - rand)) 
-                for result in results) + (self.__class__.__name__,)
+        vses = [((utils[self.winner(result)] - rand) / (best - rand)) 
+                for result in multiResults]
+        return (vses + 
+                [0 if vse==vses[0] else 1 for vse in vses[1:]] +
+                [self.__class__.__name__])
     
-    @staticmethod #cls is provided explicitly, not through binding
-    def ossBallot(cls, voter):
-        """one-sided strategy:
-        returns a 'strategic' ballot for those who prefer the honest runner-up,
-        and an honest ballot for those who prefer the honest winner. Only works
-        if honBallot and stratBallot have already been called for the voter.
+    @staticmethod
+    def ballotChooserFor(chooserFun):
+        """Uses a chooserFun
         """
-        cname = cls.__name__
-        if getattr(voter, cname + "_isStrat", False):
-            res = getattr(voter, cname + "_strat")
+        def ballotChooser(cls, voter):
+            return getattr(voter, cls.__name__ + "_" + chooserFun(cls, voter))
+        return ballotChooser
+
+###################Choosers
+
+def reluctantStrat(cls, voter):
+    if (getattr(voter, cls.__name__ + "_hon") ==
+        getattr(voter, cls.__name__ + "_strat")):
+        return "hon"
+    return "extraStrat"
+
+def ossChooser(hon="hon", strat="strat"):
+    """one-sided strategy:
+    returns a 'strategic' ballot for those who prefer the honest runner-up,
+    and an honest ballot for those who prefer the honest winner. Only works
+    if honBallot and stratBallot have already been called for the voter.
+    """
+    def ossChoose(cls, voter):
+        if getattr(voter, cls.__name__ + "_isStrat", False):
+            if callable(strat):
+                return strat(cls, voter)
+            return strat
         else:
-            res = getattr(voter, cname + "_hon")
-        return res
+            if callable(hon):
+                return hon(cls, voter)
+            return hon
+    return ossChoose
+
+def alwaysChooser(choice="extraStrat"):
+    def alwaysChoose(cls, voter):
+        return choice
+    return alwaysChoose
+
+beHon = alwaysChooser("hon")
+beStrat = alwaysChooser("strat")
+beX = alwaysChooser("extraStrat")
+
+def probChooser(probs):
+    def probChoose(cls, voter):
+        r = random.random()
+        for p, chooser in probs:
+            r -= p
+            if r < 0:
+                return chooser(cls, voter)
+    return probChoose
     
+    
+###media
+def truth(standings):
+    return standings
+
+def topNMediaFor(n):
+    def topNMedia(standings):
+        return list(standings[:n]) + [0] * (len(standings) - n)
+    return topNMedia
+
+def biasedMediaFor(bias):
+    """
+    
+    0, 0, -1/2, -2/3, -4/5....
+    """
+    def biasedMedia(standings):
+        return [(standing - bias + (bias / max(i, 1))) for i, standing in enumerate(standings)]
+    return biasedMedia
+
+def skewedMediaFor(bias):
+    """
+    
+    [0, -1/3, -2/3, -1]
+    """
+    def skewedMedia(standings):
+        return [(standing - bias * i / (len(standings) - 1)) for i, standing in enumerate(standings)]
+    return skewedMedia
+
+###decorators
+
 def rememberBallot(fun):
     """A decorator for a function of the form xxxBallot(cls, voter)
     which memoizes the vote onto the voter in an attribute named <methName>_xxx
@@ -280,6 +366,46 @@ def rememberBallot(fun):
         setattr(voter, cls.__name__ + "_" + fun.__name__[:-6], ballot) #leave off the "...Ballot" 
         return ballot
     return getAndRemember
+
+def rememberBallots(fun):
+    """A decorator for a function of the form xxxBallot(cls, voter)
+    which memoizes the vote onto the voter in an attribute named <methName>_xxx
+    """
+    def getAndRemember(cls, voter):
+        ballots = fun(cls, voter)
+        for bType, ballot in ballots.items():
+            setattr(voter, cls.__name__ + "_" + bType, ballot) 
+        
+        return ballots[fun.__name__[:-6]] #leave off the "...Ballot" 
+    return getAndRemember
+
+class Plurality(Method):
+    candScore = staticmethod(mean)
+    @staticmethod
+    def oneVote(utils, forWhom):
+        ballot = [0] * len(utils)
+        ballot[forWhom] = 1
+        return ballot
+    
+    @staticmethod #cls is provided explicitly, not through binding
+    @rememberBallot
+    def honBallot(cls, utils):
+        """Takes utilities and returns an honest ballot"""
+        return cls.oneVote(utils, cls.winner(utils))
+    
+    def stratBallotFor(self, info):
+        """Returns a (function which takes utilities and returns a strategic ballot)
+        for the given "polling" info.""" 
+        
+        places = sorted(enumerate(info),key=lambda x:x[0]) #from high to low
+        #print("placesxx",places)
+        frontrunners = places[0][0], places[1][0]
+        @rememberBallot
+        def stratBallot(cls, voter, front=frontrunners):
+            if voter[front[0]] > voter[front[1]]:
+                return cls.oneVote(voter, front[0])
+            return cls.oneVote(voter, front[1])
+        return stratBallot
 
 class Score(Method): 
     """Score voting, 0-10."""
@@ -364,21 +490,22 @@ class Mav(Method):
         #print("places",places)
         frontrunners = (places[0][0], places[1][0], places[0][1], places[1][1])
         
-        @rememberBallot
+        @rememberBallots
         def stratBallot(cls, voter, front=frontrunners):
             frontUtils = [voter[front[0]], voter[front[1]]] #utils of frontrunners
             if frontUtils[0] == frontUtils[1]:
-                return [(4 if (util >= frontUtils[0]) else 0) for util in voter]
+                strat = xtraStrat = [(4 if (util >= frontUtils[0]) else 0)
+                                     for util in voter]
             else:
                 if frontUtils[0] > frontUtils[1]:
                     #winner is preferred; be complacent.
-                    strat = False
+                    isStrat = False
                 else:
                     #runner-up is preferred; be strategic in iss run
-                    strat = True
+                    isStrat = True
                     #sort cuts high to low
                     frontUtils = (frontUtils[1], frontUtils[0])
-                setattr(voter, cls.__name__ + "_isStrat", strat)
+                setattr(voter, cls.__name__ + "_isStrat", isStrat)
                 top = max(voter)
                 cutoffs = [(  (min(frontUtils[0], self.baseCuts[i])) 
                                  if (i < floor(front[3]) - 1) else 
@@ -387,39 +514,76 @@ class Mav(Method):
                               min(top, self.baseCuts[i])
                               ))
                            for i in range(4)]
-                return [toVote(cutoffs, util) for util in voter]
+                strat = [toVote(cutoffs, util) for util in voter]
+                extraStrat = [max(0,min(10,floor(
+                                4.99 * (util-frontUtils[1]) / (frontUtils[0]-frontUtils[1])
+                            ))) 
+                        for util in voter]
+            return dict(strat=strat, extraStrat=extraStrat)
         return stratBallot
         
         
-class Mav(Method):
-    baseCuts = [-0.8, 0, 0.8, 1.6]
-    def candScore(self, scores):
-        """For now, only works correctly for odd nvot"""
-        scores = sorted(scores)
-        nvot = len(scores)
-        i = mid = nvot // 2
-        base = scores[i]
-        while (i < nvot and scores[i] == base):
-            i += 1
-        mod = mid * (base + 0.5) / (i - 0.5)
-        if mod > base:
-            return mod
-        return base - ((base - mod) / (base + 0.5)) 
-    
+class Irv(Method):
+    """CURRENTLY BADLY INCOMPLETE; JUST A COPY OF MAV"""
+    def resort(self, ballots, loser, ncand, piles):
+        """No error checking; only works for exhaustive ratings."""
+        for ballot in ballots:
+            if loser < 0:
+                nextrank = ncand - 1
+            else:
+                nextrank = ballot[loser] - 1
+            while 1:
+                try:
+                    piles[ballot.index(nextrank)].append(ballot)
+                    break
+                except AttributeError:
+                    nextrank -= 1
+                    if nextrank < 0:
+                        raise
+            
+    def results(self, ballots):
+        """IRV results.
+        
+        >>> Irv().resultsFor(DeterministicModel(3)(5,3),Irv().honBallot)
+        [0, 1, 2]
+
+        """
+        if type(ballots) is not list:
+            ballots = list(ballots)
+        ncand = len(ballots[1])
+        results = [-1] * ncand
+        piles = [[] for i in range(ncand)]
+        loserpile = ballots
+        loser = -1
+        for i in range(ncand):
+            self.resort(loserpile, loser, ncand, piles)
+            negscores = ["x" if isnum(pile) else -len(pile)
+                         for pile in piles]
+            loser = self.winner(negscores)
+            results[loser] = i 
+            loserpile, piles[loser] = piles[loser], -1
+        return results
+        
+            
     @staticmethod #cls is provided explicitly, not through binding
     @rememberBallot
     def honBallot(cls, voter):
-        """Takes utilities and returns an honest ballot (on 0..4)"""
-        cutoffs = cls.baseCuts[0:3] + [max(voter)]
-        return [toVote(cutoffs, util) for util in voter]
+        """Takes utilities and returns an honest ballot
+        
+        >>> Irv.honBallot(Irv,Voter([4,1,6,3]))
+        [2, 0, 3, 1]
+        """
+        ballot = [-1] * len(voter)
+        order = sorted(enumerate(voter), key=lambda x:x[1])
+        for i, cand in enumerate(order):
+            ballot[cand[0]] = i
+        return ballot
         
     
     def stratBallotFor(self, info):
         """Returns a (function which takes utilities and returns a strategic ballot)
         for the given "polling" info.""" 
-        places = sorted(enumerate(info),key=lambda x:x[0]) #from high to low
-        #print("places",places)
-        frontrunners = (places[0][0], places[1][0], places[0][1], places[1][1])
+        ncand = len(info)
         
         @rememberBallot
         def stratBallot(cls, voter, front=frontrunners):
@@ -448,7 +612,6 @@ class Mav(Method):
         return stratBallot
         
 class Mj(Mav):
-    """CURRENTLY BADLY INCOMPLETE; JUST A COPY OF MAV"""
     def candScore(self, scores):
         """This formula will always give numbers within 0.5 of the raw median.
         Unfortunately, with 5 grade levels, these will tend to be within 0.1 of
@@ -468,9 +631,9 @@ class Mj(Mav):
         if (hi-mid) == (mid-lo):
             return base
         elif (hi-mid) < (mid-lo):
-            return base + (hi-mid) / nvot
+            return base + 0.5 - (hi-mid) / nvot
         else:
-            return base - (mid-lo) / nvot
+            return base - 0.5 + (mid-lo) / nvot
         
 class Bucklin(Method):
     def candScore(self, scores):
@@ -539,19 +702,19 @@ def doVse(model, methods, nvot, ncand, niter):
     for i in range(niter):
         electorate = model(nvot, ncand)
         vse = []
-        for method in methods:
-            vse.append(method.vseOn(electorate))
+        for method, chooserFuns in methods:
+            vse.append(method.vseOn(electorate, chooserFuns))
         vses.append(vse)
         print(i,vse)
-    return vses
+    return (methods, vses)
             
-def printVse(results):
+def printVse(results, comparisons):
     """print the result of doVse in an accessible format.
     for instance:
     br.printVse(vses)
     """
     for i in range(len(results[0])):
-        print(results[0][i][3], 
+        print(results[0][i][-1], 
               [mean([result[i][j] for result in results]) 
                   for j in range(len(results[0][0]) - 1)],
               mean(
@@ -560,8 +723,34 @@ def printVse(results):
                    )
               )
         
-def saveResults(results, fn):
-    out = open(fn, )
+def saveResults(results, fn="vseresults.txt"):
+    out = open(fn, "wb")
+    head, body = results
+    lines = []
+    headItems = []
+    for meth in head:
+        mname = meth[0].__class__.__name__
+        headItems.extend([mname + "_hon",
+                         mname + "_strat"])
+        for i, xtra in enumerate(meth[1]):
+            print(xtra)
+            headItems.append(mname + "_" + xtra.__name__ + str(i))
+        headItems.append(mname + "_strat_push")
+        for i, xtra in enumerate(meth[1]):
+            headItems.append(mname + "_" + xtra.__name__ + str(i) + "_push")
+        
+            
+    lines.append("\t".join([str(item) for item in headItems]) + "\n")
+    
+    for line in body:
+        lineItems = []
+        for meth in line:
+            lineItems.extend(meth[:-1])
+        lines.append("\t".join(str(item) for item in lineItems) + "\n")
+    
+    for line in lines:
+        out.write(bytes(line, 'UTF-8'))
+    out.close()
     
 
 if __name__ == "__main__":

@@ -1,0 +1,4 @@
+*.pyc
+python3
+__pycache__
+.pydevproject
