@@ -42,9 +42,7 @@ class Voter(tuple):
         Length must be the same
             >>> Voter([1,2]).hybridWith(Voter([1,2,3]),1)
             Traceback (most recent call last):
-              File "<stdin>", line 1, in <module>
-              File "./br.py", line 42, in hybridWith
-                assert len(self) == len(v2)
+              ...
             AssertionError
 
         A couple of basic sanity checks:
@@ -793,7 +791,7 @@ def doVse(model, methods, nvot, ncand, niter):
     of VSE for all methods given.
     
     for instance:
-    vses = br.doVse(br.PolyaModel(), [br.Score(), br.Mav()], 100, 4, 100)
+    vses = doVse(PolyaModel(), [Score(), Mav()], 100, 4, 100)
     """
     vses = []
     for i in range(niter):
@@ -808,7 +806,7 @@ def doVse(model, methods, nvot, ncand, niter):
 def printVse(results, comparisons):
     """print the result of doVse in an accessible format.
     for instance:
-    br.printVse(vses)
+    printVse(vses)
     """
     for i in range(len(results[0])):
         print(results[0][i][-1], 
