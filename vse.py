@@ -327,6 +327,13 @@ def probChooser(probs):
     
     
 ###media
+
+
+
+
+
+
+
 def truth(standings):
     return standings
 
@@ -378,6 +385,14 @@ def rememberBallots(fun):
     return getAndRemember
 
 class Plurality(Method):
+    
+    #>>> pqs = [Plurality().resultsFor(PolyaModel()(101,5),Plurality.honBallot)[0] for i in range(400)]
+    #>>> mean(pqs)
+    #0.20534653465346522
+    #>>> std(pqs)
+    #0.2157069704671751
+    bias = 0.2157069704671751
+    
     candScore = staticmethod(mean)
     
     @staticmethod
@@ -389,31 +404,45 @@ class Plurality(Method):
     @staticmethod #cls is provided explicitly, not through binding
     @rememberBallot
     def honBallot(cls, utils):
-        """Takes utilities and returns an honest ballot"""
+        """Takes utilities and returns an honest ballot
+        
+        >>> Plurality.honBallot(Plurality, Voter([-3,-2,-1]))
+        [0, 0, 1]
+        >>> Plurality().stratBallotFor([3,2,1])(Plurality, Voter([-3,-2,-1]))
+        [0, 1, 0]
+        """
         return cls.oneVote(utils, cls.winner(utils))
     
     def stratBallotFor(self, info):
         """Returns a (function which takes utilities and returns a strategic ballot)
-        for the given "polling" info.""" 
+        for the given "polling" info.
+        
+        >>> Plurality().stratBallotFor([3,2,1])(Plurality, Voter([-3,-2,-1]))
+        [0, 1, 0]
+        """ 
         
         places = sorted(enumerate(info),key=lambda x:-x[1]) #from high to low
         #print("placesxx",places)
-        frontrunners = places[0][0], places[1][0]
-        @rememberBallot
-        def stratBallot(cls, voter, front=frontrunners):
-            if voter[front[0]] > voter[front[1]]:
-                return cls.oneVote(voter, front[0])
-            return cls.oneVote(voter, front[1])
+        @rememberBallots
+        def stratBallot(cls, voter):
+            
+            stratGap = voter[places[1][0]] - voter[places[0][0]]
+            if stratGap <= 0:
+                #winner is preferred; be complacent.
+                isStrat = False
+                strat = cls.oneVote(voter, places[0][0])
+            else:
+                #runner-up is preferred; be strategic in iss run
+                isStrat = True
+                #sort cuts high to low
+                #cuts = (cuts[1], cuts[0])
+                strat = cls.oneVote(voter, places[0][0])
+            return dict(strat=strat, isStrat=isStrat, stratGap=stratGap)
         return stratBallot
 
 class Score(Method): 
     """Score voting, 0-10.
     
-    honest ballots work as expected
-        >>> Score().honBallot(Score, Voter([5,6,7]))
-        [0.0, 5.0, 10.0]
-        >>> Score().resultsFor(DeterministicModel(3)(5,3),Score().honBallot)
-        [4.0, 6.0, 5.0]
     
     Strategy establishes pivots
         >>> Score().stratBallotFor([0,1,2])(Score, Voter([5,6,7]))
@@ -434,13 +463,35 @@ class Score(Method):
         [10, 0, 10]
 
     """
+    
+    #>>> qs += [Score().resultsFor(PolyaModel()(101,2),Score.honBallot)[0] for i in range(800)]
+    #>>> std(qs)
+    #2.770135393419682
+    #>>> mean(qs)
+    #5.1467202970297032
+    bias2 = 2.770135393419682
+    #>>> qs5 = [Score().resultsFor(PolyaModel()(101,5),Score.honBallot)[0] for i in range(400)]
+    #>>> mean(qs5)
+    #4.920247524752476
+    #>>> std(qs5)
+    #2.3536762480634343
+    bias5 = 2.3536762480634343
+    
     candScore = staticmethod(mean)
         #"""Takes the list of votes for a candidate; returns the candidate's score."""
 
     @staticmethod #cls is provided explicitly, not through binding
     @rememberBallot
     def honBallot(cls, utils):
-        """Takes utilities and returns an honest ballot (on 0..10)"""
+        """Takes utilities and returns an honest ballot (on 0..10)
+        
+        
+        honest ballots work as expected
+            >>> Score().honBallot(Score, Voter([5,6,7]))
+            [0.0, 5.0, 10.0]
+            >>> Score().resultsFor(DeterministicModel(3)(5,3),Score().honBallot)
+            [4.0, 6.0, 5.0]
+        """
         bot = min(utils)
         scale = max(utils)-bot
         return [floor(10.99 * (util-bot) / scale) for util in utils]
@@ -451,26 +502,26 @@ class Score(Method):
         
         places = sorted(enumerate(info),key=lambda x:-x[1]) #from high to low
         #print("placesxx",places)
-        frontrunners = places[0][0], places[1][0]
-        @rememberBallot
-        def stratBallot(cls, voter, front=frontrunners):
-            cuts = [voter[front[0]], voter[front[1]]]
-            if cuts[0] == cuts[1]:
-                return [(10 if (util >= cuts[0]) else 0) for util in voter]
+        @rememberBallots
+        def stratBallot(cls, voter):
+            cuts = [voter[places[0][0]], voter[places[1][0]]]
+            stratGap = cuts[1] - cuts[0]
+            if stratGap <= 0:
+                #winner is preferred; be complacent.
+                isStrat = False
             else:
-                if cuts[0] > cuts[1]:
-                    #winner is preferred; be complacent.
-                    strat = False
-                else:
-                    #runner-up is preferred; be strategic in iss run
-                    strat = True
-                    #sort cuts high to low
-                    cuts = (cuts[1], cuts[0])
-                setattr(voter, cls.__name__ + "_isStrat", strat)
-                return [max(0,min(10,floor(
+                #runner-up is preferred; be strategic in iss run
+                isStrat = True
+                #sort cuts high to low
+                cuts = (cuts[1], cuts[0])
+            if cuts[0] == cuts[1]:
+                strat = [(10 if (util >= cuts[0]) else 0) for util in voter]
+            else:
+                strat = [max(0,min(10,floor(
                                 10.99 * (util-cuts[1]) / (cuts[0]-cuts[1])
                             ))) 
                         for util in voter]
+            return dict(strat=strat, isStrat=isStrat, stratGap=stratGap)
         return stratBallot
     
     
@@ -488,6 +539,19 @@ def toVote(cutoffs, util):
 class Mav(Method):
     """Majority Approval Voting
     """
+    
+    
+    #>>> mqs = [Mav().resultsFor(PolyaModel()(101,5),Mav.honBallot)[0] for i in range(400)]
+    #>>> mean(mqs)
+    #1.5360519801980208
+    #>>> mqs += [Mav().resultsFor(PolyaModel()(101,5),Mav.honBallot)[0] for i in range(1200)]
+    #>>> mean(mqs)
+    #1.5343069306930679
+    #>>> std(mqs)
+    #1.0970202515275356
+    bias5 = 1.0970202515275356
+
+    
     baseCuts = [-0.8, 0, 0.8, 1.6]
     def candScore(self, scores):
         """For now, only works correctly for odd nvot
@@ -531,7 +595,7 @@ class Mav(Method):
             >>> Mav().honBallot(Mav, Voter([-1,-0.5,0.5]))
             [0, 1, 4]
         """
-        cutoffs = [min(cut, max(voter) - 0.001) for cut in baseCuts]
+        cutoffs = [min(cut, max(voter) - 0.001) for cut in cls.baseCuts]
         return [toVote(cutoffs, util) for util in voter]
         
     
@@ -567,7 +631,8 @@ class Mav(Method):
                 strat = extraStrat = [(4 if (util >= frontUtils[0]) else 0)
                                      for util in voter]
             else:
-                if frontUtils[0] > frontUtils[1]:
+                stratGap = frontUtils[1] - frontUtils[0]
+                if stratGap < 0:
                     #winner is preferred; be complacent.
                     isStrat = False
                 else:
@@ -575,7 +640,6 @@ class Mav(Method):
                     isStrat = True
                     #sort cuts high to low
                     frontUtils = (frontUtils[1], frontUtils[0])
-                setattr(voter, cls.__name__ + "_isStrat", isStrat)
                 top = max(voter)
                 cutoffs = [(  (min(frontUtils[0], self.baseCuts[i])) 
                                  if (i < floor(front[3])) else 
@@ -589,7 +653,8 @@ class Mav(Method):
                                 4.99 * (util-frontUtils[1]) / (frontUtils[0]-frontUtils[1])
                             ))) 
                         for util in voter]
-            return dict(strat=strat, extraStrat=extraStrat)
+            return dict(strat=strat, extraStrat=extraStrat, isStrat=isStrat,
+                        stratGap = stratGap)
         return stratBallot
         
         
@@ -636,64 +701,15 @@ class Mj(Mav):
         else:
             return base - 0.5 + (mid-lo) / nvot
         
-class Bucklin(Method):
-    """CURRENTLY BADLY INCOMPLETE; JUST A COPY OF MAV"""
-    def candScore(self, scores):
-        """For now, only works correctly for odd nvot"""
-        scores = sorted(scores)
-        nvot = len(scores)
-        i = mid = nvot // 2
-        base = scores[i]
-        while (i > nvot and scores[-i] == base):
-            i += 1
-        mod = mid * (base + 0.5) / (i - 0.5)
-        if mod > base:
-            return mod
-        return base - ((base - mod) / (base + 0.5)) 
-    
-    @staticmethod #cls is provided explicitly, not through binding
-    @rememberBallot
-    def honBallot(cls, voter):
-        """Takes utilities and returns an honest ballot (on 0..4)"""
-        cutoffs = cls.baseCuts[0:3] + [max(voter)]
-        return [toVote(cutoffs, util) for util in voter]
-        
-    
-    def stratBallotFor(self, info):
-        """Returns a (function which takes utilities and returns a strategic ballot)
-        for the given "polling" info.""" 
-        places = sorted(enumerate(info),key=lambda x:-x[1]) #from high to low
-        #print("places",places)
-        frontrunners = (places[0][0], places[1][0], places[0][1], places[1][1])
-        
-        @rememberBallot
-        def stratBallot(cls, voter, front=frontrunners):
-            frontUtils = [voter[front[0]], voter[front[1]]] #utils of frontrunners
-            if frontUtils[0] == frontUtils[1]:
-                return [(4 if (util >= frontUtils[0]) else 0) for util in voter]
-            else:
-                if frontUtils[0] > frontUtils[1]:
-                    #winner is preferred; be complacent.
-                    strat = False
-                else:
-                    #runner-up is preferred; be strategic in iss run
-                    strat = True
-                    #sort cuts high to low
-                    frontUtils = (frontUtils[1], frontUtils[0])
-                setattr(voter, cls.__name__ + "_isStrat", strat)
-                top = max(voter)
-                cutoffs = [(  (min(frontUtils[0], self.baseCuts[i])) 
-                                 if (i < floor(front[3]) - 1) else 
-                            ( (frontUtils[1]) 
-                                 if (i < floor(front[2]) + 1) else
-                              min(top, self.baseCuts[i])
-                              ))
-                           for i in range(4)]
-                return [toVote(cutoffs, util) for util in voter]
-        return stratBallot
-    
-        
 class Irv(Method):
+    
+    #>>> iqs = [Irv().resultsFor(PolyaModel()(101,5),Irv.honBallot)[0] for i in range(400)]
+    #>>> mean(iqs)
+    #1.925
+    #>>> std(iqs)
+    #1.4175242502334846
+    bias5 = 1.4175242502334846
+
     def resort(self, ballots, loser, ncand, piles):
         """No error checking; only works for exhaustive ratings."""
         #print("resort",ballots, loser, ncand)
@@ -767,8 +783,17 @@ class Irv(Method):
         ncand = len(info)
         
         places = sorted(enumerate(info),key=lambda x:-x[1]) #high to low
-        @rememberBallot
+        @rememberBallots
         def stratBallot(cls, voter):
+            stratGap = voter[places[1][0]] - voter[places[0][0]]
+            if stratGap < 0:
+                #winner is preferred; be complacent.
+                isStrat = False
+            else:
+                #runner-up is preferred; be strategic in iss run
+                isStrat = True
+                #sort cuts high to low #NOT FOR IRV
+                #places = (places[1], places[0])
             i = ncand - 1
             winnerQ = voter[places[0][0]]
             ballot = [-1] * len(voter)
@@ -783,7 +808,7 @@ class Irv(Method):
                     ballot[nextLoser] = i
                     i -= 1
             assert(i == -1)
-            return ballot
+            return dict(strat=ballot, isStrat=isStrat, stratGap=stratGap)
         return stratBallot
         
 def doVse(model, methods, nvot, ncand, niter):
