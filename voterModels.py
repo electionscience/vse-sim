@@ -5,24 +5,25 @@ from numpy.lib.scimath import sqrt
 from numpy.core.fromnumeric import mean, std
 from numpy.lib.function_base import median
 from numpy.ma.core import floor
+from scipy.stats import beta
 from test.test_binop import isnum
 from debugDump import *
 
 class Voter(tuple):
     """A tuple of candidate utilities.
-    
-    
+
+
 
     """
-    
+
     @classmethod
     def rand(cls, ncand):
         """Create a random voter with standard normal utilities.
-        
+
         ncand determines how many utilities a voter should have
             >>> [len(Voter.rand(i)) for i in list(range(5))]
             [0, 1, 2, 3, 4]
-        
+
         utilities should be in a standard normal distribution
             >>> v100 = Voter.rand(100)
             >>> -0.3 < mean(v100) < 0.3
@@ -31,16 +32,16 @@ class Voter(tuple):
             True
         """
         return cls(random.gauss(0,1) for i in range(ncand))
-        
-    
+
+
     def hybridWith(self, v2, w2):
-        """Create a weighted average of two voters. 
-        
+        """Create a weighted average of two voters.
+
         The weight of v1 is always 1; w2 is the weight of v2 relative to that.
-        
+
         If both are
         standard normal to start with, the result will be standard normal too.
-        
+
         Length must be the same
             >>> Voter([1,2]).hybridWith(Voter([1,2,3]),1)
             Traceback (most recent call last):
@@ -55,24 +56,24 @@ class Voter(tuple):
             (0.5, 1.0, 4.0)
         """
         assert len(self) == len(v2)
-        return self.copyWithUtils(  ((self[i] / sqrt(1 + w2 ** 2)) + 
+        return self.copyWithUtils(  ((self[i] / sqrt(1 + w2 ** 2)) +
                                     (w2 * v2[i] / sqrt(1 + w2 ** 2)))
                                  for i in range(len(self)))
-            
+
     def copyWithUtils(self, utils):
         """create a new voter with attrs as self and given utils.
-        
+
         This version is a stub, since this voter class has no attrs."""
         return self.__class__(utils)
-    
+
     def mutantChild(self, muteWeight):
         """Returns a copy hybridized with a random voter of weight muteWeight.
-        
+
         Should remain standard normal:
             >>> v100 = Voter.rand(100)
             >>> for i in range(30):
             ...     v100 = v100.mutantChild(random.random())
-            ... 
+            ...
             >>> -0.3 < mean(v100) < 0.3 #3 sigma
             True
             >>> 0.8 < std(v100) < 1.2 #meh that's roughly 3 sigma
@@ -80,11 +81,11 @@ class Voter(tuple):
 
         """
         return self.hybridWith(self.__class__.rand(len(self)), muteWeight)
-    
+
 class PersonalityVoter(Voter):
-    
+
     cluster_count = 0
-    
+
     def __init__(self, *args, **kw):
         super().__init__()#*args, **kw) #WTF, python?
         self.cluster = self.__class__.cluster_count
@@ -92,64 +93,71 @@ class PersonalityVoter(Voter):
         self.personality = random.gauss(0,1) #probably to be used for strategic propensity
         #but in future, could be other clustering voter variability, such as media awareness
         #print(self.cluster, self.personality)
-        
+
     #@classmethod
     #def rand(cls, ncand):
     #    voter = super().rand(ncand)
     #    return voter
-    
+
     @classmethod
     def resetClusters(cls):
         cls.cluster_count = 0
-    
+
     def copyWithUtils(self, utils):
         voter = super().copyWithUtils(utils)
-        voter.personality = self.personality
-        voter.cluster = self.cluster
+        voter.copyAttrsFrom(self)
         return voter
-            
+
+    def copyAttrsFrom(self, model):
+        self.personality = model.personality
+        self.cluster = model.cluster
+
 class Electorate(list):
     """A list of voters.
     Each voter is a list of candidate utilities"""
     @cached_property
     def socUtils(self):
         """Just get the social utilities.
-        
+
         >>> e = Electorate([[1,2],[3,4]])
         >>> e.socUtils
         [2.0, 3.0]
         """
         return list(map(mean,zip(*self)))
-    
+
+
 class RandomModel:
     """Empty base class for election models; that is, electorate factories.
-    
+
     >>> e4 = RandomModel()(4,3)
     >>> [len(v) for v in e4]
     [3, 3, 3, 3]
     """
+
+    def __str__(self):
+        return self.__class__.__name__
     def __call__(self, nvot, ncand, vType=PersonalityVoter):
         return Electorate(vType.rand(ncand) for i in range(nvot))
-    
-class DeterministicModel:
+
+class DeterministicModel(RandomModel):
     """Basically, a somewhat non-boring stub for testing.
-    
+
         >>> DeterministicModel(3)(4, 3)
         [(0, 1, 2), (1, 2, 0), (2, 0, 1), (0, 1, 2)]
     """
-    
+
     @autoassign
     def __init__(self, modulo):
         pass
-    
+
     def __call__(self, nvot, ncand, vType=PersonalityVoter):
         return Electorate(vType((i+j)%self.modulo for i in range(ncand))
                           for j in range(nvot))
-    
+
 class ReverseModel(RandomModel):
     """Creates an even number of voters in two diametrically-opposed camps
     (ie, opposite utilities for all candidates)
-    
+
     >>> e4 = ReverseModel()(4,3)
     >>> [len(v) for v in e4]
     [3, 3, 3, 3]
@@ -160,7 +168,7 @@ class ReverseModel(RandomModel):
         if nvot % 2:
             raise ValueError
         basevoter = vType.rand(ncand)
-        return Electorate( ([basevoter] * (nvot//2)) + 
+        return Electorate( ([basevoter] * (nvot//2)) +
                            ([vType(-q for q in basevoter)] * (nvot//2))
                         )
 
@@ -168,16 +176,16 @@ class QModel(RandomModel):
     """Adds a quality dimension to a base model,
     by generating an election and then hybridizing all voters
     with a common quality vector.
-    
+
     Useful along with ReverseModel to create a poor-man's 2d model.
-    
+
     Basic structure
         >>> e4 = QModel(sqrt(3), RandomModel())(100,1)
         >>> len(e4)
         100
         >>> len(e4.socUtils)
         1
-        
+
     Reduces the standard deviation
         >>> 0.4 < std(list(zip(e4))) < 0.6
         True
@@ -186,17 +194,16 @@ class QModel(RandomModel):
     @autoassign
     def __init__(self, qWeight=0.5, baseModel=ReverseModel()):
         pass
-    
+
     def __call__(self, nvot, ncand, vType=PersonalityVoter):
         qualities = vType.rand(ncand)
         return Electorate([v.hybridWith(qualities,self.qWeight)
                 for v in self.baseModel(nvot, ncand, vType)])
 
-
 class PolyaModel(RandomModel):
-    """This creates electorates based on a Polya/Hoppe/Dirchlet model, with mutation.
+    """This creates electorates based on a Polya/Hoppe/Dirichlet model, with mutation.
     You start with an "urn" of n=seedVoter voters from seedModel,
-     plus alpha "wildcard" voters. Then you draw a voter from the urn, 
+     plus alpha "wildcard" voters. Then you draw a voter from the urn,
      clone and mutate them, and put the original and clone back into the urn.
      If you draw a "wildcard", use voterGen to make a new voter.
      """
@@ -204,7 +211,7 @@ class PolyaModel(RandomModel):
     def __init__(self, seedVoters=2, alpha=1, seedModel=QModel(),
                  mutantFactor=0.2):
         pass
-    
+
     def __call__(self, nvot, ncand, vType=PersonalityVoter):
         """Tests? Making statistical tests that would pass reliably is
         a huge hassle. Sorry, maybe later.
@@ -219,5 +226,138 @@ class PolyaModel(RandomModel):
                 election.append(vType.rand(ncand))
         return election
 
+class DimVoter(PersonalityVoter):
+    """A voter in an n-dimensional model.
 
 
+     """
+
+    @classmethod
+    def fromDims(cls, v, e):
+        me = cls(-sqrt(
+            sum(((vd - cd)*w)**2 for (vd, cd, w) in zip(v,c,e.dimWeights)) /
+                            e.totWeight)
+          for c in e.cands)
+        me.copyAttrsFrom(v)
+        me.dims = v
+        me.elec = e
+        return me
+
+
+class DimElectorate(Electorate):
+
+    def asDims(self, v, *args):
+        return v
+
+    def fromDims(self, dimvoters, vType):
+        for v in dimvoters:
+            self.append(vType.fromDims(v,self))
+
+    def calcTotWeight(self):
+        self.totWeight = sum(self.dimWeights)
+
+class DimModel(RandomModel):
+    """
+
+    >>> dm = DimModel(2,baseElectorate=DeterministicModel(3))
+    >>> dm(2,4)
+    [(4.25, 0.0, 1.25, 4.25), (2.0, 1.25, 0.0, 2.0)]
+    >>> dm.dimWeights
+    [1, 0.5]
+
+
+    """
+    builtElectorate = DimElectorate
+
+    @autoassign
+    def __init__(self, ndims=3, dimWeights=None, baseElectorate=RandomModel()):
+        if self.dimWeights is None:
+            self.dimWeights = [2**(-n) for n in range(ndims)]
+        assert(len(self.dimWeights) == self.ndims)
+
+    def __call__(self, nvot, ncand, vType=DimVoter):
+        elec = self.builtElectorate()
+        elec.dimWeights = self.dimWeights
+        return self.makeElectorate(elec, nvot, ncand, vType)
+
+    def makeElectorate(self, elec, nvot, ncand, vType):
+        elec.calcTotWeight()
+        votersncands = self.baseElectorate(nvot + ncand, len(elec.dimWeights), vType)
+        elec.base = [elec.asDims(v,i) for i,v in enumerate(votersncands[:nvot])]
+        elec.cands = [elec.asDims(v,nvot+i) for i,v in enumerate(votersncands[nvot:])]
+        elec.fromDims(elec.base, vType)
+        return elec
+
+unishdist = lambda: beta.rvs(1,.8)
+
+class KSElectorate(DimElectorate):
+
+    def chooseClusters(self, n, alpha, caring):
+        self.clusters = []
+        for i in range(n):
+            item = []
+            for c in range(self.numClusters):
+                r = (i+alpha) * random.random()
+                if r > i:
+                    item.append(self.numSubclusters[c])
+                    self.numSubclusters[c] += 1
+                else:
+                    item.append(self.clusters[int(r)][c])
+            self.clusters.append(item)
+        self.clusterMeans = []
+        self.clusterCaring = []
+        for c in range(self.numClusters):
+            subclusterMeans = []
+            subclusterCaring = []
+            for i in range(self.numSubclusters[c]):
+                subclusterMeans.append([random.gauss(0,1) for i in range(self.dcs[c])])
+                subclusterCaring.append(caring())
+            self.clusterMeans.append(subclusterMeans)
+            self.clusterCaring.append(subclusterCaring)
+
+    def asDims(self, v, i):
+        result = []
+        dim = 0
+        for c in range(self.numClusters):
+            clusterMean = self.clusterMeans[c][self.clusters[i][c]]
+            for m in clusterMean:
+                result.append(m + (v[dim] * (1-self.clusterCaring[c][self.clusters[i][c]])))
+            dim += 1
+        return PersonalityVoter(result) #TODO: do personality right
+
+class KSModel(DimModel): #Kitchen sink
+
+    builtElectorate = KSElectorate
+    baseElectorate = RandomModel()
+
+    @autoassign
+    #dc = dimensional cluster; vc = voter cluster
+    def __init__(self, dcdecay=unishdist, dccut = .2,
+            wcdecay=unishdist, wccut = .2,
+            wcalpha=1, vccaring=unishdist):
+        pass
+
+    def __call__(self, nvot, ncand, vType=DimVoter):
+        """Tests? Making statistical tests that would pass reliably is
+        a huge hassle. Sorry, maybe later.
+        """
+        vType.resetClusters()
+        e = self.builtElectorate()
+        e.dcs = [] #number of dimensions in each dc
+        e.dimWeights = [] #raw importance of each dimension, regardless of dc
+        clusterWeight = 1
+        while clusterWeight > self.dccut:
+            #print(len(e.dcs),clusterWeight)
+            dimweight = clusterWeight
+            dimnum = 0
+            while dimweight > self.wccut:
+                #print("with:",dimnum,dimweight)
+                e.dimWeights.append(dimweight)
+                dimnum += 1
+                dimweight *= self.wcdecay()
+            e.dcs.append(dimnum)
+            clusterWeight *= self.dcdecay()
+        e.numClusters = len(e.dcs)
+        e.numSubclusters = [0] * e.numClusters
+        e.chooseClusters(nvot + ncand, self.wcalpha, self.vccaring)
+        return self.makeElectorate(e, nvot, ncand, vType)
