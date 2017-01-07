@@ -2,3 +2,6 @@
 python3
 __pycache__
 .pydevproject
+*.csv
+*.rtf
+*.bak
