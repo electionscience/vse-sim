@@ -55,7 +55,9 @@ class SideTally(defaultdict):
             try:
                 self.keyList = list(chooser)
             except TypeError:
-                debug("Chooser has no tally keys:", chooser)
+                pass
+                #TODO: Why does this happen?
+                #debug("Chooser has no tally keys:", str(chooser))
         self.initKeys = staticmethod(lambda x:x) #don't do it again
 
     def serialize(self):
@@ -145,8 +147,8 @@ class Method:
         if tally is None:
             tally = SideTally()
         tally.initKeys(chooser)
-        return (self.results((chooser(self.__class__, voter, tally)
-                                  for voter in voters),
+        return (self.results([chooser(self.__class__, voter, tally)
+                                  for voter in voters],
                               isHonest), chooser.__name__)
 
     def multiResults(self, voters, chooserFuns=(), media=lambda x,t:x):
@@ -204,7 +206,7 @@ class Method:
                 "nvot":nvot,
                 "best":best,
                 "rand":rand,
-                "method":self.__class__.__name__,
+                "method":str(self),
                 "chooser":chooser,#.getName(),
                 "util":utils[self.winner(result)],
                 "vse":(utils[self.winner(result)] - rand) / (best - rand)
@@ -246,6 +248,7 @@ def rememberBallot(fun):
         setattr(voter, cls.__name__ + "_" + fun.__name__[:-6], ballot) #leave off the "...Ballot"
         return ballot
     getAndRemember.__name__ = fun.__name__
+    getAndRemember.allTallyKeys = lambda:[]
     return getAndRemember
 
 def rememberBallots(fun):
@@ -260,4 +263,5 @@ def rememberBallots(fun):
 
         return ballots[fun.__name__[:-6]] #leave off the "...Ballot"
     getAndRemember.__name__ = fun.__name__
+    getAndRemember.allTallyKeys = lambda:[]
     return getAndRemember

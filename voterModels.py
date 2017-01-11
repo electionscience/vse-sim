@@ -92,7 +92,6 @@ class PersonalityVoter(Voter):
         self.__class__.cluster_count += 1
         self.personality = random.gauss(0,1) #probably to be used for strategic propensity
         #but in future, could be other clustering voter variability, such as media awareness
-        #print(self.cluster, self.personality)
 
     #@classmethod
     #def rand(cls, ncand):
@@ -233,10 +232,15 @@ class DimVoter(PersonalityVoter):
      """
 
     @classmethod
-    def fromDims(cls, v, e):
+    def fromDims(cls, v, e, caring = None):
+        if caring==None:
+            caring = [1] * len(v)
+            totCaring = e.totWeight
+        else:
+            totCaring = sum((c*w)**2 for c,w in zip(caring, e.dimWeights))
         me = cls(-sqrt(
-            sum(((vd - cd)*w)**2 for (vd, cd, w) in zip(v,c,e.dimWeights)) /
-                            e.totWeight)
+            sum(((vd - cd)*w*cares)**2 for (vd, cd, w, cares) in zip(v,c,e.dimWeights,caring)) /
+                            totCaring)
           for c in e.cands)
         me.copyAttrsFrom(v)
         me.dims = v
@@ -254,7 +258,7 @@ class DimElectorate(Electorate):
             self.append(vType.fromDims(v,self))
 
     def calcTotWeight(self):
-        self.totWeight = sum(self.dimWeights)
+        self.totWeight = sum([w**2 for w in self.dimWeights])
 
 class DimModel(RandomModel):
     """
@@ -288,7 +292,12 @@ class DimModel(RandomModel):
         elec.fromDims(elec.base, vType)
         return elec
 
-unishdist = lambda: beta.rvs(1,.8)
+def rbeta(a,b):
+    return lambda: beta.rvs(a,b)
+
+unishdist = rbeta(1,.8)
+
+caresDist = rbeta(3,1.5)
 
 class KSElectorate(DimElectorate):
 
@@ -310,7 +319,9 @@ class KSElectorate(DimElectorate):
             subclusterMeans = []
             subclusterCaring = []
             for i in range(self.numSubclusters[c]):
-                subclusterMeans.append([random.gauss(0,1) for i in range(self.dcs[c])])
+                cares = caring()
+
+                subclusterMeans.append([random.gauss(0,sqrt(cares)) for i in range(self.dcs[c])])
                 subclusterCaring.append(caring())
             self.clusterMeans.append(subclusterMeans)
             self.clusterCaring.append(subclusterCaring)
@@ -318,12 +329,21 @@ class KSElectorate(DimElectorate):
     def asDims(self, v, i):
         result = []
         dim = 0
+        cares = []
         for c in range(self.numClusters):
             clusterMean = self.clusterMeans[c][self.clusters[i][c]]
             for m in clusterMean:
-                result.append(m + (v[dim] * (1-self.clusterCaring[c][self.clusters[i][c]])))
+                acare = self.clusterCaring[c][self.clusters[i][c]]
+                result.append(m + (v[dim] * sqrt(1-acare)))
+                cares.append(acare)
             dim += 1
-        return PersonalityVoter(result) #TODO: do personality right
+        v = PersonalityVoter(result) #TODO: do personality right
+        v.cares = cares
+        return v
+
+    def fromDims(self, dimvoters, vType):
+        for v in dimvoters:
+            self.append(vType.fromDims(v,self,v.cares))
 
 class KSModel(DimModel): #Kitchen sink
 
@@ -332,10 +352,13 @@ class KSModel(DimModel): #Kitchen sink
 
     @autoassign
     #dc = dimensional cluster; vc = voter cluster
-    def __init__(self, dcdecay=unishdist, dccut = .2,
-            wcdecay=unishdist, wccut = .2,
-            wcalpha=1, vccaring=unishdist):
+    def __init__(self, dcdecay=(1,1), dccut = .2,
+            wcdecay=(1,1), wccut = .2,
+            wcalpha=1, vccaring=(3,1.5)):
         pass
+
+    def __str__(self):
+        return "_".join(str(x) for x in (self.__class__.__name__,self.wcalpha) + self.dcdecay + self.wcdecay + self.vccaring)
 
     def __call__(self, nvot, ncand, vType=DimVoter):
         """Tests? Making statistical tests that would pass reliably is
@@ -347,17 +370,15 @@ class KSModel(DimModel): #Kitchen sink
         e.dimWeights = [] #raw importance of each dimension, regardless of dc
         clusterWeight = 1
         while clusterWeight > self.dccut:
-            #print(len(e.dcs),clusterWeight)
             dimweight = clusterWeight
             dimnum = 0
             while dimweight > self.wccut:
-                #print("with:",dimnum,dimweight)
                 e.dimWeights.append(dimweight)
                 dimnum += 1
-                dimweight *= self.wcdecay()
+                dimweight *= beta.rvs(*self.wcdecay)
             e.dcs.append(dimnum)
-            clusterWeight *= self.dcdecay()
+            clusterWeight *= beta.rvs(*self.dcdecay)
         e.numClusters = len(e.dcs)
         e.numSubclusters = [0] * e.numClusters
-        e.chooseClusters(nvot + ncand, self.wcalpha, self.vccaring)
+        e.chooseClusters(nvot + ncand, self.wcalpha, lambda:beta.rvs(*self.vccaring))
         return self.makeElectorate(e, nvot, ncand, vType)

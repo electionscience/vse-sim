@@ -6,8 +6,10 @@ from numpy.lib.scimath import sqrt
 from numpy.core.fromnumeric import mean, std
 from numpy.lib.function_base import median
 from numpy.ma.core import floor
+from numpy import std
 from test.test_binop import isnum
 from debugDump import *
+from dataClasses import *
 
 
 
@@ -91,13 +93,13 @@ class OssChooser(Chooser):
         hon, strat = self.subChoosers
         if getattr(voter, cls.__name__ + "_isStrat", False):
             if callable(strat):
-                debug(strat)
+                #debug(strat)
                 return strat(cls, voter, tally)
             tally[self.myKeys[0]] += 1
             return strat
         else:
             if callable(hon):
-                debug(hon)
+                #debug(hon)
                 return hon(cls, voter, tally)
             return hon
 
@@ -131,21 +133,33 @@ class ProbChooser(Chooser):
 def truth(standings, tally=None):
     return standings
 
-def topNMediaFor(n, tally=None):
-    def topNMedia(standings):
+def topNMediaFor(n):
+    def topNMedia(standings, tally=None):
         return list(standings[:n]) + [min(standings)] * (len(standings) - n)
     return topNMedia
 
 def biaserAround(scale):
     def biaser(standings):
-        return scale * (max(standings) - min(standings))
+        return scale * std(standings,ddof=1)
+    return biaser
 
 def orderOf(standings):
     return [i for i,val in sorted(list(enumerate(standings)), key=lambda x:x[1], reverse=True)]
 
-def biasedMediaFor(biaser=biaserAround(0.367879),numerator=1):
-            #Ludicrous precision, only to show that I've arbitrarily picked 1/e
-            #which is an arbitrary compromise between 1/3 and 1/2
+def fuzzyMediaFor(biaser = biaserAround(1)):
+    def fuzzyMedia(standings, tally=None):
+        if not tally:
+            tally=SideTally()
+        if callable(biaser):
+            bias = biaser(standings)
+        else:
+            bias = biaser
+        result= [s + random.gauss(0,bias) for s in standings]
+        tally["changed"] += 0 if orderOf(result)[0:2] == orderOf(standings)[0:2] else 1
+        return result
+    return fuzzyMedia
+
+def biasedMediaFor(biaser=biaserAround(1),numerator=1):
     """
     if numerator is 1:
     0, 0, -1/2, -2/3, -3/4....

@@ -65,6 +65,7 @@ class VseBatch:
     def save(self, fn="vseresults.txt"):
 
         out = open(fn, "wb")
+        out.writeLn()
         head, body = self.methods, self.vses
         lines = []
         headItems = []
@@ -123,8 +124,8 @@ def uniquify(seq):
     return checked
 
 class CsvBatch:
-
-    def __init__(self, model, methods, nvot, ncand, niter, baseName = None):
+    @autoassign
+    def __init__(self, model, methods, nvot, ncand, niter, baseName = None, media=truth):
         """A harness function which creates niter elections from model and finds three kinds
         of utility for all methods given.
 
@@ -142,7 +143,7 @@ class CsvBatch:
             eid = uuid4()
             electorate = model(nvot, ncand)
             for method, chooserFuns in methods:
-                results = method.resultsTable(eid, emodel, ncand, electorate, chooserFuns)
+                results = method.resultsTable(eid, emodel, ncand, electorate, chooserFuns, media=media)
                 rows.extend(results)
             debug(i,results[1:3])
         self.rows = rows
@@ -163,10 +164,13 @@ class CsvBatch:
         for n in range(4):
             keys.extend(["tallyName"+str(n),"tallyVal"+str(n)])
         keys = uniquify(keys)
-        dw = csv.DictWriter(open(baseName + str(i) + ".csv", "w"), keys, restval = "NA")
+        myFile = open(baseName + str(i) + ".csv", "w")
+        print("# media = " + self.media.__name__, file=myFile)
+        dw = csv.DictWriter(myFile, keys, restval = "NA")
         dw.writeheader()
         for r in self.rows:
             dw.writerow(r)
+        myFile.close()
 
 
 
@@ -204,7 +208,7 @@ allSystems = [[Score(10), baseRuns],
                 [Srv(1), baseRuns],
                 [Plurality(), baseRuns],
                 [Irv(), baseRuns],
-                [V321(), medianRuns],
+                [V321(), baseRuns],
                 [Mav(), medianRuns],
                 [Mj(), medianRuns]
                  ]
