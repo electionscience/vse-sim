@@ -168,7 +168,7 @@ class Method:
         info = media(hon[0], stratTally)
         strat = self.resultsFor(voters, self.stratBallotFor(info), stratTally)
         extraTallies = Tallies()
-        extras = [self.resultsFor(voters, self.ballotChooserFor(chooserFun))
+        extras = [self.resultsFor(voters, self.ballotChooserFor(chooserFun), aTally)
                   for (chooserFun, aTally) in zip(chooserFuns, extraTallies)]
         return [([(hon, honTally), (strat, stratTally)] +
                 list(zip(extras, list(extraTallies)))),
@@ -211,7 +211,9 @@ class Method:
                 "util":utils[self.winner(result)],
                 "vse":(utils[self.winner(result)] - rand) / (best - rand)
             }
+            #print(tally)
             for (i, (k, v)) in enumerate(tally.items()):
+                #print("Result: tally ",i,k,v)
                 row["tallyName"+str(i)] = str(k)
                 row["tallyVal"+str(i)] = str(v)
             rows.append(row)

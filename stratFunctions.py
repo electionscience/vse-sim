@@ -62,6 +62,8 @@ beStrat = Chooser("strat")
 beX = Chooser("extraStrat")
 
 class LazyChooser(Chooser):
+    """Honest, if honest and strategic are the same. Otherwise, extra-strategic."""
+
     tallyKeys = [""]
     @autoassign
     def __init__(self, subChoosers=[beHon, beX]):
@@ -92,10 +94,10 @@ class OssChooser(Chooser):
     def __call__(self, cls, voter, tally):
         hon, strat = self.subChoosers
         if getattr(voter, cls.__name__ + "_isStrat", False):
+            tally[self.myKeys[0]] += 1
             if callable(strat):
                 #debug(strat)
                 return strat(cls, voter, tally)
-            tally[self.myKeys[0]] += 1
             return strat
         else:
             if callable(hon):

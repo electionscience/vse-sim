@@ -650,3 +650,66 @@ class V321(Mav):
 
 
         return rememberBallots(stratBallot)
+
+class Schulze(Irv):
+
+    def results(self, ballots, isHonest=False):
+        """IRV results.
+
+        >>> Irv().resultsFor(DeterministicModel(3)(5,3),Irv().honBallot)[0]
+        [0, 1, 2]
+        >>> Irv().results([[0,1,2]])[2]
+        2
+        >>> Irv().results([[0,1,2],[2,1,0]])[1]
+        0
+        >>> Irv().results([[0,1,2]] * 4 + [[2,1,0]] * 3 + [[1,2,0]] * 2)
+        [2, 0, 1]
+        """
+        n = len(ballots[0])
+        cmat = [[0] * n] * n
+        numWins = [0] * n
+        for i in range(n):
+            for j in range(n):
+                if i != j:
+                    cmat[i][j] = sum(sign(ballot[i] - ballot[j]) for ballot in ballots)
+                    if cmat[i][j]>0:
+                        numWins[i] += 1
+        order = sorted(enumerate(numWins),key=lambda x:-x[1])
+        if order[0][1] == n-1:
+            self.__class__.extraEvents["cycle"] = 0
+            result = numWins
+        else: #cycle
+            self.__class__.extraEvents["cycle"] = 1
+            result = self.resolveCycle(cmat)
+            order = None
+
+        if isHonest:
+            #check scenarios
+            pluralityTally = [0] * n
+            plurality3Tally = [0] * 3
+            if order==None:
+                order = sorted(enumerate(result),key=lambda x:-x[1])
+            for b in ballots:
+                pluralityTally[b.index(max(b))] += 1
+                b3 = [b[c] for c,v in order[:3]]
+                plurality3Tally[b3.index(max(b3))] += 1
+            
+
+
+
+
+        if type(ballots) is not list:
+            ballots = list(ballots)
+        ncand = len(ballots[0])
+        results = [-1] * ncand
+        piles = [[] for i in range(ncand)]
+        loserpile = ballots
+        loser = -1
+        for i in range(ncand):
+            self.resort(loserpile, loser, ncand, piles)
+            negscores = ["x" if isnum(pile) else -len(pile)
+                         for pile in piles]
+            loser = self.winner(negscores)
+            results[loser] = i
+            loserpile, piles[loser] = piles[loser], -1
+        return results
