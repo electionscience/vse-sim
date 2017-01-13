@@ -27,7 +27,6 @@ class VseBatch:
         of VSE for all methods given.
 
         for instance:
-        vses = VseBatch(PolyaModel(), [[Score(), baseRuns], [Mav(), medianRuns]], nvot=5, ncand=4, niter=3)
 
         >>> vses = VseBatch(PolyaModel(), [[Score(), baseRuns], [Mav(), medianRuns]], nvot=5, ncand=4, niter=3)
         >>> [[len(y) for y in x] for x in [vses.methods, vses.vses]]
@@ -129,7 +128,6 @@ class CsvBatch:
         of utility for all methods given.
 
         for instance:
-        csvs = CsvBatch(PolyaModel(), [[Score(), baseRuns], [Mav(), medianRuns]], nvot=5, ncand=4, niter=3)
 
         >>> csvs = CsvBatch(PolyaModel(), [[Score(), baseRuns], [Mav(), medianRuns]], nvot=5, ncand=4, niter=3)
         >>> len(csvs.rows)
@@ -151,8 +149,8 @@ class CsvBatch:
     def saveFile(self, baseName="SimResults"):
         """print the result of doVse in an accessible format.
         for instance:
-        vses.saveFile()
 
+        csvs.saveFile()
         """
         i = 1
         while os.path.isfile(baseName + str(i) + ".csv"):
