@@ -29,8 +29,7 @@ class VseBatch:
         for instance:
         vses = VseBatch(PolyaModel(), [[Score(), baseRuns], [Mav(), medianRuns]], nvot=5, ncand=4, niter=3)
 
-        >>> vses = VseBatch(PolyaModel(), [[Score(), baseRuns], [Mav(), medianRuns],
-            [ScoreIRunoff(), medianRuns]], nvot=5, ncand=4, niter=3)
+        >>> vses = VseBatch(PolyaModel(), [[Score(), baseRuns], [Mav(), medianRuns]], nvot=5, ncand=4, niter=3)
         >>> [[len(y) for y in x] for x in [vses.methods, vses.vses]]
         [[2, 2], [2, 2, 2]]
         """
@@ -132,8 +131,7 @@ class CsvBatch:
         for instance:
         vses = VseBatch(PolyaModel(), [[Score(), baseRuns], [Mav(), medianRuns]], nvot=5, ncand=4, niter=3)
 
-        >>> vses = VseBatch(PolyaModel(), [[Score(), baseRuns], [Mav(), medianRuns],
-            [ScoreIRunoff(), medianRuns]], nvot=5, ncand=4, niter=3)
+        >>> vses = VseBatch(PolyaModel(), [[Score(), baseRuns], [Mav(), medianRuns]], nvot=5, ncand=4, niter=3)
         >>> [[len(y) for y in x] for x in [vses.methods, vses.vses]]
         [[2, 2], [2, 2, 2]]
         """
