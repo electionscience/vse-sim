@@ -1,6 +1,5 @@
 
-#DEBUG = True
-DEBUG = False  # Turn DEBUG off to run tests
+DEBUG = True
 
 def debug(*args):
     if DEBUG:

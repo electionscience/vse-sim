@@ -44,10 +44,10 @@ class VseBatch:
         self.methods = methods
         self.vses = vses
 
-    def printMe(self, comparisons):
+    def printMe(self):
         """print the result of doVse in an accessible format.
         for instance:
-        printVse(vses)
+        vses.printMe()
 
         """
         for i in range(len(self.methods)):
@@ -129,11 +129,11 @@ class CsvBatch:
         of utility for all methods given.
 
         for instance:
-        vses = VseBatch(PolyaModel(), [[Score(), baseRuns], [Mav(), medianRuns]], nvot=5, ncand=4, niter=3)
+        csvs = CsvBatch(PolyaModel(), [[Score(), baseRuns], [Mav(), medianRuns]], nvot=5, ncand=4, niter=3)
 
-        >>> vses = VseBatch(PolyaModel(), [[Score(), baseRuns], [Mav(), medianRuns]], nvot=5, ncand=4, niter=3)
-        >>> [[len(y) for y in x] for x in [vses.methods, vses.vses]]
-        [[2, 2], [2, 2, 2]]
+        >>> csvs = CsvBatch(PolyaModel(), [[Score(), baseRuns], [Mav(), medianRuns]], nvot=5, ncand=4, niter=3)
+        >>> len(csvs.rows)
+        54
         """
         rows = []
         emodel = str(model)
@@ -151,7 +151,7 @@ class CsvBatch:
     def saveFile(self, baseName="SimResults"):
         """print the result of doVse in an accessible format.
         for instance:
-        printVse(vses)
+        vses.saveFile()
 
         """
         i = 1

@@ -7,4 +7,4 @@ Testing uses pydoc, which should make most things pretty self-documenting.
 
 E.g.:
 
-    python3 -m doctest -v vse.py
+    python3 vse.py -v
