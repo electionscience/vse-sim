@@ -514,17 +514,17 @@ class V321(Mav):
         """3-2-1 Voting results.
 
         >>> V321().resultsFor(DeterministicModel(3)(5,3),V321().honBallot)[0]
-        [0.0, 2, 1]
+        [-0.75, 2, 1]
         >>> V321().results([[0,1,2]])[2]
         2
         >>> V321().results([[0,1,2],[2,1,0]])[1]
-        0.0
+        2.5
         >>> V321().results([[0,1,2]] * 4 + [[2,1,0]] * 3 + [[1,2,0]] * 2)
-        [0.0, 2, 1]
+        [1, 1.5, -0.25]
         >>> V321().results([[0,1,2,1]]*29 + [[1,2,0,1]]*30 + [[2,0,1,1]]*31 + [[1,1,1,2]]*10)
         [3, 0.5, 1, 0]
         >>> V321().results([[1,0,2,1]]*29 + [[0,2,1,1]]*30 + [[2,1,0,1]]*31 + [[1,1,1,2]]*10)
-        [0.0, 2, 1]
+        [3.375, 2.875, 0.25, 0]
         """
         candScores = list(zip(*ballots))
         n2s = [sum(1 if s>1 else 0 for s in c) for c in candScores]
@@ -652,18 +652,67 @@ class V321(Mav):
         return rememberBallots(stratBallot)
 
 class Schulze(Irv):
+    def resolveCycle(self, cmat, n):
+
+        beatStrength = [[0] * n] * n
+        numWins = [0] * n
+        for i in range(n):
+            for j in range(n):
+                if (i != j):
+                    if cmat[i][j] > cmat[j][i]:
+                        beatStrength[i][j] = cmat[i][j]
+                    else:
+                        beatStrength[i][j] = 0
+
+                for i in range(n):
+                    for j in range(n):
+                        if (i != j):
+                            for k in range(n):
+                                if (i != k and j != k):
+                                    beatStrength[j][k] = max ( beatStrength[j][k],
+                                        min ( beatStrength[j][i], beatStrength[i][k] ) )
+
+        for i in range(n):
+            for j in range(n):
+                if i != j:
+                    if beatStrength[i][j]>beatStrength[j][i]:
+                        numWins[i] += 1
+                    if beatStrength[i][j]==beatStrength[j][i] and i<j: #break ties deterministically
+                        numWins[i] += 1
+
+        return numWins
 
     def results(self, ballots, isHonest=False):
         """IRV results.
 
-        >>> Irv().resultsFor(DeterministicModel(3)(5,3),Irv().honBallot)[0]
-        [0, 1, 2]
-        >>> Irv().results([[0,1,2]])[2]
-        2
-        >>> Irv().results([[0,1,2],[2,1,0]])[1]
-        0
-        >>> Irv().results([[0,1,2]] * 4 + [[2,1,0]] * 3 + [[1,2,0]] * 2)
+        >>> Schulze().resultsFor(DeterministicModel(3)(5,3),Schulze().honBallot,isHonest=True)[0]
         [2, 0, 1]
+        >>> Schulze.extraEvents
+        {'scenario': 'cycle'}
+        >>> Schulze().results([[0,1,2]],isHonest=True)[2]
+        2
+        >>> Schulze.extraEvents
+        {'scenario': 'easy'}
+        >>> Schulze().results([[0,1,2],[2,1,0]],isHonest=True)[1]
+        1
+        >>> Schulze.extraEvents
+        {'scenario': 'easy'}
+        >>> Schulze().results([[0,1,2]] * 4 + [[2,1,0]] * 3 + [[1,2,0]] * 2,isHonest=True)
+        [1, 2, 0]
+        >>> Schulze.extraEvents
+        {'scenario': 'chicken'}
+        >>> Schulze().results([[0,1,2]] * 4 + [[2,1,0]] * 2 + [[1,2,0]] * 3,isHonest=True)
+        [1, 2, 0]
+        >>> Schulze.extraEvents
+        {'scenario': 'squeeze'}
+        >>> Schulze().results([[3,2,1,0]] * 5 + [[2,3,1,0]] * 2 + [[0,1,0,3]] * 6 + [[0,0,3,0]] * 3,isHonest=True)
+        [2, 3, 1, 0]
+        >>> Schulze.extraEvents
+        {'scenario': 'other'}
+        >>> Schulze().results([[3,0,0,0]] * 5 + [[2,3,0,0]] * 2 + [[0,0,0,3]] * 6 + [[0,0,3,0]] * 3,isHonest=True)
+        [3, 0, 1, 2]
+        >>> Schulze.extraEvents
+        {'scenario': 'spoiler'}
         """
         n = len(ballots[0])
         cmat = [[0] * n] * n
@@ -674,42 +723,42 @@ class Schulze(Irv):
                     cmat[i][j] = sum(sign(ballot[i] - ballot[j]) for ballot in ballots)
                     if cmat[i][j]>0:
                         numWins[i] += 1
-        order = sorted(enumerate(numWins),key=lambda x:-x[1])
-        if order[0][1] == n-1:
-            self.__class__.extraEvents["cycle"] = 0
+                    elif cmat[i][j]==0 and i<j:
+                        numWins[i] += 1
+        condOrder = sorted(enumerate(numWins),key=lambda x:-x[1])
+        if condOrder[0][1] == n-1:
+            cycle = 0
             result = numWins
         else: #cycle
-            self.__class__.extraEvents["cycle"] = 1
-            result = self.resolveCycle(cmat)
+            cycle = 1
+            result = self.resolveCycle(cmat, n)
             order = None
 
         if isHonest:
+            self.__class__.extraEvents = dict()
             #check scenarios
-            pluralityTally = [0] * n
-            plurality3Tally = [0] * 3
-            if order==None:
-                order = sorted(enumerate(result),key=lambda x:-x[1])
+            plurTally = [0] * n
+            plur3Tally = [0] * 3
+            cond3 = [c for c,v in condOrder[:3]]
+            if condOrder==None:
+                condOrder = sorted(enumerate(result),key=lambda x:-x[1])
             for b in ballots:
-                pluralityTally[b.index(max(b))] += 1
-                b3 = [b[c] for c,v in order[:3]]
-                plurality3Tally[b3.index(max(b3))] += 1
-            
+                b3 = [b[c] for c in cond3]
+                plurTally[b.index(max(b))] += 1
+                plur3Tally[b3.index(max(b3))] += 1
+            plurOrder = sorted(enumerate(plurTally),key=lambda x:-x[1])
+            plur3Order = sorted(enumerate(plur3Tally),key=lambda x:-x[1])
+            if cycle:
+                self.__class__.extraEvents["scenario"] = "cycle"
+            elif plurOrder[0][0] == condOrder[0][0]:
+                self.__class__.extraEvents["scenario"] = "easy"
+            elif plur3Order[0][0] == condOrder[0][0]:
+                self.__class__.extraEvents["scenario"] = "spoiler"
+            elif plur3Order[2][0] == condOrder[0][0]:
+                self.__class__.extraEvents["scenario"] = "squeeze"
+            elif plur3Order[0][0] == condOrder[2][0]:
+                self.__class__.extraEvents["scenario"] = "chicken"
+            else:
+                self.__class__.extraEvents["scenario"] = "other"
 
-
-
-
-        if type(ballots) is not list:
-            ballots = list(ballots)
-        ncand = len(ballots[0])
-        results = [-1] * ncand
-        piles = [[] for i in range(ncand)]
-        loserpile = ballots
-        loser = -1
-        for i in range(ncand):
-            self.resort(loserpile, loser, ncand, piles)
-            negscores = ["x" if isnum(pile) else -len(pile)
-                         for pile in piles]
-            loser = self.winner(negscores)
-            results[loser] = i
-            loserpile, piles[loser] = piles[loser], -1
-        return results
+        return result
