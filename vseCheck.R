@@ -46,18 +46,18 @@ scenarioLabelBase2 = c("2. Easy\n(Cond #1 = Plur #1)",
                       "3. Spoiler\n(Cond #1 = Plur3 #1)",
                       "1. Condorcet cycle\n"
 ) 
-scenarioLabelBase = c("2. Easy", 
-                      "5. Chicken dilem.",
-                      "6. Other",
-                      "4. Ctr. squeeze",
-                      "3. Spoiler",
-                      "1. Cond. cycle"
+scenarioLabelBase = c("2.Easy", 
+                      "5.Chicken dilem.",
+                      "6.Other",
+                      "4.Ctr. squeeze",
+                      "3.Spoiler",
+                      "1.Cond. cycle"
 ) 
-scenarioLabel = paste0(scenarioLabelBase," ",round(scenarioFreq[scenarios,freq]*100),"%")
+scenarioLabel = paste0(scenarioLabelBase," (~",round(scenarioFreq[scenarios,freq]*100),"%)")
 honestScenarios[,method:=factor(hmethodlist,levels=methodOrder,labels=paste(c(paste0(" ",as.character(1:9)),as.character(10:12)),methodOrder,sep=". "))]
 honestScenarios[,strategy:=factor(chooser, levels=interestingStrats,labels=c("100% honest",
                                                                              "100% strategic",
                                                                              "100% 1-sided strategy","50% 1-sided strategy","50% strategic"))]
 honestScenarios[,`Scenario type`:=factor(scenario,levels=scenarios,labels=scenarioLabel)]
-scatterD3(data = honestScenarios, x = vse, y = method, col_var = strategy, symbol_var = `Scenario type`, left_margin = 90, xlim=c(0.4,1.0))
+scatterD3(data = honestScenarios, x = vse, y = method, col_var = strategy, symbol_var = `Scenario type`, left_margin = 90, xlim=c(0.4,1.0), size_var=frequency)
 
