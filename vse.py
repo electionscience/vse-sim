@@ -195,15 +195,15 @@ baseRuns = [OssChooser(),
 
            ]
 
-allSystems = [[Score(10), baseRuns],
-                [Score(1000), baseRuns],
+allSystems = [[Score(1000), baseRuns],
+                [Score(10), baseRuns],
                 [Score(2), baseRuns],
                 [Score(1), baseRuns],
-                [Srv(), baseRuns],
+                [Srv(10), baseRuns],
                 [Srv(2), baseRuns],
-                [Srv(1), baseRuns],
                 [Plurality(), baseRuns],
                 [Irv(), baseRuns],
+                [Schulze(), baseRuns],
                 [V321(), baseRuns],
                 [Mav(), medianRuns],
                 [Mj(), medianRuns]
