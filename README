@@ -4,3 +4,17 @@ simulations for various voting systems.
 Requirements: python3, scipy, pydoc
 
 Testing uses pydoc, which should make most things pretty self-documenting.
+
+E.g.:
+
+    python3 vse.py -v
+
+# Running simulations
+
+Try
+
+    $ python3
+    >>> csvs = CsvBatch(PolyaModel(), [[Score(), baseRuns], [Mav(), medianRuns]], nvot=5, ncand=4, niter=3)
+    >>> csvs.saveFile()
+
+and look for the results in `SimResults1.csv`
