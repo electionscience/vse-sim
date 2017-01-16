@@ -18,9 +18,11 @@ class Voter(tuple):
 
     @classmethod
     def rand(cls, ncand):
-        """Create a random voter with standard normal utilities.
+        """Create a random voter with an independent standard normal
+        utility for each candidate.
 
-        ncand determines how many utilities a voter should have
+        ncand determines the number of candidates a voter should have
+        utilities for.
             >>> [len(Voter.rand(i)) for i in list(range(5))]
             [0, 1, 2, 3, 4]
 
@@ -116,7 +118,7 @@ class Electorate(list):
     Each voter is a list of candidate utilities"""
     @cached_property
     def socUtils(self):
-        """Just get the social utilities.
+        """Return mean utility across electorate for each candidate: their social utilities.
 
         >>> e = Electorate([[1,2],[3,4]])
         >>> e.socUtils
