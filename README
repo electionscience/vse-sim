@@ -7,7 +7,10 @@ Testing uses pydoc, which should make most things pretty self-documenting.
 
 E.g.:
 
-    python3 vse.py -v
+    python3 -m doctest methods.py
+    python3 -m doctest voterModels.py
+    python3 -m doctest dataClasses.py
+    python3 vse.py
 
 # Running simulations
 

@@ -63,7 +63,7 @@ class VseBatch:
     def save(self, fn="vseresults.txt"):
 
         out = open(fn, "wb")
-        out.writeLn()
+        # out.writeLn()
         head, body = self.methods, self.vses
         lines = []
         headItems = []

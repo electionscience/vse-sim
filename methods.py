@@ -171,6 +171,8 @@ def Score(topRank=10, asClass=False):
     return Score0to()
 
 def Srv(topRank=10):
+    "Score Runoff Voting"
+
     score0to = Score(topRank,True)
     class Srv0to(score0to):
 
