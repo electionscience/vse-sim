@@ -13,7 +13,7 @@ from stratFunctions import *
 
 class VseOneRun:
     @autoassign
-    def __init__(self, result, tally, strat):
+    def __init__(self, result, tallyItems, strat):
         pass
 
 class VseMethodRun:
@@ -109,7 +109,7 @@ class Method:
     def __str__(self):
         return self.__class__.__name__
 
-    def results(self, ballots, isHonest):
+    def results(self, ballots, **kwargs):
         """Combines ballots into results. Override for comparative
         methods.
 
@@ -139,7 +139,7 @@ class Method:
         function. But the base version just returns the honBallot function."""
         return self.honBallot
 
-    def resultsFor(self, voters, chooser, tally=None, isHonest=False):
+    def resultsFor(self, voters, chooser, tally=None, **kwargs):
         """create ballots and get results.
 
         Again, test on subclasses.
@@ -147,9 +147,11 @@ class Method:
         if tally is None:
             tally = SideTally()
         tally.initKeys(chooser)
-        return (self.results([chooser(self.__class__, voter, tally)
+        return dict(results=self.results([chooser(self.__class__, voter, tally)
                                   for voter in voters],
-                              isHonest), chooser.__name__)
+                              **kwargs),
+                chooser=chooser.__name__,
+                tally=tally)
 
     def multiResults(self, voters, chooserFuns=(), media=lambda x,t:x):
         """Runs two base elections: first with honest votes, then
@@ -162,17 +164,19 @@ class Method:
         """
         honTally = SideTally()
         self.__class__.extraEvents = dict()
-        hon = self.resultsFor(voters, self.honBallotFor(voters), honTally, True)
+        hon = self.resultsFor(voters, self.honBallotFor(voters), honTally, isHonest=True)
 
         stratTally = SideTally()
-        info = media(hon[0], stratTally)
+        info = media(hon["results"], stratTally)
         strat = self.resultsFor(voters, self.stratBallotFor(info), stratTally)
         extraTallies = Tallies()
-        extras = [self.resultsFor(voters, self.ballotChooserFor(chooserFun), aTally)
-                  for (chooserFun, aTally) in zip(chooserFuns, extraTallies)]
-        return [([(hon, honTally), (strat, stratTally)] +
-                list(zip(extras, list(extraTallies)))),
-                list(self.__class__.extraEvents.items())]
+        results = ([strat] +
+                [self.resultsFor(voters, self.ballotChooserFor(chooserFun), aTally)
+                    for (chooserFun, aTally) in zip(chooserFuns, extraTallies)]
+                  )
+        return ([(hon["results"], hon["chooser"],
+                        list(self.__class__.extraEvents.items()))]  +
+                [(r["results"], r["chooser"], [r["tally"]]) for r in results])
 
     def vseOn(self, voters, chooserFuns=(), **args):
         """Finds honest and strategic voter satisfaction efficiency (VSE)
@@ -187,7 +191,7 @@ class Method:
         #pprint.pprint(multiResults)
         vses = VseMethodRun(self.__class__, chooserFuns,
                     [VseOneRun([(utils[self.winner(result)] - rand) / (best - rand)],tally,chooser)
-                        for ((result, chooser), tally) in multiResults[0]])
+                        for (result, chooser, tally) in multiResults[0]])
         vses.extraEvents=multiResults[1]
         return vses
 
@@ -198,7 +202,7 @@ class Method:
         rand = mean(utils)
         rows = list()
         nvot=len(voters)
-        for ((result, chooser), tally) in multiResults[0]:
+        for (result, chooser, tallyItems) in multiResults:
             row = {
                 "eid":eid,
                 "emodel":emodel,
@@ -212,23 +216,23 @@ class Method:
                 "vse":(utils[self.winner(result)] - rand) / (best - rand)
             }
             #print(tally)
-            for (i, (k, v)) in enumerate(tally.items()):
+            for (i, (k, v)) in enumerate(tallyItems):
                 #print("Result: tally ",i,k,v)
                 row["tallyName"+str(i)] = str(k)
                 row["tallyVal"+str(i)] = str(v)
             rows.append(row)
-        if len(multiResults[1]):
-            row = {
-                "eid":eid,
-                "emodel":emodel,
-                "method":self.__class__.__name__,
-                "chooser":"extraEvents",
-                "util":None
-            }
-            for (i, (k, v)) in enumerate(multiResults[1]):
-                row["tallyName"+str(i)] = str(k)
-                row["tallyVal"+str(i)] = str(v)
-            rows.append(row)
+        # if len(multiResults[1]):
+        #     row = {
+        #         "eid":eid,
+        #         "emodel":emodel,
+        #         "method":self.__class__.__name__,
+        #         "chooser":"extraEvents",
+        #         "util":None
+        #     }
+        #     for (i, (k, v)) in enumerate(multiResults[1]):
+        #         row["tallyName"+str(i)] = str(k)
+        #         row["tallyVal"+str(i)] = str(v)
+        #     rows.append(row)
         return(rows)
 
 

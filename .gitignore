@@ -5,3 +5,6 @@ __pycache__
 *.csv
 *.rtf
 *.bak
+.Rhistory
+ez_setup.py
+get-pip.py

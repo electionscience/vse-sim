@@ -130,7 +130,7 @@ def Score(topRank=10, asClass=False):
             honest ballots work as expected
                 >>> Score().honBallot(Score, Voter([5,6,7]))
                 [0.0, 5.0, 10.0]
-                >>> Score().resultsFor(DeterministicModel(3)(5,3),Score().honBallot)
+                >>> Score().resultsFor(DeterministicModel(3)(5,3),Score().honBallot)["results"]
                 [4.0, 6.0, 5.0]
             """
             bot = min(utils)
@@ -176,10 +176,10 @@ def Srv(topRank=10):
     score0to = Score(topRank,True)
     class Srv0to(score0to):
 
-        def results(self, ballots, isHonest=False):
+        def results(self, ballots, **kwargs):
             """Srv results.
 
-            >>> Srv().resultsFor(DeterministicModel(3)(5,3),Irv().honBallot)[0]
+            >>> Srv().resultsFor(DeterministicModel(3)(5,3),Irv().honBallot)["results"]
             [0, 1, 2]
             >>> Srv().results([[0,1,2]])[2]
             2
@@ -188,7 +188,7 @@ def Srv(topRank=10):
             >>> Srv().results([[0,1,2]] * 4 + [[2,1,0]] * 3 + [[1,2,0]] * 2)
             [2, 0, 1]
             """
-            baseResults = super(Srv0to, self).results(ballots, isHonest=False)
+            baseResults = super(Srv0to, self).results(ballots, **kwargs)
             (runnerUp,top) = sorted(range(len(baseResults)), key=lambda i: baseResults[i])[-2:]
             upset = sum(sign(ballot[runnerUp] - ballot[top]) for ballot in ballots)
             if upset > 0:
@@ -424,10 +424,10 @@ class Irv(Method):
                     if nextrank < 0:
                         raise
 
-    def results(self, ballots, isHonest=False):
+    def results(self, ballots, **kwargs):
         """IRV results.
 
-        >>> Irv().resultsFor(DeterministicModel(3)(5,3),Irv().honBallot)[0]
+        >>> Irv().resultsFor(DeterministicModel(3)(5,3),Irv().honBallot)["results"]
         [0, 1, 2]
         >>> Irv().results([[0,1,2]])[2]
         2
@@ -512,10 +512,10 @@ class V321(Mav):
     baseCuts = [-.1,.8]
     specificPercentiles = [45, 75]
 
-    def results(self, ballots, isHonest=False):
+    def results(self, ballots, isHonest=False, **kwargs):
         """3-2-1 Voting results.
 
-        >>> V321().resultsFor(DeterministicModel(3)(5,3),V321().honBallot)[0]
+        >>> V321().resultsFor(DeterministicModel(3)(5,3),V321().honBallot)["results"]
         [-0.75, 2, 1]
         >>> V321().results([[0,1,2]])[2]
         2
@@ -627,6 +627,7 @@ class V321(Mav):
                             rating -= 1
                 isStrat = (voter[top3[0]] == max(voter[c] for c in top3))
                 return dict(strat=ballot, isStrat=isStrat, stratGap=stratGap)
+            stratBallo2.__name__ = "stratBallot" #God, that's ugly.
             return stratBallo2
 
         if self.extraEvents["4beats1"]:
@@ -648,6 +649,7 @@ class V321(Mav):
                         return dict(strat=ballot, isStrat=True, stratGap=stratGap)
 
                 return stratBallot(cls,voter)
+            stratBallo3.__name__ = "stratBallot" #God, that's ugly.
             return stratBallo3
 
 
@@ -684,10 +686,10 @@ class Schulze(Irv):
 
         return numWins
 
-    def results(self, ballots, isHonest=False):
+    def results(self, ballots, isHonest=False, **kwargs):
         """IRV results.
 
-        >>> Schulze().resultsFor(DeterministicModel(3)(5,3),Schulze().honBallot,isHonest=True)[0]
+        >>> Schulze().resultsFor(DeterministicModel(3)(5,3),Schulze().honBallot,isHonest=True)["results"]
         [2, 0, 1]
         >>> Schulze.extraEvents
         {'scenario': 'cycle'}
