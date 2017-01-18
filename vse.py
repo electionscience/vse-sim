@@ -78,14 +78,14 @@ class CsvBatch:
             keys.extend(["tallyName"+str(n),"tallyVal"+str(n)])
         keys = uniquify(keys)
         myFile = open(baseName + str(i) + ".csv", "w")
-        print("# " + str(media = self.media.__name__,
-                         version = self.repo_version,
-                         seed=self.seed,
-                         model=self.model,
-                         methods=self.methods,
-                         nvot=self.nvot,
-                         ncand=self.ncand,
-                         niter=self.niter),
+        print("# " + str(dict(media = self.media.__name__,
+                             version = self.repo_version,
+                             seed=self.seed,
+                             model=self.model,
+                             methods=self.methods,
+                             nvot=self.nvot,
+                             ncand=self.ncand,
+                             niter=self.niter)),
             file=myFile)
         dw = csv.DictWriter(myFile, keys, restval = "NA")
         dw.writeheader()
