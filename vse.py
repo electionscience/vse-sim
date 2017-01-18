@@ -16,6 +16,9 @@ from stratFunctions import *
 from methods import *
 from uuid import uuid4
 import csv, os
+from git import Repo
+join = os.path.join
+
 
 
 
@@ -29,7 +32,8 @@ def uniquify(seq):
 
 class CsvBatch:
     @autoassign
-    def __init__(self, model, methods, nvot, ncand, niter, baseName = None, media=truth):
+    def __init__(self, model, methods, nvot, ncand, niter,
+            baseName = None, media=truth, seed=None):
         """A harness function which creates niter elections from model and finds three kinds
         of utility for all methods given.
 
@@ -41,6 +45,9 @@ class CsvBatch:
         """
         rows = []
         emodel = str(model)
+        if (seed is None):
+            seed = baseName
+        random.seed(seed)
         for i in range(niter):
             eid = uuid4()
             electorate = model(nvot, ncand)
@@ -67,7 +74,9 @@ class CsvBatch:
             keys.extend(["tallyName"+str(n),"tallyVal"+str(n)])
         keys = uniquify(keys)
         myFile = open(baseName + str(i) + ".csv", "w")
-        print("# media = " + self.media.__name__, file=myFile)
+        print("# " + str(media = self.media.__name__,
+                         version = )
+            file=myFile)
         dw = csv.DictWriter(myFile, keys, restval = "NA")
         dw.writeheader()
         for r in self.rows:
