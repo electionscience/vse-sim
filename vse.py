@@ -85,7 +85,7 @@ class CsvBatch:
                          methods=self.methods,
                          nvot=self.nvot,
                          ncand=self.ncand,
-                         niter=self.niter)
+                         niter=self.niter),
             file=myFile)
         dw = csv.DictWriter(myFile, keys, restval = "NA")
         dw.writeheader()
