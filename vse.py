@@ -46,7 +46,7 @@ class CsvBatch:
         rows = []
         emodel = str(model)
         if (seed is None):
-            seed = baseName
+            seed = baseName + str(niter)
         random.seed(seed)
         for i in range(niter):
             eid = uuid4()
@@ -75,7 +75,8 @@ class CsvBatch:
         keys = uniquify(keys)
         myFile = open(baseName + str(i) + ".csv", "w")
         print("# " + str(media = self.media.__name__,
-                         version = )
+                         version =
+                         self, model, methods, nvot, ncand, niter)
             file=myFile)
         dw = csv.DictWriter(myFile, keys, restval = "NA")
         dw.writeheader()
