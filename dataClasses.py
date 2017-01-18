@@ -68,9 +68,17 @@ class SideTally(defaultdict):
 
     def fullSerialize(self):
         try:
-            return [self[key] for key in self.keys()]
+            kl = self.keyList
         except AttributeError:
-            return []
+            return [self[key] for key in self.keys()]
+
+    def itemList(self):
+        try:
+            kl = self.keyList
+            return ([(k, self[k]) for k in kl] +
+                    [(k, self[k]) for k in self.keys() if k not in kl])
+        except AttributeError:
+            return list(self.items())
 
 class Tallies(list):
     """Used (ONCE) as an enumerator, gives an inexhaustible flow of SideTally objects.
@@ -176,7 +184,7 @@ class Method:
                   )
         return ([(hon["results"], hon["chooser"],
                         list(self.__class__.extraEvents.items()))]  +
-                [(r["results"], r["chooser"], [r["tally"]]) for r in results])
+                [(r["results"], r["chooser"], r["tally"].itemList()) for r in results])
 
     def vseOn(self, voters, chooserFuns=(), **args):
         """Finds honest and strategic voter satisfaction efficiency (VSE)
@@ -215,7 +223,7 @@ class Method:
                 "util":utils[self.winner(result)],
                 "vse":(utils[self.winner(result)] - rand) / (best - rand)
             }
-            #print(tally)
+            print(tallyItems)
             for (i, (k, v)) in enumerate(tallyItems):
                 #print("Result: tally ",i,k,v)
                 row["tallyName"+str(i)] = str(k)
