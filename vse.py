@@ -47,6 +47,7 @@ class CsvBatch:
         emodel = str(model)
         if (seed is None):
             seed = baseName + str(niter)
+            self.seed = seed
         random.seed(seed)
         repo = Repo(os.getcwd())
         if not force:
