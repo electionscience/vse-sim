@@ -33,7 +33,7 @@ def uniquify(seq):
 class CsvBatch:
     @autoassign
     def __init__(self, model, methods, nvot, ncand, niter,
-            baseName = None, media=truth, seed=None):
+            baseName = None, media=truth, seed=None, force=False):
         """A harness function which creates niter elections from model and finds three kinds
         of utility for all methods given.
 
@@ -49,7 +49,8 @@ class CsvBatch:
             seed = baseName + str(niter)
         random.seed(seed)
         repo = Repo(os.getcwd())
-        assert not repo.is_dirty()
+        if not force:
+            assert not repo.is_dirty()
         self.repo_version = repo.head.commit.hexsha
         for i in range(niter):
             eid = uuid4()
