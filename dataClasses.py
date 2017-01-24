@@ -121,11 +121,22 @@ class Method:
         """Combines ballots into results. Override for comparative
         methods.
 
+        Ballots is an iterable of list-or-tuple of numbers (utility) higher is better for the choice of that index.
+
+        Returns a results-array which should be a list of the same length as a ballot with a number (higher is better) for the choice at that index.
+
         Test for subclasses, makes no sense to test this method in the abstract base class.
         """
         if type(ballots) is not list:
             ballots = list(ballots)
         return list(map(self.candScore,zip(*ballots)))
+
+    @staticmethod #cls is provided explicitly, not through binding
+    #@rememberBallot
+    def honBallot(cls, utils):
+        """Takes utilities and returns an honest ballot
+        """
+        raise NotImplementedError("{} needs honBallot".format(cls))
 
     @staticmethod
     def winner(results):
@@ -146,6 +157,11 @@ class Method:
         """This is where you would do any setup necessary and create an honBallot
         function. But the base version just returns the honBallot function."""
         return self.honBallot
+
+    def stratBallotFor(self, info):
+        """Returns a (function which takes utilities and returns a strategic ballot)
+        for the given "polling" info."""
+        return lambda cls, utilities, stratTally: utilities
 
     def resultsFor(self, voters, chooser, tally=None, **kwargs):
         """create ballots and get results.

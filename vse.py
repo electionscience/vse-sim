@@ -16,7 +16,6 @@ from stratFunctions import *
 from methods import *
 from uuid import uuid4
 import csv, os
-from git import Repo
 join = os.path.join
 
 
@@ -46,12 +45,16 @@ class CsvBatch:
         rows = []
         emodel = str(model)
         if (seed is None):
-            seed = baseName + str(niter)
+            seed = (baseName or '') + str(niter)
         random.seed(seed)
-        repo = Repo(os.getcwd())
-        if not force:
-            assert not repo.is_dirty()
-        self.repo_version = repo.head.commit.hexsha
+        try:
+            from git import Repo
+            repo = Repo(os.getcwd())
+            if not force:
+                assert not repo.is_dirty()
+            self.repo_version = repo.head.commit.hexsha
+        except:
+            self.repo_version = 'unknown repo version'
         for i in range(niter):
             eid = uuid4()
             electorate = model(nvot, ncand)
@@ -131,7 +134,8 @@ allSystems = [[Score(1000), baseRuns],
                 [Schulze(), baseRuns],
                 [V321(), baseRuns],
                 [Mav(), medianRuns],
-                [Mj(), medianRuns]
+                [Mj(), medianRuns],
+                [IRNR(), baseRuns],
                  ]
 
 if __name__ == "__main__":
