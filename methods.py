@@ -1,5 +1,5 @@
 
-from mydecorators import autoassign, cached_property, setdefaultattr
+from mydecorators import autoassign, cached_property, setdefaultattr, decorator
 import random
 from numpy.lib.scimath import sqrt
 from numpy.core.fromnumeric import mean, std
@@ -50,32 +50,32 @@ class Plurality(Method):
         """
         return cls.oneVote(utils, cls.winner(utils))
 
-    def stratBallotFor(self, info):
+    def xstratBallotFor(self, info):
         """Returns a (function which takes utilities and returns a strategic ballot)
         for the given "polling" info.
 
         >>> Plurality().stratBallotFor([3,2,1])(Plurality, Voter([-3,-2,-1]))
         [0, 1, 0]
         """
+        pass
 
-        places = sorted(enumerate(info),key=lambda x:-x[1]) #from high to low
-        #print("placesxx",places)
-        @rememberBallots
-        def stratBallot(cls, voter):
+    @classmethod
+    def stratBallot(cls, voter, info, places,
+                        frontId, frontResult, ruId, ruResult):
+        stratGap = voter[ruId] - voter[frontId]
+        if stratGap <= 0:
+            #winner is preferred; be complacent.
+            isStrat = False
+            strat = cls.oneVote(voter, frontId)
+        else:
+            #runner-up is preferred; be strategic in iss run
+            isStrat = True
+            #sort cuts high to low
+            #cuts = (cuts[1], cuts[0])
+            strat = cls.oneVote(voter, ruId)
+        return dict(strat=strat, isStrat=isStrat, stratGap=stratGap)
 
-            stratGap = voter[places[1][0]] - voter[places[0][0]]
-            if stratGap <= 0:
-                #winner is preferred; be complacent.
-                isStrat = False
-                strat = cls.oneVote(voter, places[0][0])
-            else:
-                #runner-up is preferred; be strategic in iss run
-                isStrat = True
-                #sort cuts high to low
-                #cuts = (cuts[1], cuts[0])
-                strat = cls.oneVote(voter, places[1][0])
-            return dict(strat=strat, isStrat=isStrat, stratGap=stratGap)
-        return stratBallot
+
 
 def Score(topRank=10, asClass=False):
     class Score0to(Method):
@@ -267,7 +267,6 @@ class Mav(Method):
 
         honest ballot works as intended, gives highest grade to highest utility:
             >>> Mav().honBallot(Mav, Voter([-1,-0.5,0.5,1,1.1]))
-            3
             [0, 1, 2, 3, 4]
 
         Even if they don't rate at least an honest "B":
@@ -309,11 +308,11 @@ class Mav(Method):
         """
         places = sorted(enumerate(info),key=lambda x:-x[1]) #from high to low
         #print("places",places)
-        front = (places[0][0], places[1][0], places[0][1], places[1][1])
+        ((frontId,frontResult), (ruId, ruResult)) = places[0:2]
 
         @rememberBallots
         def stratBallot(cls, voter):
-            frontUtils = [voter[front[0]], voter[front[1]]] #utils of frontrunners
+            frontUtils = [voter[frontId], voter[ruId]] #utils of frontrunners
             stratGap = frontUtils[1] - frontUtils[0]
             if stratGap is 0:
                 strat = extraStrat = [(4 if (util >= frontUtils[0]) else 0)
@@ -333,9 +332,9 @@ class Mav(Method):
                 #print("lll312")
                 #print(self.baseCuts, front)
                 cutoffs = [(  (min(frontUtils[0], self.baseCuts[i]))
-                                 if (i < floor(front[3])) else
+                                 if (i < floor(ruResult)) else
                             ( (frontUtils[1])
-                                 if (i < floor(front[2]) + 1) else
+                                 if (i < floor(frontResult) + 1) else
                               min(top, self.baseCuts[i])
                               ))
                            for i in range(len(self.baseCuts))]

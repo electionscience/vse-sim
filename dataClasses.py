@@ -1,5 +1,5 @@
 
-from mydecorators import autoassign, cached_property, setdefaultattr
+from mydecorators import autoassign, cached_property, setdefaultattr, decorator
 import random
 from numpy.lib.scimath import sqrt
 from numpy.core.fromnumeric import mean, std
@@ -8,6 +8,7 @@ from numpy.ma.core import floor
 from test.test_binop import isnum
 from debugDump import *
 from uuid import uuid4
+
 
 from stratFunctions import *
 
@@ -253,6 +254,18 @@ class Method:
         ballotChooser.__name__ = chooserFun.getName()
         return ballotChooser
 
+    def stratBallotFor(self,info):
+
+        places = sorted(enumerate(info),key=lambda x:-x[1]) #from high to low
+        #print("places",places)
+        ((frontId,frontResult), (ruId, ruResult)) = places[0:2]
+        @rememberBallots
+        def stratBallot(cls, voter):
+            return cls.stratBallot(voter, info, places,
+                                frontId, frontResult, ruId, ruResult)
+        return stratBallot
+
+@decorator
 def rememberBallot(fun):
     """A decorator for a function of the form xxxBallot(cls, voter)
     which memoizes the vote onto the voter in an attribute named <methName>_xxx
@@ -265,6 +278,7 @@ def rememberBallot(fun):
     getAndRemember.allTallyKeys = lambda:[]
     return getAndRemember
 
+@decorator
 def rememberBallots(fun):
     """A decorator for a function of the form xxxBallot(cls, voter)
     which memoizes the vote onto the voter in an attribute named <methName>_xxx

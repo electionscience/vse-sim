@@ -1,7 +1,7 @@
 
 from imp import reload
 
-from mydecorators import autoassign, cached_property, setdefaultattr
+from mydecorators import autoassign, cached_property, setdefaultattr, timeit
 import random
 from numpy.lib.scimath import sqrt
 from numpy.core.fromnumeric import mean, std
@@ -31,6 +31,7 @@ def uniquify(seq):
     return checked
 
 class CsvBatch:
+    @timeit
     @autoassign
     def __init__(self, model, methods, nvot, ncand, niter,
             baseName = None, media=truth, seed=None, force=False):

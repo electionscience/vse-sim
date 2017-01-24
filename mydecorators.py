@@ -1,8 +1,16 @@
-from functools import wraps
+from functools import wraps, update_wrapper
 from inspect import getargspec, isfunction
 from itertools import starmap
 
 _missing = object()
+
+
+def decorator(d):
+    "Make function d a decorator: d wraps a function fn."
+    def _d(fn):
+        return update_wrapper(d(fn), fn)
+    return _d
+decorator = decorator(decorator)(decorator)
 
 def setdefaultattr(obj, name, value):
     try:
@@ -11,25 +19,26 @@ def setdefaultattr(obj, name, value):
         setattr(obj, name, value)
     return value
 
+@decorator
 def autoassign(*names, **kwargs):
     """
     autoassign(function) -> method
     autoassign(*argnames) -> decorator
     autoassign(exclude=argnames) -> decorator
-    
+
     allow a method to assign (some of) its arguments as attributes of
     'self' automatically.  E.g.
-    
+
     >>> class Foo(object):
     ...     @autoassign
     ...     def __init__(self, foo, bar): pass
-    ... 
+    ...
     >>> breakfast = Foo('spam', 'eggs')
     >>> breakfast.foo, breakfast.bar
     ('spam', 'eggs')
-    
+
     To restrict autoassignment to 'bar' and 'baz', write:
-    
+
         @autoassign('bar', 'baz')
         def method(self, foo, bar, baz): ...
 
@@ -66,6 +75,7 @@ def autoassign(*names, **kwargs):
 import collections
 import functools
 
+@decorator
 class memoized(object):
     '''Decorator. Caches a function's return value each time it is called.
     If called later with the same arguments, the cached value is returned
@@ -91,8 +101,9 @@ class memoized(object):
     def __get__(self, obj, objtype):
         '''Support instance methods.'''
         return functools.partial(self.__call__, obj)
-    
-    
+
+
+@decorator
 class cached_property(object):
     """A decorator that converts a function into a lazy property.  The
     function wrapped is called the first time to retrieve the result
@@ -133,21 +144,36 @@ class cached_property(object):
             obj.__dict__[self.__name__] = value
         return value
 
-    
+
+@decorator
 class curried(object):
     '''
     Decorator that returns a function that keeps returning functions
     until all arguments are supplied; then the original function is
     evaluated.
     '''
-    
+
     def __init__(self, func, *a):
         self.func = func
         self.args = a
-    
+
     def __call__(self, *a):
         args = self.args + a
         if len(args) < self.func.func_code.co_argcount:
             return curried(self.func, *args)
         else:
             return self.func(*args)
+
+@decorator
+def timeit(method):
+
+    def timed(*args, **kw):
+        ts = time.time()
+        result = method(*args, **kw)
+        te = time.time()
+
+        print('%r (%r, %r) %2.2f sec' %
+              (method.__name__, args, kw, te-ts))
+        return result
+
+    return timed
