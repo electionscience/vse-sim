@@ -72,6 +72,8 @@ class Borda(Method):
                         frontId, frontResult, ruId, ruResult):
         """Mutates the `ballot` argument to be a strategic ballot.
 
+        >>> Borda().stratBallotFor([4,5,2,1])(Borda, Voter([-4,-5,-2,-1]))
+        [3, 0, 1, 2]
         """
         nRanks = min(cls.nRanks,n)
         if stratGap <= 0:
@@ -85,6 +87,7 @@ class Borda(Method):
         # (don't) return dict(strat=ballot, isStrat=isStrat, stratGap=stratGap)
 
 RankedMethod = Borda #alias
+RatedMethod = RankedMethod #Should have same strategies available, plus more
 
 class Plurality(RankedMethod):
     candScore = staticmethod(mean)
@@ -119,7 +122,7 @@ class Plurality(RankedMethod):
         """Takes utilities and returns a strategic ballot
         for the given "polling" info.
 
-        >>> Plurality().stratBallotFor([3,2,1])(Plurality, Voter([-3,-2,-1]))
+        >>> Plurality().stratBallotFor([4,2,1])(Plurality, Voter([-4,-2,-1]))
         [0, 1, 0]
         """
         stratGap = voter[ruId] - voter[frontId]
@@ -527,45 +530,26 @@ class Irv(Method):
         return ballot
 
 
-    def stratBallotFor(self, info):
-        """Returns a function which takes utilities and returns a dict(
-            isStrat=
-        for the given "polling" info.
-
-
+    @classmethod
+    def fillStratBallot(cls, voter, info, places, n, stratGap, ballot,
+                        frontId, frontResult, ruId, ruResult):
+        """
         >>> Irv().stratBallotFor([3,2,1,0])(Irv,Voter([3,6,5,2]))
         [1, 2, 3, 0]
         """
-        ncand = len(info)
-
-        places = sorted(enumerate(info),key=lambda x:-x[1]) #high to low
-        @rememberBallots
-        def stratBallot(cls, voter):
-            stratGap = voter[places[1][0]] - voter[places[0][0]]
-            if stratGap < 0:
-                #winner is preferred; be complacent.
-                isStrat = False
-            else:
-                #runner-up is preferred; be strategic in iss run
-                isStrat = True
-                #sort cuts high to low #NOT FOR IRV
-                #places = (places[1], places[0])
-            i = ncand - 1
-            winnerQ = voter[places[0][0]]
-            ballot = [-1] * len(voter)
-            for nextLoser, loserScore in places[::-1][:-1]: #all but winner, low to high
-                if voter[nextLoser] > winnerQ:
-                    ballot[nextLoser] = i
-                    i -= 1
-            ballot[places[0][0]] = i
-            i -= 1
-            for nextLoser, loserScore in places[1:]:
-                if voter[nextLoser] <= winnerQ:
-                    ballot[nextLoser] = i
-                    i -= 1
-            assert(i == -1)
-            return dict(strat=ballot, isStrat=isStrat, stratGap=stratGap)
-        return stratBallot
+        i = n - 1
+        winnerQ = voter[frontId]
+        for nextLoser, loserScore in places[::-1][:-1]: #all but winner, low to high
+            if voter[nextLoser] > winnerQ:
+                ballot[nextLoser] = i
+                i -= 1
+        ballot[frontId] = i
+        i -= 1
+        for nextLoser, loserScore in places[1:]:
+            if voter[nextLoser] <= winnerQ:
+                ballot[nextLoser] = i
+                i -= 1
+        assert(i == -1)
 
 class V321(Mav):
     baseCuts = [-.1,.8]
@@ -827,7 +811,8 @@ class Schulze(Irv):
         return result
 
 
-class IRNR(Method):
+class IRNR(Irv):
+    stratMax = 10
     def results(self, ballots, **kwargs):
         enabled = [True] * len(ballots[0])
         numEnabled = sum(enabled)
@@ -867,8 +852,13 @@ class IRNR(Method):
         """
         return utils
 
-    def stratBallotFor(self, info):
-        """Returns a (function which takes utilities and returns a strategic ballot)
-        for the given "polling" info."""
-        # TODO: try to be strategic
-        return lambda cls, utilities, tally: utilities
+
+    def fillStratBallot(cls, voter, info, places, n, stratGap, ballot,
+                        frontId, frontResult, ruId, ruResult):
+        if stratGap <= 0:
+            ballot[frontId], ballot[ruId] = cls.stratMax, 0
+        else:
+            ballot[frontId], ballot[ruId] = 0, cls.stratMax
+        cls.fillPrefOrder(utils, ballot,
+            whichCands=[c for (c, r) in places[2:]],
+            nSlots = 1, lowSlot=1, remainderScore=0)
