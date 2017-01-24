@@ -22,6 +22,8 @@ from dataClasses import *
 
 ####EMs themeselves
 class Borda(Method):
+    candScore = staticmethod(mean)
+
     nRanks = 999 # infinity
 
     @staticmethod
@@ -90,7 +92,6 @@ RankedMethod = Borda #alias
 RatedMethod = RankedMethod #Should have same strategies available, plus more
 
 class Plurality(RankedMethod):
-    candScore = staticmethod(mean)
 
     nRanks = 2
 
@@ -698,7 +699,7 @@ class V321(Mav):
 
         return rememberBallots(stratBallot)
 
-class Schulze(Irv):
+class Schulze(RankedMethod):
     def resolveCycle(self, cmat, n):
 
         beatStrength = [[0] * n] * n
@@ -821,12 +822,14 @@ class Schulze(Irv):
             whichCands=decentOnes,
             lowSlot=n-len(decentOnes))
         if stratGap <= 0:
-            ballot[frontId], ballot[ruId] = n-len(decentOnes)-1, n-len(decentOnes)-2
+            #ballot[frontId], ballot[ruId] = n-len(decentOnes)-1, n-len(decentOnes)-2
+            ballot[frontId], ballot[ruId] = n-len(decentOnes)-1, 0
         else:
-            ballot[frontId], ballot[ruId] = n-len(decentOnes)-2, n-len(decentOnes)-1
+            #ballot[frontId], ballot[ruId] = n-len(decentOnes)-2, n-len(decentOnes)-1
+            ballot[frontId], ballot[ruId] = 0, n-len(decentOnes)-1
         cls.fillPrefOrder(voter, ballot,
             whichCands=[c for c in others if voter[c] < notTooBad],
-            lowSlot=0)
+            lowSlot=1)
 
 class Rp(Schulze):
     def resolveCycle(self, cmat, n):
@@ -862,7 +865,7 @@ class Rp(Schulze):
         return numWins
 
 
-class IRNR(Irv):
+class IRNR(RankedMethod):
     stratMax = 10
     def results(self, ballots, **kwargs):
         enabled = [True] * len(ballots[0])
@@ -912,6 +915,6 @@ class IRNR(Irv):
             ballot[frontId], ballot[ruId] = cls.stratMax, 0
         else:
             ballot[frontId], ballot[ruId] = 0, cls.stratMax
-        cls.fillPrefOrder(utils, ballot,
+        cls.fillPrefOrder(voter, ballot,
             whichCands=[c for (c, r) in places[2:]],
             nSlots = 1, lowSlot=1, remainderScore=0)

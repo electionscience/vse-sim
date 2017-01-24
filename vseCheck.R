@@ -22,9 +22,9 @@ mvse[chooser %in% c("honBallot","Oss.hon_strat.","Prob.strat50_hon50."),mean(uti
 fvse = fread("fuzzy5.csv")
 fvse[,mean(util-rand)/mean(best-rand),by=list(method,chooser)]
 
-fvse = fread("fuzzySchulze2.csv")
-fvse[,mean(util-rand)/mean(best-rand),by=list(method,chooser)]
-etype = fvse[method=="Schulze" & chooser=="extraEvents",tallyVal0,by=eid]
+fvse = fread("fuzzy14.csv")
+fuzVses = fvse[,mean(util-rand)/mean(best-rand),by=list(method,chooser)]
+etype = fvse[method=="Schulze" & chooser=="honBallot",tallyVal0,by=eid]
 names(etype) = c("eid","scenario")
 setkey(etype,eid)
 setkey(fvse,eid)
@@ -35,7 +35,9 @@ honestScenarios = fvse[chooser %in% interestingStrats,list(vse=mean(util-rand)/m
 write.csv(honestScenarios,"byScenario.csv")
 hmethodlist = honestScenarios[,method]
 methods = unique(hmethodlist)
-methodOrder = methods[c(7,11,12,8,9,4,3,2,1,6,5,10)]
+methodOrder = methods[c(7,8,13,14,9,#15, #IRNR
+                        10,11, #rp
+                        4,3,2,1,6,5,12)]
 scenarios = unique(fvse[,scenario])
 scenarioFreq = honestScenarios[,list(freq=mean(frequency)),by=scenario]
 setkey(scenarioFreq,scenario)
@@ -54,10 +56,11 @@ scenarioLabelBase = c("2.Easy",
                       "1.Cond. cycle"
 ) 
 scenarioLabel = paste0(scenarioLabelBase," (~",round(scenarioFreq[scenarios,freq]*100),"%)")
-honestScenarios[,method:=factor(hmethodlist,levels=methodOrder,labels=paste(c(paste0(" ",as.character(1:9)),as.character(10:12)),methodOrder,sep=". "))]
+honestScenarios[,method:=factor(hmethodlist,levels=methodOrder,labels=paste(c(paste0(" ",as.character(1:9)),as.character(10:length(methodOrder))),methodOrder,sep=". "))]
 honestScenarios[,strategy:=factor(chooser, levels=interestingStrats,labels=c("100% honest",
                                                                              "100% strategic",
                                                                              "100% 1-sided strategy","50% 1-sided strategy","50% strategic"))]
 honestScenarios[,`Scenario type`:=factor(scenario,levels=scenarios,labels=scenarioLabel)]
-scatterD3(data = honestScenarios, x = vse, y = method, col_var = strategy, symbol_var = `Scenario type`, left_margin = 90, xlim=c(0.4,1.0), size_var=frequency)
+honestScenarios[method==" 6. IRNR",vse:=-vse]
+scatterD3(data = honestScenarios, x = vse, y = method, col_var = strategy, symbol_var = `Scenario type`, left_margin = 90, xlim=c(-.2,1.0), size_var=frequency)
 

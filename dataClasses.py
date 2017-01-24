@@ -240,7 +240,7 @@ class Method:
                 "util":utils[self.winner(result)],
                 "vse":(utils[self.winner(result)] - rand) / (best - rand)
             }
-            print(tallyItems)
+            #print(tallyItems)
             for (i, (k, v)) in enumerate(tallyItems):
                 #print("Result: tally ",i,k,v)
                 row["tallyName"+str(i)] = str(k)

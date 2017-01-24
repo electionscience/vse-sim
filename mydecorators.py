@@ -1,6 +1,7 @@
 from functools import wraps, update_wrapper
 from inspect import getargspec, isfunction
 from itertools import starmap
+import time
 
 _missing = object()
 
