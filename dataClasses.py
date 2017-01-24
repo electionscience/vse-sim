@@ -159,8 +159,8 @@ class Method:
         function. But the base version just returns the honBallot function."""
         return self.honBallot
 
-    def stratBallotFor(self, info):
-        """Returns a (function which takes utilities and returns a strategic ballot)
+    def dummyBallotFor(self, info):
+        """Returns a (function which takes utilities and returns a dummy ballot)
         for the given "polling" info."""
         return lambda cls, utilities, stratTally: utilities
 
@@ -271,13 +271,16 @@ class Method:
         return ballotChooser
 
     def stratBallotFor(self,info):
+        """Returns a (function which takes utilities and returns a strategic ballot)
+        for the given "polling" info."""
 
         places = sorted(enumerate(info),key=lambda x:-x[1]) #from high to low
         #print("places",places)
         ((frontId,frontResult), (ruId, ruResult)) = places[0:2]
+        n = len(info)
         @rememberBallots
         def stratBallot(cls, voter):
-            return cls.stratBallot(voter, info, places,
+            return cls.stratBallot(voter, info, places, n,
                                 frontId, frontResult, ruId, ruResult)
         return stratBallot
 

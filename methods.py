@@ -21,16 +21,76 @@ from dataClasses import *
 #     return 0
 
 ####EMs themeselves
-class Plurality(Method):
+class Borda(Method):
+    nRanks = 999 # infinity
 
-    #>>> pqs = [Plurality().resultsFor(PolyaModel()(101,5),Plurality.honBallot)[0] for i in range(400)]
-    #>>> mean(pqs)
-    #0.20534653465346522
-    #>>> std(pqs)
-    #0.2157069704671751
-    bias = 0.2157069704671751
+    @staticmethod
+    def fillPrefOrder(voter, ballot,
+            whichCands=None, #None means "all"; otherwise, an iterable of cand indexes
+            lowSlot=0,
+            nSlots=None, #again, None means "all"
+            remainderScore=None #what to give candidates that don't fit in nSlots
+            ):
 
+        venum = list(enumerate(voter))
+        if whichCands:
+            venum = [venum[c] for c in whichCands]
+        prefOrder = sorted(venum,key=lambda x:-x[1]) #high to low
+        Borda.fillCands(ballot, prefOrder, lowSlot, nSlots, remainderScore)
+        #modifies ballot argument, returns nothing.
+
+    @staticmethod
+    def fillCands(ballot,
+            whichCands, #list of tuples starting with cand id, in descending order
+            lowSlot=0,
+            nSlots=None, #again, None means "all"
+            remainderScore=None #what to give candidates that don't fit in nSlots
+            ):
+        if nSlots is None:
+            nSlots = len(whichCands)
+        cur = lowSlot + nSlots - 1
+        for i in range(nSlots):
+            ballot[whichCands[i][0]] = cur
+            cur -= 1
+        if remainderScore is not None:
+            i += 1
+            while i < len(whichCands):
+                ballot[whichCands[i][0]] = remainderScore
+                i += 1
+        #modifies ballot argument, returns nothing.
+
+    @staticmethod #cls is provided explicitly, not through binding
+    @rememberBallot
+    def honBallot(cls, utils):
+        ballot = [0] * len(utils)
+        cls.fillPrefOrder(utils, ballot)
+        return ballot
+
+
+    @classmethod
+    def stratBallot(cls, voter, info, places, n,
+                        frontId, frontResult, ruId, ruResult):
+
+        stratGap = voter[ruId] - voter[frontId]
+        ballot = [0] * len(voter)
+        nRanks = min(cls.nRanks,n)
+        isStrat = stratGap > 0
+        if not isStrat:
+            ballot[frontId], ballot[ruId] = (nRanks - 1), 0
+        else:
+            ballot[frontId], ballot[ruId] = 0, (nRanks - 1)
+        nRanks -= 2
+        if nRanks > 0:
+            cls.fillCands(ballot, places[2:][::-1],
+                lowSlot=1, nSlots=nRanks, remainderScore=0)
+        return dict(strat=ballot, isStrat=isStrat, stratGap=stratGap)
+
+RankedMethod = Borda #alias
+
+class Plurality(RankedMethod):
     candScore = staticmethod(mean)
+
+    nRanks = 2
 
     @staticmethod
     def oneVote(utils, forWhom):
@@ -48,20 +108,21 @@ class Plurality(Method):
         >>> Plurality().stratBallotFor([3,2,1])(Plurality, Voter([-3,-2,-1]))
         [0, 1, 0]
         """
-        return cls.oneVote(utils, cls.winner(utils))
+        #return cls.oneVote(utils, cls.winner(utils))
+        ballot = [0] * len(utils)
+        cls.fillPrefOrder(utils, ballot,
+            nSlots = 1, lowSlot=1, remainderScore=0)
+        return ballot
 
-    def xstratBallotFor(self, info):
-        """Returns a (function which takes utilities and returns a strategic ballot)
+    @classmethod
+    def xxstratBallot(cls, voter, info, places, n,
+                        frontId, frontResult, ruId, ruResult):
+        """Takes utilities and returns a strategic ballot
         for the given "polling" info.
 
         >>> Plurality().stratBallotFor([3,2,1])(Plurality, Voter([-3,-2,-1]))
         [0, 1, 0]
         """
-        pass
-
-    @classmethod
-    def stratBallot(cls, voter, info, places,
-                        frontId, frontResult, ruId, ruResult):
         stratGap = voter[ruId] - voter[frontId]
         if stratGap <= 0:
             #winner is preferred; be complacent.
