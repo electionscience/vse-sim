@@ -766,3 +766,50 @@ class Schulze(Irv):
                 self.__class__.extraEvents["scenario"] = "other"
 
         return result
+
+
+class IRNR(Method):
+    def results(self, ballots, **kwargs):
+        enabled = [True] * len(ballots[0])
+        numEnabled = sum(enabled)
+        results = [None] * len(enabled)
+        while numEnabled > 1:
+            tsum = [0.0] * len(enabled)
+            for bal in ballots:
+                vsum = 0.0
+                for i, v in enumerate(bal):
+                    if enabled[i]:
+                        vsum += abs(v)
+                if vsum == 0.0:
+                    # TODO: count spoiled ballot
+                    continue
+                for i, v in enumerate(bal):
+                    if enabled[i]:
+                        tsum[i] += v / vsum
+            mini = None
+            minv = None
+            for i, v in enumerate(tsum):
+                if enabled[i]:
+                    if (minv is None) or (tsum[i] < minv):
+                        minv = tsum[i]
+                        mini = i
+            enabled[mini] = False
+            results[mini] = minv
+            numEnabled -= 1
+        for i, v in enumerate(tsum):
+            if enabled[i]:
+                results[i] = tsum[i]
+        return results
+
+    @staticmethod #cls is provided explicitly, not through binding
+    @rememberBallot
+    def honBallot(cls, utils):
+        """Takes utilities and returns an honest ballot
+        """
+        return utils
+
+    def stratBallotFor(self, info):
+        """Returns a (function which takes utilities and returns a strategic ballot)
+        for the given "polling" info."""
+        # TODO: try to be strategic
+        return lambda cls, utilities, tally: utilities
