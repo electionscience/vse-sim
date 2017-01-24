@@ -762,7 +762,7 @@ class Schulze(Irv):
         {'scenario': 'spoiler'}
         """
         n = len(ballots[0])
-        cmat = [[0] * n] * n
+        cmat = [[0 for i in range(n)] for j in range(n)]
         numWins = [0] * n
         for i in range(n):
             for j in range(n):
@@ -811,6 +811,57 @@ class Schulze(Irv):
         return result
 
 
+    @classmethod
+    def fillStratBallot(cls, voter, info, places, n, stratGap, ballot,
+                        frontId, frontResult, ruId, ruResult):
+        others = [c for (c, r) in places[2:]]
+        notTooBad = min(voter[frontId], voter[ruId])
+        decentOnes = [c for c in others if voter[c] >= notTooBad]
+        cls.fillPrefOrder(voter, ballot,
+            whichCands=decentOnes,
+            lowSlot=n-len(decentOnes))
+        if stratGap <= 0:
+            ballot[frontId], ballot[ruId] = n-len(decentOnes)-1, n-len(decentOnes)-2
+        else:
+            ballot[frontId], ballot[ruId] = n-len(decentOnes)-2, n-len(decentOnes)-1
+        cls.fillPrefOrder(voter, ballot,
+            whichCands=[c for c in others if voter[c] < notTooBad],
+            lowSlot=0)
+
+class Rp(Schulze):
+    def resolveCycle(self, cmat, n):
+        """Note: mutates cmat destructively.
+
+        >>> Rp().resultsFor(DeterministicModel(3)(5,3),Rp().honBallot,isHonest=True)["results"]
+        [1, 2, 0]
+        """
+        matches = [(i, j, cmat[i][j]) for i in range(n) for j in range(i,n) if i != j]
+        rps = sorted(matches,key=lambda x:-abs(x[2]))
+        for (i, j, margin) in rps:
+            if margin < 0:
+                i, j = j, i
+            if cmat[j][i] is True:
+                #print("rejecting",cmat)
+                pass #reject this victory
+            else: #lock-in
+                #print(i,j,cmat)
+                cmat[i][j] = True
+                #print("....",i,j,cmat)
+                for k in range(n):
+                    if k not in (i, j):
+                        if cmat[j][k] is True:
+                            cmat[i][k] = True
+                        if cmat[k][i] is True:
+                            cmat[k][j] = True
+
+                            #print(".......",i,j,k,cmat)
+
+        #print(cmat)
+        numWins = [sum(1 for j in range(n) if cmat[i][j] is True)
+                    for i in range(n)]
+        return numWins
+
+
 class IRNR(Irv):
     stratMax = 10
     def results(self, ballots, **kwargs):
@@ -853,6 +904,8 @@ class IRNR(Irv):
         return utils
 
 
+
+    @classmethod
     def fillStratBallot(cls, voter, info, places, n, stratGap, ballot,
                         frontId, frontResult, ruId, ruResult):
         if stratGap <= 0:
