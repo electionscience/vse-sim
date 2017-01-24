@@ -68,14 +68,13 @@ class Borda(Method):
 
 
     @classmethod
-    def stratBallot(cls, voter, info, places, n,
+    def fillStratBallot(cls, voter, info, places, n, stratGap, ballot,
                         frontId, frontResult, ruId, ruResult):
+        """Mutates the `ballot` argument to be a strategic ballot.
 
-        stratGap = voter[ruId] - voter[frontId]
-        ballot = [0] * len(voter)
+        """
         nRanks = min(cls.nRanks,n)
-        isStrat = stratGap > 0
-        if not isStrat:
+        if stratGap <= 0:
             ballot[frontId], ballot[ruId] = (nRanks - 1), 0
         else:
             ballot[frontId], ballot[ruId] = 0, (nRanks - 1)
@@ -83,7 +82,7 @@ class Borda(Method):
         if nRanks > 0:
             cls.fillCands(ballot, places[2:][::-1],
                 lowSlot=1, nSlots=nRanks, remainderScore=0)
-        return dict(strat=ballot, isStrat=isStrat, stratGap=stratGap)
+        # (don't) return dict(strat=ballot, isStrat=isStrat, stratGap=stratGap)
 
 RankedMethod = Borda #alias
 

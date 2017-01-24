@@ -280,8 +280,15 @@ class Method:
         n = len(info)
         @rememberBallots
         def stratBallot(cls, voter):
-            return cls.stratBallot(voter, info, places, n,
+            stratGap = voter[ruId] - voter[frontId]
+            ballot = [0] * len(voter)
+            isStrat = stratGap > 0
+            extras = cls.fillStratBallot(voter, info, places, n, stratGap, ballot,
                                 frontId, frontResult, ruId, ruResult)
+            result =  dict(strat=ballot, isStrat=isStrat, stratGap=stratGap)
+            if extras:
+                result.update(extras)
+            return result
         return stratBallot
 
 @decorator
