@@ -178,7 +178,8 @@ class Method:
                 chooser=chooser.__name__,
                 tally=tally)
 
-    def multiResults(self, voters, chooserFuns=(), media=lambda x,t:x):
+    def multiResults(self, voters, chooserFuns=(), media=(lambda x,t:x),
+                checkStrat = True):
         """Runs two base elections: first with honest votes, then
         with strategic results based on the first results (filtered by
         the media). Then, runs a series of elections using each chooserFun
@@ -187,15 +188,33 @@ class Method:
         Returns a tuple of (honResults, stratResults, ...). The stratresults
         are based on common information, which is given by media(honresults).
         """
+        from stratFunctions import OssChooser
+
         honTally = SideTally()
         self.__class__.extraEvents = dict()
         hon = self.resultsFor(voters, self.honBallotFor(voters), honTally, isHonest=True)
 
         stratTally = SideTally()
+
         info = media(hon["results"], stratTally)
+        winner, runnerUp = [c for c,r in sorted(enumerate(info),key=lambda x:-x[1])[:2]]
+
         strat = self.resultsFor(voters, self.stratBallotFor(info), stratTally)
+
+        ossTally = SideTally()
+        oss = self.resultsFor(voters, self.ballotChooserFor(OssChooser()), ossTally)
+        ossWinner = oss["results"].index(max(oss["results"]))
+        ossTally["worked"] += (1 if ossWinner==runnerUp else
+                                    (0 if ossWinner==winner else -1))
+
+        smart = dict(results=(hon["results"]
+                                    if ossTally["worked"] == 1
+                                else oss["results"]),
+                chooser="smartOss",
+                tally=SideTally())
+
         extraTallies = Tallies()
-        results = ([strat] +
+        results = ([strat, oss, smart] +
                 [self.resultsFor(voters, self.ballotChooserFor(chooserFun), aTally)
                     for (chooserFun, aTally) in zip(chooserFuns, extraTallies)]
                   )

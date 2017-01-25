@@ -100,7 +100,7 @@ class CsvBatch:
 
 
 
-medianRuns = [OssChooser(),
+medianRuns = [
                OssChooser([beHon,ProbChooser([(1/2, beStrat), (1/2, beHon)])]),
 
 
@@ -116,7 +116,7 @@ medianRuns = [OssChooser(),
 
                ]
 
-baseRuns = [OssChooser(),
+baseRuns = [
            OssChooser([beHon,ProbChooser([(1/2, beStrat), (1/2, beHon)])]),
 
            ProbChooser([(1/4, beStrat), (3/4, beHon)]),

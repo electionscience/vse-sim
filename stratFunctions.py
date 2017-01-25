@@ -79,7 +79,7 @@ class LazyChooser(Chooser):
         return self.subChoosers[1](cls, voter, tally) #strat
 
 class OssChooser(Chooser):
-    tallyKeys = [""]
+    tallyKeys = ["", "gap"]
     """one-sided strategy:
     returns a 'strategic' ballot for those who prefer the honest runner-up,
     and an honest ballot for those who prefer the honest winner. Only works
@@ -95,6 +95,7 @@ class OssChooser(Chooser):
         hon, strat = self.subChoosers
         if getattr(voter, cls.__name__ + "_isStrat", False):
             tally[self.myKeys[0]] += 1
+            tally[self.myKeys[1]] += getattr(voter, cls.__name__ + "_stratGap", 0)
             if callable(strat):
                 #debug(strat)
                 return strat(cls, voter, tally)
