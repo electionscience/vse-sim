@@ -19,10 +19,19 @@ mvse[,mean(util-rand)/mean(best-rand),by=list(method,chooser)]
 mvse[chooser %in% c("honBallot","Oss.hon_strat.","Prob.strat50_hon50."),mean(util-rand)/mean(best-rand),by=list(method,chooser)]
 
 
+
+
+
+
+
+
+
+
+
 fvse = fread("fuzzy5.csv")
 fvse[,mean(util-rand)/mean(best-rand),by=list(method,chooser)]
 
-fvse = fread("ossSmart2.csv")
+fvse = fread("ossSmart3.csv")
 fuzVses = fvse[,mean(util-rand)/mean(best-rand),by=list(method,chooser)]
 etype = fvse[method=="Schulze" & chooser=="honBallot",tallyVal0,by=eid]
 names(etype) = c("eid","scenario")
@@ -41,7 +50,7 @@ methodOrder = methods[c(7,8,13,14,9,#15, #IRNR
                         4,3,2,1,6,5,12,
                         15 #IRNR at end
                         )]
-scenarios = unique(fvse[,scenario])
+scenarios = c("cycle", "easy", "spoiler", "squeeze", "chicken", "other")
 scenarioFreq = honestScenarios[,list(freq=mean(frequency)),by=scenario]
 setkey(scenarioFreq,scenario)
 scenarioLabelBase2 = c("2. Easy\n(Cond #1 = Plur #1)", 
@@ -51,12 +60,13 @@ scenarioLabelBase2 = c("2. Easy\n(Cond #1 = Plur #1)",
                       "3. Spoiler\n(Cond #1 = Plur3 #1)",
                       "1. Condorcet cycle\n"
 ) 
-scenarioLabelBase = c("2.Easy", 
-                      "5.Chicken dilem.",
-                      "6.Other",
-                      "4.Ctr. squeeze",
+scenarioLabelBase = c(
+                      "1.Cond. cycle",
+                      "2.Easy", 
                       "3.Spoiler",
-                      "1.Cond. cycle"
+                      "4.Ctr. squeeze",
+                      "5.Chicken dilem.",
+                      "6.Other"
 ) 
 scenarioLabel = paste0(scenarioLabelBase," (~",round(scenarioFreq[scenarios,freq]*100),"%)")
 stratLabel = c("a.100% honest",
@@ -76,3 +86,11 @@ honestScenarios2[vse<0,vse:=vse/10]
 
 scatterD3(data = honestScenarios2[-grep("IRNR",honestScenarios[,as.character(method)])], x = vse, y = method, col_var = strategy, left_margin = 90, xlim=c(-.2,1.0))
 
+fvse[,works:=as.integer(tallyVal1)]
+
+#strategic function
+fvse[chooser=="Oss.hon_strat.",mean(works==-1,na.rm=T),by=method]
+#strategic backfire
+fvse[chooser=="Oss.hon_strat.",mean(works==-1,na.rm=T),by=method]
+
+#(I think that refining the strategies can improve the function:backfire balance, but it's a start.)
