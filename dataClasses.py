@@ -159,7 +159,7 @@ class Method:
         function. But the base version just returns the honBallot function."""
         return self.honBallot
 
-    def dummyBallotFor(self, info):
+    def dummyBallotFor(self, polls):
         """Returns a (function which takes utilities and returns a dummy ballot)
         for the given "polling" info."""
         return lambda cls, utilities, stratTally: utilities
@@ -186,7 +186,7 @@ class Method:
         in chooserFuns to select the votes for each voter.
 
         Returns a tuple of (honResults, stratResults, ...). The stratresults
-        are based on common information, which is given by media(honresults).
+        are based on common polling information, which is given by media(honresults).
         """
         from stratFunctions import OssChooser
 
@@ -196,15 +196,15 @@ class Method:
 
         stratTally = SideTally()
 
-        info = media(hon["results"], stratTally)
-        winner, runnerUp = [c for c,r in sorted(enumerate(info),key=lambda x:-x[1])[:2]]
+        polls = media(hon["results"], stratTally)
+        winner, _w, target, _t = self.stratTargetFor(sorted(enumerate(polls),key=lambda x:-x[1]))
 
-        strat = self.resultsFor(voters, self.stratBallotFor(info), stratTally)
+        strat = self.resultsFor(voters, self.stratBallotFor(polls), stratTally)
 
         ossTally = SideTally()
         oss = self.resultsFor(voters, self.ballotChooserFor(OssChooser()), ossTally)
         ossWinner = oss["results"].index(max(oss["results"]))
-        ossTally["worked"] += (1 if ossWinner==runnerUp else
+        ossTally["worked"] += (1 if ossWinner==target else
                                     (0 if ossWinner==winner else -1))
 
         smart = dict(results=(hon["results"]
@@ -289,21 +289,31 @@ class Method:
         ballotChooser.__name__ = chooserFun.getName()
         return ballotChooser
 
-    def stratBallotFor(self,info):
+    def stratTarget2(self,places):
+        ((frontId,frontResult), (targId, targResult)) = places[0:2]
+        return (frontId, frontResult, targId, targResult)
+
+    def stratTarget3(self,places):
+        ((frontId,frontResult), (targId, targResult)) = places[0:3:2]
+        return (frontId, frontResult, targId, targResult)
+
+    stratTargetFor = stratTarget2
+
+    def stratBallotFor(self,polls):
         """Returns a (function which takes utilities and returns a strategic ballot)
         for the given "polling" info."""
 
-        places = sorted(enumerate(info),key=lambda x:-x[1]) #from high to low
+        places = sorted(enumerate(polls),key=lambda x:-x[1]) #from high to low
         #print("places",places)
-        ((frontId,frontResult), (ruId, ruResult)) = places[0:2]
-        n = len(info)
+        (frontId, frontResult, targId, targResult) = self.stratTargetFor(places)
+        n = len(polls)
         @rememberBallots
         def stratBallot(cls, voter):
-            stratGap = voter[ruId] - voter[frontId]
+            stratGap = voter[targId] - voter[frontId]
             ballot = [0] * len(voter)
             isStrat = stratGap > 0
-            extras = cls.fillStratBallot(voter, info, places, n, stratGap, ballot,
-                                frontId, frontResult, ruId, ruResult)
+            extras = cls.fillStratBallot(voter, polls, places, n, stratGap, ballot,
+                                frontId, frontResult, targId, targResult)
             result =  dict(strat=ballot, isStrat=isStrat, stratGap=stratGap)
             if extras:
                 result.update(extras)

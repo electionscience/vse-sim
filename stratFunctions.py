@@ -81,7 +81,7 @@ class LazyChooser(Chooser):
 class OssChooser(Chooser):
     tallyKeys = ["", "gap"]
     """one-sided strategy:
-    returns a 'strategic' ballot for those who prefer the honest runner-up,
+    returns a 'strategic' ballot for those who prefer the strategic target,
     and an honest ballot for those who prefer the honest winner. Only works
     if honBallot and stratBallot have already been called for the voter.
 

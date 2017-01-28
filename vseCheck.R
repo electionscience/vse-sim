@@ -31,7 +31,7 @@ mvse[chooser %in% c("honBallot","Oss.hon_strat.","Prob.strat50_hon50."),mean(uti
 fvse = fread("fuzzy5.csv")
 fvse[,mean(util-rand)/mean(best-rand),by=list(method,chooser)]
 
-fvse = fread("ossSmart3.csv")
+fvse = fread("target2.csv")
 fuzVses = fvse[,mean(util-rand)/mean(best-rand),by=list(method,chooser)]
 etype = fvse[method=="Schulze" & chooser=="honBallot",tallyVal0,by=eid]
 names(etype) = c("eid","scenario")
@@ -89,8 +89,19 @@ scatterD3(data = honestScenarios2[-grep("IRNR",honestScenarios[,as.character(met
 fvse[,works:=as.integer(tallyVal1)]
 
 #strategic function
-fvse[chooser=="Oss.hon_strat.",mean(works==-1,na.rm=T),by=method]
-#strategic backfire
-fvse[chooser=="Oss.hon_strat.",mean(works==-1,na.rm=T),by=method]
+stratWorks = fvse[chooser=="Oss.hon_strat.",list(stratWorks=mean(works==1,na.rm=T),
+                                    stratBackfire=mean(works==-1,na.rm=T),
+                                    frequency=.N/dim(etype)[1]),by=list(method,scenario)]
 
-#(I think that refining the strategies can improve the function:backfire balance, but it's a start.)
+stratWorks[,`Scenario type`:=factor(scenario,levels=scenarios,labels=scenarioLabel)]
+scatterD3(data = stratWorks, x = stratWorks, y = stratBackfire, left_margin = 90, xlim=c(0,1.0),ylim=c(0,1.0), symbol_var = `Scenario type`, size_var=frequency, col_var=method)
+
+
+
+stratWorksAg = fvse[chooser=="Oss.hon_strat.",list(stratWorks=mean(works==1,na.rm=T),
+                                                 stratBackfire=mean(works==-1,na.rm=T)),
+                    by=list(method)]
+
+scatterD3(data = stratWorksAg, x = stratWorks, y = stratBackfire, left_margin = 90, xlim=c(0,1.0),ylim=c(0,1.0), col_var=method, lab=method)
+
+#(I think that refining the strategies can improve the function:backfire balance, but it's a)
