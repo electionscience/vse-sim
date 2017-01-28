@@ -95,11 +95,17 @@ https://github.com/electology/vse-sim
 
 # OK, can I see some results?
 
-   http://rpubs.com/Jameson-Quinn/vse1
-Or, with sizes based on frequency of scenario type in my model:
-http://rpubs.com/Jameson-Quinn/vse3
+[![VSE](vse.png)](vse.html)
 
-Those results are broken down by “Scenario type”. Why?
+[![Effectiveness of strategies](vsestrat.png)](stratstuff.html)
+
+Or, broken down by scenario type:
+
+[VSE](vsebreakdown.html)
+[Effectiveness of strategies](stratbreakdown.html)
+
+
+# Those results are broken down by “Scenario type”. Why?
 Classifying each simulated election into one of several “scenario types” makes it less important to get the precise voter model correct. Depending on the voter model used and on the parameters of that voter model, different types of scenarios will be more or less common. However, if you define “scenario types” with an eye to grouping elections with similar strategic considerations, the results for a given voting method within a given scenario type will be less dependent on the voter model details than the overall results are across types. The overall results will basically be a weighted average of the results by scenario type, and adjusting the voter model will mostly change the weights only, not the results within a type.
 
 # Could you explain the 6 scenario types you use?
