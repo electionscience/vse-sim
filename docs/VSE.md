@@ -95,14 +95,14 @@ https://github.com/electology/vse-sim
 
 # OK, can I see some results?
 
-[![VSE](vse.png)](vse.html)
+[![VSE](../vse.png)](../vse.html)
 
-[![Effectiveness of strategies](vsestrat.png)](stratstuff.html)
+[![Effectiveness of strategies](../vsestrat.png)](../stratstuff.html)
 
 Or, broken down by scenario type:
 
-[VSE](vsebreakdown.html)
-[Effectiveness of strategies](stratbreakdown.html)
+[VSE](../vsebreakdown.html)
+[Effectiveness of strategies](../stratbreakdown.html)
 
 
 # Those results are broken down by “Scenario type”. Why?
