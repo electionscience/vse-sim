@@ -31,7 +31,7 @@ mvse[chooser %in% c("honBallot","Oss.hon_strat.","Prob.strat50_hon50."),mean(uti
 fvse = fread("fuzzy5.csv")
 fvse[,mean(util-rand)/mean(best-rand),by=list(method,chooser)]
 
-fvse = fread("target2.csv")
+fvse = fread("wtf1.csv")
 fuzVses = fvse[,mean(util-rand)/mean(best-rand),by=list(method,chooser)]
 etype = fvse[method=="Schulze" & chooser=="honBallot",tallyVal0,by=eid]
 names(etype) = c("eid","scenario")
