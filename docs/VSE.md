@@ -21,6 +21,7 @@ Note that VSE uses the word “satisfaction” rather than “utility” for two
 # What assumptions are necessary in order to calculate VSE?
 
 Any evaluation of voting methods involves some kind of assumptions. In the case of VSE, the assumptions are necessary in order to generate voters, candidates, and ballots many times over to run virtual elections. To do that, you need to make assumptions about the following:
+
 * The voting method that you will use.
 * How voters feel (the “voter model”): An election scenario consists of voters and candidates; each voter has a utility number for each candidate that specifies how satisfied they will be if that candidate wins. The voter model is the set of rules used to randomly generate new election scenarios.
 * What voters know (the “media model”): This is the information that’s available to voters as they decide how to cast their ballots.
@@ -113,6 +114,7 @@ Classifying each simulated election into one of several “scenario types” mak
 The “type classifier” tries to fit each scenario into 5 types in order, labeling it with the first type that it fits. If it fits none of the 5 types, it’s labeled “other”.
 
 The types are:
+ 
 * “Condorcet cycle”: elections where there is an honest Condorcet cycle for first place. These are often the hardest elections to find a good winner for. This is about 2% of elections in the voter model I used.
 * “Easy”: Elections where the honest Condorcet winner is also the honest Plurality winner (and which don’t fit the above category). Any reasonable election method should have an easy time finding the “correct” winner in such elections. This is almost 50% of elections in the voter model I used.
 * “Spoiler”: Elections which don’t fit either of the above, but where the honest Condorcet winner would be the honest winner in a plurality runoff among the top 3 candidates by a Condorcet method. Most voting method other than plurality can usually do well in these scenarios. This is about 9% of elections in the voter model I used.
