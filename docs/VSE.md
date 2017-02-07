@@ -31,11 +31,16 @@ Any evaluation of voting methods involves some kind of assumptions. In the case 
 
 In the field of voting theory, there are many desirable criteria a given voting method may or may not pass. Basically, most criteria define a certain kind of undesirable outcome, and say that good voting methods should make such outcomes impossible. But it’s been shown mathematically that it’s impossible for a method to pass all desirable criteria (see: Gibbard-Satterthwaite theorem, Arrow’s theorem, etc.), so tradeoffs are necessary. VSE measures how well a method makes those tradeoffs by using outcomes. Basically, instead of asking “can a certain kind of problem ever happen?”, VSE is asking “how rarely do problems of all kinds happen?”.
 
-If the voter model, media model, and strategy model are realistic for a particular context, then VSE is probably a good metric f for comparing voting methods. If you find a method which robustly gets a relatively high VSE, across a broad range of voter, media, and strategy models, then you can be confident that it reflects of the will of the voters, no matter what that will is. That’s democracy.
+If the voter model, media model, and strategy model are realistic for a particular context, then VSE is probably a good metric for comparing voting methods. If you find a method which robustly gets a relatively high VSE, across a broad range of voter, media, and strategy models, then you can be confident that it reflects the will of the voters, no matter what that will is. That’s democracy.
 
 # What does VSE not measure?
 
-VSE cannot measure the complexity of a voting method (from the perspective of voters or election administrators); a voting method’s effects on who decides to run for office in the first place; the effects on campaign behavior; or any desirable characteristics of a voting method that do not directly relate to outcome (who wins).
+VSE cannot measure:
+
+* The complexity of a voting method (from the perspective of voters or election administrators).
+* A voting method’s effects on who decides to run for office in the first place.
+* The effects on campaign behavior.
+* Any desirable characteristics of a voting method that do not directly relate to outcome (who wins).
 
 # What are the various voter models that were used to get the VSE numbers below?
 
@@ -43,9 +48,9 @@ There are three basic models. The first two are simple but unrealistic; the thir
 
 > Note: As a grad student in statistics, building and working with statistical models is my expertise, so I apologize for the inevitable technicalities in what follows. I’ll try to keep things as understandable for a non-expert audience as I can, but it’s always hard to find the right balance. It’s important to be transparent about how things work and why, but I don’t want to overwhelm you with technicalities.
 
-* “Impartial Culture”: Each voter’s satisfaction for each candidate is an independent (normally-distributed) random number.
-* “N-dimensional ideology”: Voters and candidates each have a location in n-dimensional “ideology space”. A voter’s satisfaction for a given candidate goes down linearly with the ideological distance between the two. Locations are normally distributed, using the same distribution for candidates and voters; and the standard deviations for each dimension follow an exponentially descending sequence such as 1, 1/2, 1/4, 1/8, etc. The number of dimensions is set so as to be large enough that further dimensions would be insignificant. Thus, the only important parameter is the rate of exponential decay; in the example sequence above, it’s 2.
-* “Hierarchical clusters”: This is a complicated model, which combines the following aspects:
+1. “Impartial Culture”: Each voter’s satisfaction for each candidate is an independent (normally-distributed) random number.
+2. “N-dimensional ideology”: Voters and candidates each have a location in n-dimensional “ideology space”. A voter’s satisfaction for a given candidate goes down linearly with the ideological distance between the two. Locations are normally distributed, using the same distribution for candidates and voters; and the standard deviations for each dimension follow an exponentially descending sequence such as 1, 1/2, 1/4, 1/8, etc. The number of dimensions is set so as to be large enough that further dimensions would be insignificant. Thus, the only important parameter is the rate of exponential decay; in the example sequence above, it’s 2.
+3. “Hierarchical clusters”: This is a complicated model, which combines the following aspects:
   * Issue dimensions, much as in n-dimensional ideology.
   * However, unlike in n-dimensional ideology these dimensions are grouped into “issue clusters”. Conceptually, one might imagine a cluster of social issues, a cluster of domestic economy issues, a cluster of foreign policy issues, etc.; although of course in the model, these are all merely numbers, and the labels have no impact.
   * The dispersion of individuals decreases, both from dimension to dimension within each cluster, and for the largest cluster dimension between clusters. This is similar to the exponential decay of the n-dimensional ideology above, but it is slightly random; the decay factors between each dimension and the next are numbers between 0 and 1, drawn from a beta distribution (which allows adjusting the average value and dispersion).
@@ -53,11 +58,11 @@ There are three basic models. The first two are simple but unrealistic; the thir
   * Each identity cluster has a mean, a standard deviation, and an overall level of caring on the dimensions in that issue cluster.
     * Technical: The standard deviation is based on the overall level of caring; higher for clusters that care less, lower for clusters that care more. The means are also chosen from a normal distribution, so that the sum of the squares of the standard deviation used to draw the cluster mean and the standard deviation of the individuals inside that cluster add up to a constant for each dimension; that way, if you don’t know the cluster’s mean, your best guess for where an individual would land on a dimension (the marginal distribution) would always be the same Normal distribution with the standard deviation associated with that dimension.
   * Technical: thus, this model has 5 parameters that can be usefully varied:
-    * The mean of the beta distribution for the decay of standard deviations of dimensions within a cluster.
-    * The mean of the beta distribution for the decay of standard deviations of dimensions between clusters.
-    * The “α” (alpha) parameter for all the Chinese restaurant processes, which determines the expected number and size of identity clusters for any given issue cluster. A high α leads to many similarly-sized identity clusters; a low α leads to most voters falling into a few dominant clusters.
-    * The mean of the beta distribution for how much voters care about each cluster.
-    * The dispersion (α + β) for all three beta distributions above.
+    1. The mean of the beta distribution for the decay of standard deviations of dimensions within a cluster.
+    2. The mean of the beta distribution for the decay of standard deviations of dimensions between clusters.
+    3. The “α” (alpha) parameter for all the Chinese restaurant processes, which determines the expected number and size of identity clusters for any given issue cluster. A high α leads to many similarly-sized identity clusters; a low α leads to most voters falling into a few dominant clusters.
+    4. The mean of the beta distribution for how much voters care about each cluster.
+    5. The dispersion (α + β) for all three beta distributions above.
   * The 5 parameters above are set to numbers that seem to produce realistic-seeming voter sets, and varied in order to see how robust each method is to different styles of electorate (different amounts of diversity of various kinds).
 
 # What are the advantages and disadvantages of each of the voter models used?
@@ -76,7 +81,7 @@ The strategy models include various mixes of the following possibilities:
 
 # Where’s the code?
 
-https://github.com/electology/vse-sim
+[Electology's GitHub](https://github.com/electology/vse-sim)
 
 # What voting methods do you test?
 
@@ -114,7 +119,7 @@ Classifying each simulated election into one of several “scenario types” mak
 The “type classifier” tries to fit each scenario into 5 types in order, labeling it with the first type that it fits. If it fits none of the 5 types, it’s labeled “other”.
 
 The types are:
- 
+
 * “Condorcet cycle”: elections where there is an honest Condorcet cycle for first place. These are often the hardest elections to find a good winner for. This is about 2% of elections in the voter model I used.
 * “Easy”: Elections where the honest Condorcet winner is also the honest Plurality winner (and which don’t fit the above category). Any reasonable election method should have an easy time finding the “correct” winner in such elections. This is almost 50% of elections in the voter model I used.
 * “Spoiler”: Elections which don’t fit either of the above, but where the honest Condorcet winner would be the honest winner in a plurality runoff among the top 3 candidates by a Condorcet method. Most voting method other than plurality can usually do well in these scenarios. This is about 9% of elections in the voter model I used.
