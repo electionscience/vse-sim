@@ -183,6 +183,8 @@ def Score(topRank=10, asClass=False):
 
 
         def __str__(self):
+            if self.topRank == 1:
+                return "IdealApproval"
             return self.__class__.__name__ + str(self.topRank)
 
         @staticmethod #cls is provided explicitly, not through binding
@@ -226,6 +228,37 @@ def Score(topRank=10, asClass=False):
     if asClass:
         return Score0to
     return Score0to()
+
+def BulletyApprovalWith(bullets=0.5, asClass=False):
+    class BulletyApproval(Score(1,True)):
+
+        bulletiness = bullets
+
+        def __str__(self):
+            return "BulletyApproval" + str(round(self.bulletiness * 100))
+
+
+        @staticmethod #cls is provided explicitly, not through binding
+        @rememberBallot
+        def honBallot(cls, utils):
+            """Takes utilities and returns an honest ballot (on 0..10)
+
+
+            honest ballots work as expected
+                >>> Score().honBallot(Score, Voter([5,6,7]))
+                [0.0, 5.0, 10.0]
+                >>> Score().resultsFor(DeterministicModel(3)(5,3),Score().honBallot)["results"]
+                [4.0, 6.0, 5.0]
+            """
+            if random.random() > cls.bulletiness:
+                return cls.__bases__[0].honBallot(cls, utils)
+            best = max(utils)
+            return [1 if util==best else 0 for util in utils]
+
+    if asClass:
+        return BulletyApproval
+    return BulletyApproval()
+
 
 def Srv(topRank=10):
     "Score Runoff Voting"
