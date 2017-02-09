@@ -85,7 +85,9 @@ https://github.com/electology/vse-sim
 * IRV: A ranked method; used in a significant number of political jurisdictions. Also called “the alternative vote”, or (incorrectly) “Ranked Choice Voting (RCV)”.
 * Schulze: a Condorcet method.
 * Rp (Ranked Pairs): a Condorcet method.
-* Approval voting: Voters approve as many candidates as they like, and the most-approved wins. This is a form of score voting, so it’s called “Score0to1” in my graphs.
+* Approval voting: Voters approve as many candidates as they like, and the most-approved wins. In my graphs, this is split into two systems:
+    * IdealApproval: Approval voting, where the "honest" (baseline) vote is to approve any candidate with above-average utility. (It turns out that with this model for candidate utilities, this strategy isn't actually ideal...)
+    * BulletyApproval60: Approval voting, where the "honest" baseline is that 60% of voters bullet vote (approve only their favorite candidate), and 40% vote as in IdealApproval.
 * Score voting: Voters give candidates a numerical rating, and the highest total or average rating wins.
 * Score Runoff Voting (SRV): Voters cast ballots as in score voting, rating each candidate on a numerical scale. The two candidates with the highest total or average are selected, and the pairwise winner between those two is the overall winner.
 * 3-2-1 Voting (V321): Voters may rate each candidate “Good”, “Acceptable”, or “Rejected”. You find the winner in three steps.
