@@ -97,6 +97,8 @@ https://github.com/electology/vse-sim
 
 # OK, can I see some results?
 
+Click to go to interactive versions of the following graphs:
+
 [![VSE](../vse.png)](../vse.html)
 
 [![Effectiveness of strategies](../vsestrat.png)](../stratstuff.html)
