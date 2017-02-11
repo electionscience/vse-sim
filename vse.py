@@ -144,7 +144,8 @@ allSystems = [[Score(1000), baseRuns],
                  ]
 
 #usage example:
-#vses = CsvBatch(KSModel(dcdecay=(1,3),wcdecay=(1.5,3), dccut = .2, wcalpha=1.5),
+#>>> from vse import *
+#>>> vses = CsvBatch(KSModel(dcdecay=(1,3),wcdecay=(1.5,3), dccut = .2, wcalpha=1.5),
 #           allSystems, nvot=40, ncand=6, niter=15000, baseName="target",
 #           media=fuzzyMediaFor())
 

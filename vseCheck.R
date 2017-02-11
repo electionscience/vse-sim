@@ -1,39 +1,39 @@
 library(data.table)
 library(scatterD3)
-
-vse = fread("full1.csv")
-vse = rbind(vse,fread("full2.csv"))
-vse[,mean(util-rand)/mean(best-rand),by=list(method,chooser)]
-
-vse[chooser=="honBallot",mean(util-rand)/mean(best-rand),by=list(method,chooser)]
-
-ovse = fread("lowDks2.csv")
-ovse[,mean(util-rand)/mean(best-rand),by=list(method,chooser)]
-
-ovse[chooser %in% c("honBallot","Oss.hon_strat.","Prob.strat50_hon50."),mean(util-rand)/mean(best-rand),by=list(method,chooser)]
-
-mvse = fread("media413.csv")
-mvse = rbind(mvse,fread("media41.csv"), fill=T)
-mvse[,mean(util-rand)/mean(best-rand),by=list(method,chooser)]
-
-mvse[chooser %in% c("honBallot","Oss.hon_strat.","Prob.strat50_hon50."),mean(util-rand)/mean(best-rand),by=list(method,chooser)]
-
-
-
-
-
-
-
-
-
-
-
-fvse = fread("fuzzy5.csv")
-fvse[,mean(util-rand)/mean(best-rand),by=list(method,chooser)]
-
-fvse = fread("wtf1.csv")
-
-fvse = rbind(fvse,fread("wtf2.csv"))
+# 
+# vse = fread("full1.csv")
+# vse = rbind(vse,fread("full2.csv"))
+# vse[,mean(util-rand)/mean(best-rand),by=list(method,chooser)]
+# 
+# vse[chooser=="honBallot",mean(util-rand)/mean(best-rand),by=list(method,chooser)]
+# 
+# ovse = fread("lowDks2.csv")
+# ovse[,mean(util-rand)/mean(best-rand),by=list(method,chooser)]
+# 
+# ovse[chooser %in% c("honBallot","Oss.hon_strat.","Prob.strat50_hon50."),mean(util-rand)/mean(best-rand),by=list(method,chooser)]
+# 
+# mvse = fread("media413.csv")
+# mvse = rbind(mvse,fread("media41.csv"), fill=T)
+# mvse[,mean(util-rand)/mean(best-rand),by=list(method,chooser)]
+# 
+# mvse[chooser %in% c("honBallot","Oss.hon_strat.","Prob.strat50_hon50."),mean(util-rand)/mean(best-rand),by=list(method,chooser)]
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# fvse = fread("fuzzy5.csv")
+# fvse[,mean(util-rand)/mean(best-rand),by=list(method,chooser)]
+# 
+# fvse = fread("wtf1.csv")
+# 
+# fvse = rbind(fvse,fread("wtf2.csv"))
 
 fvse = fread("target3.csv")
 fuzVses = fvse[,mean(util-rand)/mean(best-rand),by=list(method,chooser)]
@@ -51,12 +51,12 @@ hmethodlist = honestScenarios[,method]
 #methods = unique(hmethodlist)
 # methodOrder = methods[c(8,9,14,15,10,#15, #IRNR
 #                         11,12, #rp
-#                         5,4,3,2,1,6,5,13
+#                         5,4,3,2,1,6,7,13
 #                         #,15 #IRNR at end
 #                         )]
 methodOrder = c("Plurality", "Borda", "Mav", "Mj", "Irv", "Schulze", "Rp", 
                 "BulletyApproval60", "IdealApproval", "Score0to2", "Score0to10", 
-                "Score0to1000", "Srv0to10", "BulletyApproval60", "V321")
+                "Score0to1000", "Srv0to10", "Srv0to2", "V321")
 scenarios = c("cycle", "easy", "spoiler", "squeeze", "chicken", "other")
 scenarioFreq = honestScenarios[,list(freq=mean(frequency)),by=scenario]
 setkey(scenarioFreq,scenario)
@@ -84,7 +84,7 @@ honestScenarios[,method:=factor(hmethodlist,levels=methodOrder,labels=paste(c(pa
 honestScenarios[,strategy:=factor(chooser, levels=interestingStrats,labels=stratLabel)]
 honestScenarios[,`Scenario type`:=factor(scenario,levels=scenarios,labels=scenarioLabel)]
 honestScenarios[vse<0,vse:=vse/10]
-scatterD3(data = honestScenarios, x = vse, y = method, col_var = strategy, symbol_var = `Scenario type`, left_margin = 90, xlim=c(-.2,1.0), size_var=frequency)
+scatterD3(data = honestScenarios[!is.na(method),], x = vse, y = method, col_var = strategy, symbol_var = `Scenario type`, left_margin = 90, xlim=c(-.2,1.0), size_var=frequency)
 
 honestScenarios2[,method:=factor(hmethodlist,levels=methodOrder,labels=paste(c(paste0(" ",as.character(1:9)),as.character(10:length(methodOrder))),methodOrder,sep=". "))]
 honestScenarios2[,strategy:=factor(chooser, levels=interestingStrats,labels=stratLabel)]
