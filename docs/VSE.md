@@ -1,6 +1,10 @@
 ---
-title: VSE, explained
+title: VSE FAQ
 ---
+
+# This document looks long. Is there a shorter version?
+
+See [here](../VSEbasic).
 
 # What is Voter Satisfaction Efficiency?
 
@@ -85,7 +89,7 @@ https://github.com/electology/vse-sim
 * IRV: A ranked method; used in a significant number of political jurisdictions. Also called “the alternative vote”, or (incorrectly) “Ranked Choice Voting (RCV)”.
 * Schulze: a Condorcet method.
 * Rp (Ranked Pairs): a Condorcet method.
-* Approval voting: Voters approve as many candidates as they like, and the most-approved wins. In my graphs, this is split into two systems:
+* Approval voting: Voters approve as many candidates as they like, and the most-approved wins. In my graphs, this is split into two methods:
     * IdealApproval: Approval voting, where the "honest" (baseline) vote is to approve any candidate with above-average utility. (It turns out that with this model for candidate utilities, this strategy isn't actually ideal...)
     * BulletyApproval60: Approval voting, where the "honest" baseline is that 60% of voters bullet vote (approve only their favorite candidate), and 40% vote as in IdealApproval.
 * Score voting: Voters give candidates a numerical rating, and the highest total or average rating wins.
@@ -123,3 +127,7 @@ The types are:
 * “Center squeeze”: Elections where the honest Condorcet winner would come 3rd in said runoff. These scenarios are a problem for IRV, but are not handled too badly by most other methods. This is about 9% of elections in the voter model I used.
 * “Chicken dilemma”: Elections which are not “Center Squeeze”, but where the honest winner of said runoff would be 3rd place in Condorcet. In many methods these elections may be particularly problematic in real life, where voters’ strategy can react to their expectations of others’ strategy; but in simulated elections, this effect is moderated by the fact that voters are arbitrarily set to be strategic or not. This is about 7% of elections in the voter model I used.
 * “Other”: Elections which fit none of the categories above. This is about 25% of elections in the voter model I used.
+
+# Can you summarize the outcomes?
+
+See [here](../VSEbasic).
