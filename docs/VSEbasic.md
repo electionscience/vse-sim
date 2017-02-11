@@ -1,5 +1,5 @@
 ---
-title: VSE, explained
+title: VSE summary
 ---
 
 Voter Satisfaction Efficiency, or VSE, is a measure of the quality of a election method. A VSE of 100% would mean an impossibly perfect method; 0% or lower would mean that the society would be better off picking a winner at random.
@@ -22,7 +22,7 @@ The other methods I tested include:
 
 * _Condorcet methods_ such as Schulze and Ranked Pairs. In these methods, voters rank candidates in preference order, and any candidate who can beat all the others pairwise is the winner. These methods also topped out at 98% VSE, though they seem slightly more vulnerable to strategy than SRV; Ranked Pairs, the best Condorcet method I tested, can have a VSE as low as 86% under strategy. However, the complexity of vote-counting and of presenting results in these methods makes them, I feel, more theoretical than practical.
 
-* _Instant Runoff Voting_ (IRV). In this method, voters rank candidates in preference order and the favorites are tallied. Then, there's a process of eliminating the last-place candidate and re-tallying their votes for the voters' next preference (if any), until one candidate tallies more than half of the remaining votes. This method's VSE runs from 92% with honest voters down to 79% with all strategic voters. That's better than plurality, but worse than all the other methods above. 
+* _Instant Runoff Voting_ (IRV). In this method, voters rank candidates in preference order and the favorites are tallied. Then, there's a process of eliminating the last-place candidate and re-tallying their votes for the voters' next preference (if any), until one candidate tallies more than half of the remaining votes. This method's VSE runs from 92% with honest voters down to 79% with all strategic voters. That's better than plurality, but worse than all the other methods above.
 
 * _Median-based (Bucklin) methods_ such as Majority Judgment or Majority Approval Voting. These methods are the only ones whose practical strategy resistance is significantly better than 3-2-1 voting; but unfortunately, their VSE tops out at 92%.
 
