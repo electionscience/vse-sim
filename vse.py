@@ -143,6 +143,23 @@ allSystems = [[Score(1000), baseRuns],
                 [IRNR(), baseRuns],
                  ]
 
+#request from Mark: "SRV0-2, SRV0-3, SRV0-4, SRV0-5, SRV0-6, SRV0-7, SRV0-8, SRV0-9, SRV0-10, Score0-10, 321, Approval, IRV and plurality"
+markMethods = [
+                [Srv(2), baseRuns],
+                [Srv(3), baseRuns],
+                [Srv(4), baseRuns],
+                [Srv(5), baseRuns],
+                [Srv(6), baseRuns],
+                [Srv(7), baseRuns],
+                [Srv(8), baseRuns],
+                [Srv(9), baseRuns],
+                [Score(10), baseRuns],
+                [V321(), baseRuns],
+                [BulletyApprovalWith(.6), baseRuns],
+                [Irv(), baseRuns],
+                [Plurality(), baseRuns],
+                 ]
+
 #usage example:
 #>>> from vse import *
 #>>> vses = CsvBatch(KSModel(dcdecay=(1,3),wcdecay=(1.5,3), dccut = .2, wcalpha=1.5),
