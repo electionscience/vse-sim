@@ -35,7 +35,7 @@ library(scatterD3)
 # 
 # fvse = rbind(fvse,fread("wtf2.csv"))
 
-fvse = fread("target3.csv")
+fvse = fread("target4.csv")
 fuzVses = fvse[,mean(util-rand)/mean(best-rand),by=list(method,chooser)]
 etype = fvse[method=="Schulze" & chooser=="honBallot",tallyVal0,by=eid]
 names(etype) = c("eid","scenario")
@@ -47,8 +47,8 @@ interestingStrats = c("honBallot","smartOss","stratBallot","Oss.hon_strat.","Oss
 honestScenarios = fvse[chooser %in% interestingStrats,list(vse=mean(util-rand)/mean(best-rand),frequency=.N/dim(etype)[1]),by=list(scenario,chooser,method)]
 honestScenarios2 = fvse[chooser %in% interestingStrats,list(vse=mean(util-rand)/mean(best-rand),frequency=.N/dim(etype)[1]),by=list(chooser,method)]
 write.csv(honestScenarios,"byScenario.csv")
-hmethodlist = honestScenarios[,method]
-#methods = unique(hmethodlist)
+hmethodlist = honestScenarios2[,method]
+methods = unique(hmethodlist)
 # methodOrder = methods[c(8,9,14,15,10,#15, #IRNR
 #                         11,12, #rp
 #                         5,4,3,2,1,6,7,13
@@ -80,7 +80,9 @@ stratLabel = c("a.100% honest",
                "d.Smart 1-sided strat.",
                "f.100% strategic",
                "e.100% 1-sided strategy","b.50% 1-sided strategy","c.50% strategic")
-honestScenarios[,method:=factor(hmethodlist,levels=methodOrder,labels=paste(c(paste0(" ",as.character(1:9)),as.character(10:length(methodOrder))),methodOrder,sep=". "))]
+methodOrder = methods #comment out
+honestScenarios[,method:=factor(hmethodlist,levels=methodOrder,
+                                labels=paste(c(paste0(" ",as.character(1:9)),as.character(10:length(methodOrder))),methodOrder,sep=". "))]
 honestScenarios[,strategy:=factor(chooser, levels=interestingStrats,labels=stratLabel)]
 honestScenarios[,`Scenario type`:=factor(scenario,levels=scenarios,labels=scenarioLabel)]
 honestScenarios[vse<0,vse:=vse/10]
