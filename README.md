@@ -21,6 +21,7 @@ E.g.:
 Try
 
     $ python3
+    >>> from vse import *
     >>> csvs = CsvBatch(PolyaModel(), [[Score(), baseRuns], [Mav(), medianRuns]], nvot=5, ncand=4, niter=3)
     >>> csvs.saveFile()
 
