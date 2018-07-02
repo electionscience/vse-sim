@@ -59,7 +59,7 @@ allMethodOrder = c("Plurality", "Borda", "Mav", "Mj", "Irv", "Schulze", "Rp",
                 "Score0to1000", "Srv0to10", "Srv0to2", "V321")
 methodOrder = c("Plurality", "Irv", "BulletyApproval60", "Srv0to10", "V321")
 allMethodOrder= unique(c(methodOrder,allMethodOrder))
-methodNames = c("Plurality", "IRV", "Approval", "SRV", "3-2-1 voting", 
+methodNames = c("Plurality", "IRV", "Approval", "SRV", "3-2-1", 
                 allMethodOrder[(length(methodOrder)+1):length(allMethodOrder)])
 scenarios = c("cycle", "easy", "spoiler", "squeeze", "chicken", "other")
 scenarioFreq = honestScenarios[,list(freq=mean(frequency)),by=scenario]
@@ -82,8 +82,8 @@ scenarioLabelBase = c(
 scenarioLabel = paste0(scenarioLabelBase," (~",round(scenarioFreq[scenarios,freq]*100),"%)")
 stratLabel = c("a.100% honest",
                "d.Smart 1-sided strat.",
-               "f.100% strategic",
-               "e.100% 1-sided strategy","b.50% 1-sided strategy","c.50% strategic")
+               "f.100% strat.",
+               "e.100% 1-sided strat.","b.50% 1-sided strat.","c.50% strat.")
 methodOrder = methods #comment out
 honestScenarios[,method:=factor(hmethodlist,levels=allMethodOrder,
                                 labels=paste(c(paste0(" ",as.character(1:9)),as.character(10:length(allMethodOrder))),allMethodOrder,sep=". "))]
@@ -130,4 +130,9 @@ stratWorksAg = fvse[chooser=="Oss.hon_strat.",list(stratWorks=mean(works==1,na.r
 
 scatterD3(data = stratWorksAg, x = stratWorks, y = stratBackfire, xlim=c(0,1.0),ylim=c(0,1.0), col_var=method, lab=method)
 
+honestScenarios2[,VSE:=vse*100]
+
+library(ggplot2)
+library(ggthemes)
+ggplot(data = honestScenarios2[as.character(method) %in% levels(honestScenarios2[,method])[c(1:3,5)],], aes(x = VSE, y = method, group = method)) + geom_line(size=3) + xlim(70,100) + theme_gdocs() + theme(axis.title.y=element_blank()) + xlab("% Voter Satisfaction Efficiency (VSE)")
 #(I think that refining the strategies can improve the function:backfire balance, but it's a)
