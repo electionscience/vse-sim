@@ -99,7 +99,7 @@ The strategy models include various mixes of the following possibilities:
     * IdealApproval: Approval voting, where the "honest" (baseline) vote is to approve any candidate with above-average utility. (It turns out that with this model for candidate utilities, this strategy isn't actually ideal...)
     * BulletyApproval60: Approval voting, where the "honest" baseline is that 60% of voters bullet vote (approve only their favorite candidate), and 40% vote as in IdealApproval.
 * Score voting: Voters give candidates a numerical rating, and the highest total or average rating wins.
-* Star Voting (Score then Automatic runoff): Voters cast ballots as in score voting, rating each candidate on a numerical scale. The two candidates with the highest total or average are selected, and the pairwise winner between those two is the overall winner.
+* STAR Voting (Score then Automatic runoff): Voters cast ballots as in score voting, rating each candidate on a numerical scale. The two candidates with the highest total or average are selected, and the pairwise winner between those two is the overall winner.
 * 3-2-1 Voting (V321): Voters may rate each candidate “Good”, “Acceptable”, or “Rejected”. You find the winner in three steps.
   * Find 3 Semifinalists: the candidates with the most “good” ratings.
   * Find 2 Finalists: the semifinalists with the fewest rejections.
