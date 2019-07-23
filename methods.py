@@ -20,7 +20,7 @@ from dataClasses import *
 #         return -1
 #     return 0
 
-####EMs themeselves
+####EMs themselves
 class Borda(Method):
     candScore = staticmethod(mean)
 
@@ -767,7 +767,7 @@ class Schulze(RankedMethod):
         return numWins
 
     def results(self, ballots, isHonest=False, **kwargs):
-        """IRV results.
+        """Schulze results.
 
         >>> Schulze().resultsFor(DeterministicModel(3)(5,3),Schulze().honBallot,isHonest=True)["results"]
         [2, 0, 1]
