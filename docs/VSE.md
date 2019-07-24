@@ -1,5 +1,5 @@
 ---
-title: VSE FAQ
+title: Voter Satisfaction Efficiency (VSE) FAQ
 ---
 
 # This document looks long. Is there a shorter version?
@@ -55,19 +55,19 @@ There are three basic models. The first two are simple but unrealistic; the thir
 1. “Impartial Culture”: Each voter’s satisfaction for each candidate is an independent (normally-distributed) random number.
 2. “N-dimensional ideology”: Voters and candidates each have a location in n-dimensional “ideology space”. A voter’s satisfaction for a given candidate goes down linearly with the ideological distance between the two. Locations are normally distributed, using the same distribution for candidates and voters; and the standard deviations for each dimension follow an exponentially descending sequence such as 1, 1/2, 1/4, 1/8, etc. The number of dimensions is set so as to be large enough that further dimensions would be insignificant. Thus, the only important parameter is the rate of exponential decay; in the example sequence above, it’s 2.
 3. “Hierarchical clusters”: This is a complicated model, which combines the following aspects:
-  * Issue dimensions, much as in n-dimensional ideology.
-  * However, unlike in n-dimensional ideology these dimensions are grouped into “issue clusters”. Conceptually, one might imagine a cluster of social issues, a cluster of domestic economy issues, a cluster of foreign policy issues, etc.; although of course in the model, these are all merely numbers, and the labels have no impact.
-  * The dispersion of individuals decreases, both from dimension to dimension within each cluster, and for the largest cluster dimension between clusters. This is similar to the exponential decay of the n-dimensional ideology above, but it is slightly random; the decay factors between each dimension and the next are numbers between 0 and 1, drawn from a beta distribution (which allows adjusting the average value and dispersion).
-  * Within each issue cluster, voters are organized into “identity clusters” (assigned using the Chinese restaurant process). You might imagine that a certain voter was in a liberal cluster on social issues, a pro-Egypt cluster on foreign policy issues, etc. Another voter might share the same cluster on social issues but be in an isolationist cluster on foreign policy. A given voter’s identity clusters on different issue clusters are independent.
-  * Each identity cluster has a mean, a standard deviation, and an overall level of caring on the dimensions in that issue cluster.
-    * Technical: The standard deviation is based on the overall level of caring; higher for clusters that care less, lower for clusters that care more. The means are also chosen from a normal distribution, so that the sum of the squares of the standard deviation used to draw the cluster mean and the standard deviation of the individuals inside that cluster add up to a constant for each dimension; that way, if you don’t know the cluster’s mean, your best guess for where an individual would land on a dimension (the marginal distribution) would always be the same Normal distribution with the standard deviation associated with that dimension.
-  * Technical: thus, this model has 5 parameters that can be usefully varied:
-    1. The mean of the beta distribution for the decay of standard deviations of dimensions within a cluster.
-    2. The mean of the beta distribution for the decay of standard deviations of dimensions between clusters.
-    3. The “α” (alpha) parameter for all the Chinese restaurant processes, which determines the expected number and size of identity clusters for any given issue cluster. A high α leads to many similarly-sized identity clusters; a low α leads to most voters falling into a few dominant clusters.
-    4. The mean of the beta distribution for how much voters care about each cluster.
-    5. The dispersion (α + β) for all three beta distributions above.
-  * The 5 parameters above are set to numbers that seem to produce realistic-seeming voter sets, and varied in order to see how robust each method is to different styles of electorate (different amounts of diversity of various kinds).
+    * Issue dimensions, much as in n-dimensional ideology.
+    * However, unlike in n-dimensional ideology these dimensions are grouped into “issue clusters”. Conceptually, one might imagine a cluster of social issues, a cluster of domestic economy issues, a cluster of foreign policy issues, etc.; although of course in the model, these are all merely numbers, and the labels have no impact.
+    * The dispersion of individuals decreases, both from dimension to dimension within each cluster, and for the largest cluster dimension between clusters. This is similar to the exponential decay of the n-dimensional ideology above, but it is slightly random; the decay factors between each dimension and the next are numbers between 0 and 1, drawn from a beta distribution (which allows adjusting the average value and dispersion).
+    * Within each issue cluster, voters are organized into “identity clusters” (assigned using the Chinese restaurant process). You might imagine that a certain voter was in a liberal cluster on social issues, a pro-Egypt cluster on foreign policy issues, etc. Another voter might share the same cluster on social issues but be in an isolationist cluster on foreign policy. A given voter’s identity clusters on different issue clusters are independent.
+    * Each identity cluster has a mean, a standard deviation, and an overall level of caring on the dimensions in that issue cluster.
+        * Technical: The standard deviation is based on the overall level of caring; higher for clusters that care less, lower for clusters that care more. The means are also chosen from a normal distribution, so that the sum of the squares of the standard deviation used to draw the cluster mean and the standard deviation of the individuals inside that cluster add up to a constant for each dimension; that way, if you don’t know the cluster’s mean, your best guess for where an individual would land on a dimension (the marginal distribution) would always be the same Normal distribution with the standard deviation associated with that dimension.
+    * Technical: thus, this model has 5 parameters that can be usefully varied:
+        1. The mean of the beta distribution for the decay of standard deviations of dimensions within a cluster.
+        2. The mean of the beta distribution for the decay of standard deviations of dimensions between clusters.
+        3. The “α” (alpha) parameter for all the Chinese restaurant processes, which determines the expected number and size of identity clusters for any given issue cluster. A high α leads to many similarly-sized identity clusters; a low α leads to most voters falling into a few dominant clusters.
+        4. The mean of the beta distribution for how much voters care about each cluster.
+        5. The dispersion (α + β) for all three beta distributions above.
+    * The 5 parameters above are set to numbers that seem to produce realistic-seeming voter sets, and varied in order to see how robust each method is to different styles of electorate (different amounts of diversity of various kinds).
 
 # What are the advantages and disadvantages of each of the voter models used?
 
