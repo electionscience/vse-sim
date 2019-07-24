@@ -85,7 +85,7 @@ The strategy models include various mixes of the following possibilities:
 
 # Where’s the code?
 
-[Electology's GitHub](https://github.com/electology/vse-sim)
+[The Center for Election Science's GitHub](https://github.com/electionscience/vse-sim)
 
 # What voting methods do you test?
 
