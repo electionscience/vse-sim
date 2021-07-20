@@ -304,26 +304,39 @@ caresDist = rbeta(3,1.5)
 class KSElectorate(DimElectorate):
 
     def chooseClusters(self, n, alpha, caring):
-        self.clusters = []
+        """
+        Sets up the crosscat structure.
+        args:
+            n: number of voters to create
+            alpha: global alpha for subcluster dirichlet processes
+
+        preconditions:
+            .numSubclusters is a len-.numViews array of zeros
+
+
+        Side-effects include setting the following attributes on self:
+            .views: a
+        """
+        self.views = []
         for i in range(n):
             item = []
-            for c in range(self.numClusters):
+            for c in range(self.numViews):
                 r = (i+alpha) * random.random()
                 if r > i:
                     item.append(self.numSubclusters[c])
                     self.numSubclusters[c] += 1
                 else:
-                    item.append(self.clusters[int(r)][c])
-            self.clusters.append(item)
+                    item.append(self.views[int(r)][c])
+            self.views.append(item)
         self.clusterMeans = []
         self.clusterCaring = []
-        for c in range(self.numClusters):
+        for c in range(self.numViews):
             subclusterMeans = []
             subclusterCaring = []
             for i in range(self.numSubclusters[c]):
                 cares = caring()
 
-                subclusterMeans.append([random.gauss(0,sqrt(cares)) for i in range(self.dcs[c])])
+                subclusterMeans.append([random.gauss(0,sqrt(cares)) for i in range(self.dimsPerView[c])])
                 subclusterCaring.append(caring())
             self.clusterMeans.append(subclusterMeans)
             self.clusterCaring.append(subclusterCaring)
@@ -332,10 +345,10 @@ class KSElectorate(DimElectorate):
         result = []
         dim = 0
         cares = []
-        for c in range(self.numClusters):
-            clusterMean = self.clusterMeans[c][self.clusters[i][c]]
+        for c in range(self.numViews):
+            clusterMean = self.clusterMeans[c][self.views[i][c]]
             for m in clusterMean:
-                acare = self.clusterCaring[c][self.clusters[i][c]]
+                acare = self.clusterCaring[c][self.views[i][c]]
                 result.append(m + (v[dim] * sqrt(1-acare)))
                 cares.append(acare)
             dim += 1
@@ -363,24 +376,39 @@ class KSModel(DimModel): #Kitchen sink
         return "_".join(str(x) for x in (self.__class__.__name__,self.wcalpha) + self.dcdecay + self.wcdecay + self.vccaring)
 
     def __call__(self, nvot, ncand, vType=DimVoter):
-        """Tests? Making statistical tests that would pass reliably is
+        """Create an electorate.
+        Args:
+            nvot: number of voters
+            ncand: number of cands
+            vType: type of voter. Defaults to DimVoter.
+
+        Directly responsible for side-effects:
+            Choose V (# views) and D_v (# dims per view)
+            Use two-level stick-breaking to assign non-normalized (!!!) dimension weights to each dimension.
+            len(e.dimsPerView) = e.numViews
+            len(e.dimWeights) = sum(e.dimsPerView) = num dims
+
+            e.numSubclusters: init to array of e.numViews zeros; let chooseClusters go from there
+
+
+        TODO: Tests? Making statistical tests that would pass reliably is
         a huge hassle. Sorry, maybe later.
         """
         vType.resetClusters()
         e = self.builtElectorate()
-        e.dcs = [] #number of dimensions in each dc
-        e.dimWeights = [] #raw importance of each dimension, regardless of dc
-        clusterWeight = 1
-        while clusterWeight > self.dccut:
-            dimweight = clusterWeight
+        e.dimsPerView = [] #number of dimensions in each view
+        e.dimWeights = [] #raw importance of each dimension, regardless of view
+        viewWeight = 1
+        while viewWeight > self.dccut:
+            dimweight = viewWeight
             dimnum = 0
             while dimweight > self.wccut:
                 e.dimWeights.append(dimweight)
                 dimnum += 1
                 dimweight *= beta.rvs(*self.wcdecay)
-            e.dcs.append(dimnum)
-            clusterWeight *= beta.rvs(*self.dcdecay)
-        e.numClusters = len(e.dcs)
-        e.numSubclusters = [0] * e.numClusters
+            e.dimsPerView.append(dimnum)
+            viewWeight *= beta.rvs(*self.dcdecay)
+        e.numViews = len(e.dimsPerView)
+        e.numSubclusters = [0] * e.numViews
         e.chooseClusters(nvot + ncand, self.wcalpha, lambda:beta.rvs(*self.vccaring))
         return self.makeElectorate(e, nvot, ncand, vType)

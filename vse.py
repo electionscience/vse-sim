@@ -1,7 +1,7 @@
 
 from imp import reload
 
-from .mydecorators import autoassign, cached_property, setdefaultattr, timeit
+from mydecorators import autoassign, cached_property, setdefaultattr, timeit
 import random
 from numpy.lib.scimath import sqrt
 from numpy.core.fromnumeric import mean, std
