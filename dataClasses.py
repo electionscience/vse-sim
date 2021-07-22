@@ -138,6 +138,13 @@ class Method:
         """Takes utilities and returns an honest ballot
         """
         raise NotImplementedError("{} needs honBallot".format(cls))
+    
+    @staticmethod
+    def lowInfoBallot(cls, utils, winProbs):
+        """Takes utilities and information on each candidate's electability
+        and returns a strategically optimal ballot based on that information
+        """
+        raise NotImplementedError("{} lacks lowInfoBallot".format(cls))
 
     @staticmethod
     def winner(results):
