@@ -68,6 +68,13 @@ class Borda(Method):
         cls.fillPrefOrder(utils, ballot)
         return ballot
 
+    @staticmethod
+    def lowInfoBallot(cls, utils, winProbs):
+        expectedUtility = sum(u*p for u, p in zip(utils, winProbs))
+        scores = [(u - expectedUtility)*p for u, p in zip(utils, winProbs)]
+        ballot = [0] * len(utils)
+        cls.fillPrefOrder(scores, ballot)
+        return ballot
 
     @classmethod
     def fillStratBallot(cls, voter, polls, places, n, stratGap, ballot,
@@ -116,6 +123,12 @@ class Plurality(RankedMethod):
         cls.fillPrefOrder(utils, ballot,
             nSlots = 1, lowSlot=1, remainderScore=0)
         return ballot
+
+    @staticmethod
+    def lowInfoBallot(cls, utils, winProbs):
+        expectedUtility = sum(u*p for u, p in zip(utils, winProbs))
+        scores = [(u - expectedUtility)*p for u, p in zip(utils, winProbs)]
+        return cls.oneVote(scores, scores.index(max(scores)))
     #
     # @classmethod
     # def xxstratBallot(cls, voter, polls, places, n,
@@ -204,6 +217,29 @@ def Score(topRank=10, asClass=False):
             scale = max(utils)-bot
             return [floor((cls.topRank + .99) * (util-bot) / scale) for util in utils]
 
+        @staticmethod
+        def lowInfoBallot(cls, utils, winProbs):
+            expectedUtility = sum(u*p for u, p in zip(utils, winProbs))
+            return [cls.topRank if u > expectedUtility else 0 for u in utils]
+
+        @staticmethod
+        def lowInfoIntermediateBallot(cls, utils, winProbs, midScoreWillingness=0.7):
+            expectedUtility = sum(u*p for u, p in zip(utils, winProbs))
+            if all(u == utils[0] for u in utils[1:]):
+                return [0]*len(utils)
+            lowThreshold = max(min(utils), expectedUtility - midScoreWillingness*std(utils))
+            highThreshold = min(max(utils), expectedUtility + midScoreWillingness*std(utils))
+            #this is wrong. We should use a standard deviation that's weighted
+            #by each candidate's chance of winning
+            ballot = []
+            for util in utils:
+                if util < lowThreshold:
+                    ballot.append(0)
+                elif util > highThreshold:
+                    ballot.append(cls.topRank)
+                else:
+                    ballot.append(floor((cls.topRank + .99)*(util-lowThreshold)/(highThreshold-lowThreshold)))
+            return ballot
 
         @classmethod
         def fillStratBallot(cls, voter, polls, places, n, stratGap, ballot,
@@ -288,6 +324,53 @@ def STAR(topRank=5):
             if upset > 0:
                 baseResults[runnerUp] = baseResults[top] + 0.01
             return baseResults
+
+        @staticmethod
+        def lowInfoBallot(cls, utils, winProbs, scoreImportance=0.3):
+            #runoffCoefficients[i][j] is how valuable it is to score i over j
+            runoffCoefficients = [[(u1 - u2)*p1*p2
+                                   for u2, p2 in zip(utils, winProbs)]
+                                  for u1, p1 in zip(utils, winProbs)]
+            unnormalizedRunnerUpProbs = [p*(1-p) for p in winProbs]
+            normFactor = sum(unnormalizedRunnerUpProbs)
+            runnerUpProbs = [u/normFactor for u in unnormalizedRunnerUpProbs]
+            eRunnerUpUtil = sum(u*p for u, p in zip(utils, runnerUpProbs))
+            #scoreCoefficients[i] is how vauable it is for i to have a high score
+            scoreCoefficients = [scoreImportance*(u-eRunnerUpUtil)*p
+                                 for u, p in zip(utils, runnerUpProbs)]
+
+            #create a tentative ballot
+            numCands = len(utils)
+            #ballot = [0]*numCands #optimize for performance later
+            bot = min(utils)
+            scale = max(utils)-bot
+            ballot = [floor((cls.topRank + .99) * (util-bot) / scale) for util in utils]
+
+            #optimize the ballot
+            improvementFound = True
+            while improvementFound:
+                improvementFound = False
+                for cand in range(numCands):
+                    #Should cand be scored higher?
+                    if (ballot[cand] < cls.topRank and
+                        sum(runoffCoefficients[cand][j]*sign(ballot[cand] + 1 - ballot[j])
+                            for j in range(numCands))
+                        + scoreCoefficients[cand]
+                        > sum(runoffCoefficients[cand][j]*sign(ballot[cand] - ballot[j])
+                              for j in range(numCands))):
+                        ballot[cand] += 1
+                        improvementFound = True
+                    #Should cand be scored lower?
+                    elif (ballot[cand] > 0 and
+                        sum(runoffCoefficients[cand][j]*sign(ballot[cand] - 1 - ballot[j])
+                            for j in range(numCands))
+                        - scoreCoefficients[cand]
+                        > sum(runoffCoefficients[cand][j]*sign(ballot[cand] - ballot[j])
+                              for j in range(numCands))):
+                        ballot[cand] -= 1
+                        improvementFound = True
+            return ballot
+
     return STAR0to()
 
 
@@ -408,7 +491,7 @@ class Mav(Method):
         def stratBallot(cls, voter):
             frontUtils = [voter[frontId], voter[targId]] #utils of frontrunners
             stratGap = frontUtils[1] - frontUtils[0]
-            if stratGap is 0:
+            if stratGap == 0:
                 strat = extraStrat = [(4 if (util >= frontUtils[0]) else 0)
                                      for util in voter]
                 isStrat = True
@@ -554,6 +637,21 @@ class Irv(Method):
         for i, cand in enumerate(order):
             ballot[cand[0]] = i
         #print("hballot",ballot)
+        return ballot
+
+    @staticmethod
+    def lowInfoBallot(cls, utils, winProbs):
+        """Here, winProbs should be interpreted as a metric for electability
+        and the ability to win in the final round.
+        """
+        expectedUtility = sum(u*p for u, p in zip(utils, winProbs))
+        scores = [(u - expectedUtility)*p for u, p in zip(utils, winProbs)]
+        goodCandidates = sorted(filter(lambda x: x[1] > 0, enumerate(scores)), key=lambda x:x[1]) #from worst to best score
+        badCandidates = sorted([(i,utils[i]) for i in range(len(utils)) if scores[i] <= 0], key=lambda x:x[1]) #from worst to best utility
+        order = badCandidates + goodCandidates
+        ballot = [-1] * len(utils)
+        for i in range(len(utils)):
+            ballot[order[i][0]] = i
         return ballot
 
 
@@ -903,6 +1001,23 @@ class Rp(Schulze):
         numWins = [sum(1 for j in range(n) if cmat[i][j] is True)
                     for i in range(n)]
         return numWins
+
+class Minimax(Schulze):
+    """Smith Minimax margins"""
+    def resolveCycle(self, cmat, n):
+        winCount = [sum(1 if matchup > 0 else 0 for matchup in row) for row in cmat]
+        smithSet = set(candID for candID, wins in enumerate(winCount) if wins == max(winCount))
+        extensionFound = True
+        while extensionFound:
+            extensionFound = False
+            for cand, matchups in enumerate(cmat):
+                if cand not in smithSet and any(matchups[i] > 0 for i in smithSet):
+                    smithSet.add(cand)
+                    extensionFound = True
+        places = sorted([cand for cand in range(n) if cand not in smithSet],
+                        key=lambda c: min(cmat[c]))\
+    + sorted([cand for cand in smithSet], key=lambda c: min(cmat[c]))
+        return [places.index(cand) for cand in range(n)]
 
 
 class IRNR(RankedMethod):
