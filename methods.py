@@ -199,6 +199,7 @@ def Score(topRank=10, asClass=False):
                 >>> Score().resultsFor(DeterministicModel(3)(5,3),Score().honBallot)["results"]
                 [4.0, 6.0, 5.0]
             """
+            raise Exception("NOT")
             bot = min(utils)
             scale = max(utils)-bot
             return [floor((cls.topRank + .99) * (util-bot) / scale) for util in utils]
@@ -260,34 +261,34 @@ def BulletyApprovalWith(bullets=0.5, asClass=False):
     return BulletyApproval()
 
 
-def Srv(topRank=10):
-    "Score Runoff Voting"
+def STAR(topRank=5):
+    "STAR Voting"
 
     score0to = Score(topRank,True)
 
-    class Srv0to(score0to):
+    class STAR0to(score0to):
 
         stratTargetFor = Method.stratTarget3
 
         def results(self, ballots, **kwargs):
-            """Srv results.
+            """STAR results.
 
-            >>> Srv().resultsFor(DeterministicModel(3)(5,3),Irv().honBallot)["results"]
+            >>> STAR().resultsFor(DeterministicModel(3)(5,3),Irv().honBallot)["results"]
             [0, 1, 2]
-            >>> Srv().results([[0,1,2]])[2]
+            >>> STAR().results([[0,1,2]])[2]
             2
-            >>> Srv().results([[0,1,2],[2,1,0]])[1]
+            >>> STAR().results([[0,1,2],[2,1,0]])[1]
             0
-            >>> Srv().results([[0,1,2]] * 4 + [[2,1,0]] * 3 + [[1,2,0]] * 2)
+            >>> STAR().results([[0,1,2]] * 4 + [[2,1,0]] * 3 + [[1,2,0]] * 2)
             [2, 0, 1]
             """
-            baseResults = super(Srv0to, self).results(ballots, **kwargs)
+            baseResults = super(STAR0to, self).results(ballots, **kwargs)
             (runnerUp,top) = sorted(range(len(baseResults)), key=lambda i: baseResults[i])[-2:]
             upset = sum(sign(ballot[runnerUp] - ballot[top]) for ballot in ballots)
             if upset > 0:
                 baseResults[runnerUp] = baseResults[top] + 0.01
             return baseResults
-    return Srv0to()
+    return STAR0to()
 
 
 def toVote(cutoffs, util):
