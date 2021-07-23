@@ -69,7 +69,8 @@ class Borda(Method):
         return ballot
     
     @staticmethod
-    def lowInfoBallot(cls, utils, winProbs):
+    def lowInfoBallot(cls, utils, polls, pollingUncertainty=.1):
+        winProbs = pollsToProbs(polls, pollingUncertainty)
         expectedUtility = sum(u*p for u, p in zip(utils, winProbs))
         scores = [(u - expectedUtility)*p for u, p in zip(utils, winProbs)]
         ballot = [0] * len(utils)
@@ -125,7 +126,8 @@ class Plurality(RankedMethod):
         return ballot
     
     @staticmethod
-    def lowInfoBallot(cls, utils, winProbs):
+    def lowInfoBallot(cls, utils, polls, pollingUncertainty=.07):
+        winProbs = pollsToProbs(polls, pollingUncertainty)
         expectedUtility = sum(u*p for u, p in zip(utils, winProbs))
         scores = [(u - expectedUtility)*p for u, p in zip(utils, winProbs)]
         return cls.oneVote(scores, scores.index(max(scores)))
@@ -217,12 +219,15 @@ def Score(topRank=10, asClass=False):
             return [floor((cls.topRank + .99) * (util-bot) / scale) for util in utils]
 
         @staticmethod
-        def lowInfoBallot(cls, utils, winProbs):
+        def lowInfoBallot(cls, utils, polls, pollingUncertainty=.07):
+            winProbs = pollsToProbs(polls, pollingUncertainty)
             expectedUtility = sum(u*p for u, p in zip(utils, winProbs))
             return [cls.topRank if u > expectedUtility else 0 for u in utils]
         
         @staticmethod
-        def lowInfoIntermediateBallot(cls, utils, winProbs, midScoreWillingness=0.7):
+        def lowInfoIntermediateBallot(cls, utils, polls, pollingUncertainty=.07,
+                                      midScoreWillingness=0.7):
+            winProbs = pollsToProbs(polls, pollingUncertainty)
             expectedUtility = sum(u*p for u, p in zip(utils, winProbs))
             if all(u == utils[0] for u in utils[1:]):
                 return [0]*len(utils)
@@ -264,6 +269,19 @@ def Score(topRank=10, asClass=False):
     if asClass:
         return Score0to
     return Score0to()
+
+class Approval(Score(1,True)):
+    @staticmethod
+    def zeroInfoBallot(cls, utils, pickiness=0):
+        """Returns a ballot based on utils and pickiness
+        pickiness=0 corresponds to lowInfoBallot with equal polling for all candidates
+        pickiness=1 corresponds to bullet voting
+        """
+        expectedUtility = sum(u for u in utils)/len(utils)
+        best = max(utils)
+        normalizedUtils = [(u - expectedUtility)/(best - expectedUtility)
+                           for u in utils]
+        return [1 if u >= pickiness else 0 for u in normalizedUtils]
 
 def BulletyApprovalWith(bullets=0.5, asClass=False):
     class BulletyApproval(Score(1,True)):
@@ -325,7 +343,8 @@ def Srv(topRank=10):
             return baseResults
         
         @staticmethod
-        def lowInfoBallot(cls, utils, winProbs, scoreImportance=0.3):
+        def lowInfoBallot(cls, utils, polls, pollingUncertainty=.07, scoreImportance=0.17):
+            winProbs = pollsToProbs(polls, pollingUncertainty)
             #runoffCoefficients[i][j] is how valuable it is to score i over j
             runoffCoefficients = [[(u1 - u2)*p1*p2
                                    for u2, p2 in zip(utils, winProbs)]
@@ -639,10 +658,11 @@ class Irv(Method):
         return ballot
     
     @staticmethod
-    def lowInfoBallot(cls, utils, winProbs):
-        """Here, winProbs should be interpreted as a metric for electability
+    def lowInfoBallot(cls, utils, approvalPolls, pollingUncertainty=.1):
+        """approvalPolls should be interpreted as a metric for electability
         and the ability to win in the final round. 
         """
+        winProbs = pollsToProbs(approvalPolls, pollingUncertainty)
         expectedUtility = sum(u*p for u, p in zip(utils, winProbs))
         scores = [(u - expectedUtility)*p for u, p in zip(utils, winProbs)]
         goodCandidates = sorted(filter(lambda x: x[1] > 0, enumerate(scores)), key=lambda x:x[1]) #from worst to best score

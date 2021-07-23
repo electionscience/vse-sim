@@ -286,6 +286,45 @@ class Method:
         #     rows.append(row)
         return(rows)
 
+    def threeRoundResults(self, voters, backgroundStrat, foregrounds=[],
+                          r1Media=(lambda x,t:x), pickiness=0.4):
+        """
+        Performs three elections: a single approval voting contest in which everyone
+        votes honestly to give an intentionally crude estimate of electability
+        (which is filtered by r1Media),
+        then an election using no information beyond the first round of "polling,"
+        and a third round which may use the results of both the prior rounds.
+        """
+        if isinstance(backgroundStrat, str):
+            backgroundStrat = getattr(self, backgroundStrat)
+        if isinstance(foregrounds, tuple):
+            foregrounds = [foregrounds]
+        for i, f in enumerate(foregrounds):
+            if len(f) == 2: #if media isn't provided, default to truth
+                foregrounds[i] = (f[0], f[1], lambda x,t:x)
+        
+        r0Results = Approval.results([Approval.zeroInfoBallot(voter, pickiness)
+                                      for voter in voters])
+        electabilities = r1Media(r0Results)
+        backgroundBallots = [backgroundStrat(voter, electabilities) for voter in voters]
+        r1Results = self.results(backgroundBallots)
+        r1Winner = index(max(r1Results))
+        
+        allResults = []
+        for foregroundSelect, foregroundStrat, r2Media in foregrounds:
+            foreground = {(ID, voter) for ID, voter in enumerate(voters)
+                          if foregroundSelect(voter)}
+            #TODO replace "stuff" with actual stuff
+            ballots = [foregroundStrat(voter, stuff) if (i, voter) in foreground
+                       else backgroundBallots[i] for i, voter in enumerate(voters)]
+            results = self.results(ballots)
+            winner = index(max(results))
+            foregroundBaseUtil = sum(voter[r1Winner] for voter in foreground)/len(foreground)
+            foregroundStratUtil = sum(voter[winner] for voter in foreground)/len(foreground)
+            totalUtil = voters.socUtils
+            
+        
+
 
     @staticmethod
     def ballotChooserFor(chooserFun):
@@ -355,3 +394,15 @@ def rememberBallots(fun):
     getAndRemember.__name__ = fun.__name__
     getAndRemember.allTallyKeys = lambda:[]
     return getAndRemember
+
+def pollsToProbs(polls, uncertainty=.05):
+    """Takes approval-style polling as input i.e. a list of floats in the interval [0,1],
+    and returns a list of the estimated probabilities of each candidate winning based on
+    uncertainty. Uncertainty is a float that corresponds to the difference in polling
+    that's required for one candidate to be twice as viable as another.
+    >>> pollsToProbs([.5,.4,.4],.1)
+    [0.5, 0.25, 0.25]
+    """
+    unnormalizedProbs = [2**(pollResult/uncertainty) for pollResult in polls]
+    normFactor = sum(unnormalizedProbs)
+    return [p/normFactor for p in unnormalizedProbs]
