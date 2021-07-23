@@ -67,7 +67,7 @@ class Borda(Method):
         ballot = [0] * len(utils)
         cls.fillPrefOrder(utils, ballot)
         return ballot
-    
+
     @staticmethod
     def lowInfoBallot(cls, utils, polls, pollingUncertainty=.1):
         winProbs = pollsToProbs(polls, pollingUncertainty)
@@ -124,7 +124,7 @@ class Plurality(RankedMethod):
         cls.fillPrefOrder(utils, ballot,
             nSlots = 1, lowSlot=1, remainderScore=0)
         return ballot
-    
+
     @staticmethod
     def lowInfoBallot(cls, utils, polls, pollingUncertainty=.07):
         winProbs = pollsToProbs(polls, pollingUncertainty)
@@ -214,6 +214,7 @@ def Score(topRank=10, asClass=False):
                 >>> Score().resultsFor(DeterministicModel(3)(5,3),Score().honBallot)["results"]
                 [4.0, 6.0, 5.0]
             """
+            raise Exception("NOT")
             bot = min(utils)
             scale = max(utils)-bot
             return [floor((cls.topRank + .99) * (util-bot) / scale) for util in utils]
@@ -223,7 +224,7 @@ def Score(topRank=10, asClass=False):
             winProbs = pollsToProbs(polls, pollingUncertainty)
             expectedUtility = sum(u*p for u, p in zip(utils, winProbs))
             return [cls.topRank if u > expectedUtility else 0 for u in utils]
-        
+
         @staticmethod
         def lowInfoIntermediateBallot(cls, utils, polls, pollingUncertainty=.07,
                                       midScoreWillingness=0.7):
@@ -244,7 +245,7 @@ def Score(topRank=10, asClass=False):
                 else:
                     ballot.append(floor((cls.topRank + .99)*(util-lowThreshold)/(highThreshold-lowThreshold)))
             return ballot
-            
+
         @classmethod
         def fillStratBallot(cls, voter, polls, places, n, stratGap, ballot,
                             frontId, frontResult, targId, targResult):
@@ -314,34 +315,34 @@ def BulletyApprovalWith(bullets=0.5, asClass=False):
     return BulletyApproval()
 
 
-def Srv(topRank=10):
-    "Score Runoff Voting"
+def STAR(topRank=5):
+    "STAR Voting"
 
     score0to = Score(topRank,True)
 
-    class Srv0to(score0to):
+    class STAR0to(score0to):
 
         stratTargetFor = Method.stratTarget3
 
         def results(self, ballots, **kwargs):
-            """Srv results.
+            """STAR results.
 
-            >>> Srv().resultsFor(DeterministicModel(3)(5,3),Irv().honBallot)["results"]
+            >>> STAR().resultsFor(DeterministicModel(3)(5,3),Irv().honBallot)["results"]
             [0, 1, 2]
-            >>> Srv().results([[0,1,2]])[2]
+            >>> STAR().results([[0,1,2]])[2]
             2
-            >>> Srv().results([[0,1,2],[2,1,0]])[1]
+            >>> STAR().results([[0,1,2],[2,1,0]])[1]
             0
-            >>> Srv().results([[0,1,2]] * 4 + [[2,1,0]] * 3 + [[1,2,0]] * 2)
+            >>> STAR().results([[0,1,2]] * 4 + [[2,1,0]] * 3 + [[1,2,0]] * 2)
             [2, 0, 1]
             """
-            baseResults = super(Srv0to, self).results(ballots, **kwargs)
+            baseResults = super(STAR0to, self).results(ballots, **kwargs)
             (runnerUp,top) = sorted(range(len(baseResults)), key=lambda i: baseResults[i])[-2:]
             upset = sum(sign(ballot[runnerUp] - ballot[top]) for ballot in ballots)
             if upset > 0:
                 baseResults[runnerUp] = baseResults[top] + 0.01
             return baseResults
-        
+
         @staticmethod
         def lowInfoBallot(cls, utils, polls, pollingUncertainty=.07, scoreImportance=0.17):
             winProbs = pollsToProbs(polls, pollingUncertainty)
@@ -356,14 +357,14 @@ def Srv(topRank=10):
             #scoreCoefficients[i] is how vauable it is for i to have a high score
             scoreCoefficients = [scoreImportance*(u-eRunnerUpUtil)*p
                                  for u, p in zip(utils, runnerUpProbs)]
-            
+
             #create a tentative ballot
             numCands = len(utils)
             #ballot = [0]*numCands #optimize for performance later
             bot = min(utils)
             scale = max(utils)-bot
             ballot = [floor((cls.topRank + .99) * (util-bot) / scale) for util in utils]
-            
+
             #optimize the ballot
             improvementFound = True
             while improvementFound:
@@ -388,8 +389,8 @@ def Srv(topRank=10):
                         ballot[cand] -= 1
                         improvementFound = True
             return ballot
-            
-    return Srv0to()
+
+    return STAR0to()
 
 
 def toVote(cutoffs, util):
@@ -656,7 +657,7 @@ class Irv(Method):
             ballot[cand[0]] = i
         #print("hballot",ballot)
         return ballot
-    
+
     @staticmethod
     def lowInfoBallot(cls, utils, approvalPolls, pollingUncertainty=.1):
         """approvalPolls should be interpreted as a metric for electability
@@ -672,7 +673,7 @@ class Irv(Method):
         for i in range(len(utils)):
             ballot[order[i][0]] = i
         return ballot
-        
+
 
     @classmethod
     def fillStratBallot(cls, voter, polls, places, n, stratGap, ballot,
@@ -1037,8 +1038,8 @@ class Minimax(Schulze):
                         key=lambda c: min(cmat[c]))\
     + sorted([cand for cand in smithSet], key=lambda c: min(cmat[c]))
         return [places.index(cand) for cand in range(n)]
-            
-        
+
+
 class IRNR(RankedMethod):
     stratMax = 10
 
