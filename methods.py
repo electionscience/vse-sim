@@ -63,8 +63,20 @@ class Method(BaseMethod):
             foregroundBaseUtil = sum(voter[1][r1Winner] for voter in foreground)/len(foreground)
             foregroundStratUtil = sum(voter[1][winner] for voter in foreground)/len(foreground)
             totalUtil = voters.socUtils[winner]
-            allResults.append(makeResults(results=results, foregroundUtil=foregroundStratUtil,
-            foregroundUtilDiff=foregroundStratUtil-foregroundBaseUtil, totalUtil=totalUtil))
+            fgHelped = []
+            fgHarmed = []
+            if winner != r1Winner:
+                for ID, voter in foreground:
+                    if voter[winner] > voter[r1Winner]:
+                        fgHelped.append(voter)
+                    elif voter[winner] < voter[r1Winner]:
+                        fgHarmed.append(voter)
+            utilGained = sum(v[winner] - v[r1Winner] for v in fgHelped)
+            utilLost = sum(v[r1Winner] - v[winner] for v in fgHarmed)
+            allResults.append(makeResults(results=results, fgUtil=foregroundStratUtil,
+            fgUtilDiff=foregroundStratUtil-foregroundBaseUtil, totalUtil=totalUtil,
+            fgSize=len(foreground), fgNumHelped=len(fgHelped), fgNumHarmed=len(fgHarmed),
+            fgUtilGained=utilGained, fgUtilLost=utilLost))
         return allResults
 
 
@@ -264,7 +276,7 @@ def Score(topRank=10, asClass=False):
                 >>> Score().resultsFor(DeterministicModel(3)(5,3),Score().honBallot)["results"]
                 [4.0, 6.0, 5.0]
             """
-            raise Exception("NOT")
+            #raise Exception("NOT")
             bot = min(utils)
             scale = max(utils)-bot
             return [floor((cls.topRank + .99) * (util-bot) / scale) for util in utils]
