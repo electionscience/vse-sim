@@ -13,12 +13,60 @@ from math import log
 from stratFunctions import *
 from dataClasses import *
 
-# def sign(x):
-#     if x>0:
-#         return 1
-#     if x<0:
-#         return -1
-#     return 0
+
+class Method(BaseMethod):
+    """This is separate from BaseMethod to avoid circular dependencies
+    """
+    @classmethod
+    def threeRoundResults(cls, voters, backgroundStrat, foregrounds=[],
+                          r1Media=(lambda x:x), pickiness=0.4):
+        """
+        Performs three elections: a single approval voting contest in which everyone
+        votes honestly to give an intentionally crude estimate of electability
+        (which is filtered by r1Media),
+        then an election using no information beyond the first round of "polling" in which all voters
+        use backgroundStrat, and a third round which may use the results of both the prior rounds.
+        The third round is repeated for each choice of foreground.
+        A foreground is a (foregroundSelectionFunction, foregroundStrat, media) tuple
+        where foregroundSelectionFunction receives the input of
+        (voter, electabilities, media(round1Results)) and returns a positive float representing
+        the voter's eagerness to be strategic if the voter will be part of the strategic foregrounds
+        and 0 if the voter will just use backgroundStrat
+        """
+        if isinstance(backgroundStrat, str):
+            backgroundStrat = getattr(cls, backgroundStrat)
+        if isinstance(foregrounds, tuple):
+            foregrounds = [foregrounds]
+        for i, f in enumerate(foregrounds):
+            if len(f) == 2: #if media isn't provided, default to truth
+                foregrounds[i] = (f[0], f[1], lambda x:x)
+
+        r0Results = Approval.results([useStrat(voter, Approval.zeroInfoBallot, pickiness=pickiness)
+        for voter in voters])
+        r0Winner = cls.winner(r0Results)
+        electabilities = tuple(r1Media(r0Results))
+        backgroundBallots = [useStrat(voter, backgroundStrat, electabilities=electabilities) for voter in voters]
+        r1Results = cls.results(backgroundBallots)
+        r1Winner = cls.winner(r1Results)
+
+        allResults = [makeResults(results=r0Results, totalUtil=voters.socUtils[r0Winner]),
+        makeResults(results=r1Results, totalUtil=voters.socUtils[r1Winner])]
+        for foregroundSelect, foregroundStrat, r2Media in foregrounds:
+            polls = tuple(r2Media(r1Results))
+            foreground = {(ID, voter) for ID, voter in enumerate(voters)
+                          if foregroundSelect(voter, electabilities, polls)}
+            ballots = [useStrat(voter, foregroundStrat, polls=polls, electabilities=electabilities)
+                       if (i, voter) in foreground
+                       else backgroundBallots[i] for i, voter in enumerate(voters)]
+            results = cls.results(ballots)
+            winner = cls.winner(results)
+            foregroundBaseUtil = sum(voter[r1Winner] for voter in foreground)/len(foreground)
+            foregroundStratUtil = sum(voter[winner] for voter in foreground)/len(foreground)
+            totalUtil = voters.socUtils[winner]
+            allResults.append(makeResults(results=results, foregroundUtil=foregroundStratUtil,
+            foregroundUtilDiff=foregroundStratUtil-foregroundBaseUtil, totalUtil=totalUtil))
+        return allResults
+
 
 ####EMs themselves
 class Borda(Method):
@@ -61,16 +109,15 @@ class Borda(Method):
                 i += 1
         #modifies ballot argument, returns nothing.
 
-    @staticmethod #cls is provided explicitly, not through binding
-    @rememberBallot
-    def honBallot(cls, utils):
+    @classmethod
+    def honBallot(cls, utils, **kw):
         ballot = [0] * len(utils)
         cls.fillPrefOrder(utils, ballot)
         return ballot
 
-    @staticmethod
-    def lowInfoBallot(cls, utils, polls, pollingUncertainty=.1):
-        winProbs = pollsToProbs(polls, pollingUncertainty)
+    @classmethod
+    def lowInfoBallot(cls, utils, electabilities, polls=None, pollingUncertainty=.1):
+        winProbs = pollsToProbs(electabilities, pollingUncertainty)
         expectedUtility = sum(u*p for u, p in zip(utils, winProbs))
         scores = [(u - expectedUtility)*p for u, p in zip(utils, winProbs)]
         ballot = [0] * len(utils)
@@ -109,9 +156,8 @@ class Plurality(RankedMethod):
         ballot[forWhom] = 1
         return ballot
 
-    @staticmethod #cls is provided explicitly, not through binding
-    @rememberBallot
-    def honBallot(cls, utils):
+    @classmethod
+    def honBallot(cls, utils, **kw):
         """Takes utilities and returns an honest ballot
 
         >>> Plurality.honBallot(Plurality, Voter([-3,-2,-1]))
@@ -125,9 +171,9 @@ class Plurality(RankedMethod):
             nSlots = 1, lowSlot=1, remainderScore=0)
         return ballot
 
-    @staticmethod
-    def lowInfoBallot(cls, utils, polls, pollingUncertainty=.07):
-        winProbs = pollsToProbs(polls, pollingUncertainty)
+    @classmethod
+    def lowInfoBallot(cls, utils, electabilities, polls=None, pollingUncertainty=.07):
+        winProbs = pollsToProbs(electabilities, pollingUncertainty)
         expectedUtility = sum(u*p for u, p in zip(utils, winProbs))
         scores = [(u - expectedUtility)*p for u, p in zip(utils, winProbs)]
         return cls.oneVote(scores, scores.index(max(scores)))
@@ -202,9 +248,8 @@ def Score(topRank=10, asClass=False):
                 return "IdealApproval"
             return self.__class__.__name__ + str(self.topRank)
 
-        @staticmethod #cls is provided explicitly, not through binding
-        @rememberBallot
-        def honBallot(cls, utils):
+        @classmethod
+        def honBallot(cls, utils, **kw):
             """Takes utilities and returns an honest ballot (on 0..10)
 
 
@@ -219,16 +264,16 @@ def Score(topRank=10, asClass=False):
             scale = max(utils)-bot
             return [floor((cls.topRank + .99) * (util-bot) / scale) for util in utils]
 
-        @staticmethod
-        def lowInfoBallot(cls, utils, polls, pollingUncertainty=.07):
-            winProbs = pollsToProbs(polls, pollingUncertainty)
+        @classmethod
+        def lowInfoBallot(cls, utils, electabilities, polls=None, pollingUncertainty=.07):
+            winProbs = pollsToProbs(electabilities, pollingUncertainty)
             expectedUtility = sum(u*p for u, p in zip(utils, winProbs))
             return [cls.topRank if u > expectedUtility else 0 for u in utils]
 
-        @staticmethod
-        def lowInfoIntermediateBallot(cls, utils, polls, pollingUncertainty=.07,
-                                      midScoreWillingness=0.7):
-            winProbs = pollsToProbs(polls, pollingUncertainty)
+        @classmethod
+        def lowInfoIntermediateBallot(cls, utils, electabilities, polls=None,
+        pollingUncertainty=.07, midScoreWillingness=0.7):
+            winProbs = pollsToProbs(electabilities, pollingUncertainty)
             expectedUtility = sum(u*p for u, p in zip(utils, winProbs))
             if all(u == utils[0] for u in utils[1:]):
                 return [0]*len(utils)
@@ -272,8 +317,8 @@ def Score(topRank=10, asClass=False):
     return Score0to()
 
 class Approval(Score(1,True)):
-    @staticmethod
-    def zeroInfoBallot(cls, utils, pickiness=0):
+    @classmethod
+    def zeroInfoBallot(cls, utils, electabilities=None, polls=None, pickiness=0):
         """Returns a ballot based on utils and pickiness
         pickiness=0 corresponds to lowInfoBallot with equal polling for all candidates
         pickiness=1 corresponds to bullet voting
@@ -293,9 +338,8 @@ def BulletyApprovalWith(bullets=0.5, asClass=False):
             return "BulletyApproval" + str(round(self.bulletiness * 100))
 
 
-        @staticmethod #cls is provided explicitly, not through binding
-        @rememberBallot
-        def honBallot(cls, utils):
+        @classmethod
+        def honBallot(cls, utils, **kw):
             """Takes utilities and returns an honest ballot (on 0..10)
 
 
@@ -324,6 +368,7 @@ def STAR(topRank=5):
 
         stratTargetFor = Method.stratTarget3
 
+        @classmethod
         def results(self, ballots, **kwargs):
             """STAR results.
 
@@ -343,9 +388,9 @@ def STAR(topRank=5):
                 baseResults[runnerUp] = baseResults[top] + 0.01
             return baseResults
 
-        @staticmethod
-        def lowInfoBallot(cls, utils, polls, pollingUncertainty=.07, scoreImportance=0.17):
-            winProbs = pollsToProbs(polls, pollingUncertainty)
+        @classmethod
+        def lowInfoBallot(cls, utils, electabilities, polls=None, pollingUncertainty=.07, scoreImportance=0.17):
+            winProbs = pollsToProbs(electabilities, pollingUncertainty)
             #runoffCoefficients[i][j] is how valuable it is to score i over j
             runoffCoefficients = [[(u1 - u2)*p1*p2
                                    for u2, p2 in zip(utils, winProbs)]
@@ -360,7 +405,6 @@ def STAR(topRank=5):
 
             #create a tentative ballot
             numCands = len(utils)
-            #ballot = [0]*numCands #optimize for performance later
             bot = min(utils)
             scale = max(utils)-bot
             ballot = [floor((cls.topRank + .99) * (util-bot) / scale) for util in utils]
@@ -456,9 +500,8 @@ class Mav(Method):
         cls.specificCuts = percentile(voters,cls.specificPercentiles)
         return cls.honBallot
 
-    @staticmethod #cls is provided explicitly, not through binding
-    @rememberBallot
-    def honBallot(cls, voter):
+    @classmethod
+    def honBallot(cls, voter, **kw):
         """Takes utilities and returns an honest ballot (on 0..4)
 
         honest ballot works as intended, gives highest grade to highest utility:
@@ -614,6 +657,7 @@ class Irv(Method):
                     if nextrank < 0:
                         raise
 
+    @classmethod
     def results(self, ballots, **kwargs):
         """IRV results.
 
@@ -643,9 +687,8 @@ class Irv(Method):
         return results
 
 
-    @staticmethod #cls is provided explicitly, not through binding
-    @rememberBallot
-    def honBallot(cls, voter):
+    @classmethod
+    def honBallot(cls, voter, **kw):
         """Takes utilities and returns an honest ballot
 
         >>> Irv.honBallot(Irv,Voter([4,1,6,3]))
@@ -658,12 +701,11 @@ class Irv(Method):
         #print("hballot",ballot)
         return ballot
 
-    @staticmethod
-    def lowInfoBallot(cls, utils, approvalPolls, pollingUncertainty=.1):
-        """approvalPolls should be interpreted as a metric for electability
-        and the ability to win in the final round. 
+    @classmethod
+    def lowInfoBallot(cls, utils, electabilities, polls=None, pollingUncertainty=.1):
+        """Electabilities should be interpreted as a metric for the ability to win in the final round.
         """
-        winProbs = pollsToProbs(approvalPolls, pollingUncertainty)
+        winProbs = pollsToProbs(electabilities, pollingUncertainty)
         expectedUtility = sum(u*p for u, p in zip(utils, winProbs))
         scores = [(u - expectedUtility)*p for u, p in zip(utils, winProbs)]
         goodCandidates = sorted(filter(lambda x: x[1] > 0, enumerate(scores)), key=lambda x:x[1]) #from worst to best score
@@ -885,6 +927,7 @@ class Schulze(RankedMethod):
 
         return numWins
 
+    @classmethod
     def results(self, ballots, isHonest=False, **kwargs):
         """Schulze results.
 
@@ -1076,9 +1119,8 @@ class IRNR(RankedMethod):
                 results[i] = tsum[i]
         return results
 
-    @staticmethod #cls is provided explicitly, not through binding
-    @rememberBallot
-    def honBallot(cls, utils):
+    @classmethod
+    def honBallot(cls, utils, **kw):
         """Takes utilities and returns an honest ballot
         """
         return utils

@@ -1,6 +1,7 @@
 
 from mydecorators import autoassign, cached_property, setdefaultattr, decorator
 import random
+import functools
 from numpy.lib.scimath import sqrt
 from numpy.core.fromnumeric import mean, std
 from numpy.lib.function_base import median
@@ -112,12 +113,13 @@ class Tallies(list):
         return tally
 
 ##Election Methods
-class Method:
+class BaseMethod:
     """Base class for election methods. Holds some of the duct tape."""
 
     def __str__(self):
         return self.__class__.__name__
 
+    @classmethod
     def results(self, ballots, **kwargs):
         """Combines ballots into results. Override for comparative
         methods.
@@ -138,8 +140,8 @@ class Method:
         """Takes utilities and returns an honest ballot
         """
         raise NotImplementedError("{} needs honBallot".format(cls))
-    
-    @staticmethod
+
+    @classmethod
     def lowInfoBallot(cls, utils, winProbs):
         """Takes utilities and information on each candidate's electability
         and returns a strategically optimal ballot based on that information
@@ -286,46 +288,6 @@ class Method:
         #     rows.append(row)
         return(rows)
 
-    def threeRoundResults(self, voters, backgroundStrat, foregrounds=[],
-                          r1Media=(lambda x,t:x), pickiness=0.4):
-        """
-        Performs three elections: a single approval voting contest in which everyone
-        votes honestly to give an intentionally crude estimate of electability
-        (which is filtered by r1Media),
-        then an election using no information beyond the first round of "polling,"
-        and a third round which may use the results of both the prior rounds.
-        """
-        if isinstance(backgroundStrat, str):
-            backgroundStrat = getattr(self, backgroundStrat)
-        if isinstance(foregrounds, tuple):
-            foregrounds = [foregrounds]
-        for i, f in enumerate(foregrounds):
-            if len(f) == 2: #if media isn't provided, default to truth
-                foregrounds[i] = (f[0], f[1], lambda x,t:x)
-        
-        r0Results = Approval.results([Approval.zeroInfoBallot(voter, pickiness)
-                                      for voter in voters])
-        electabilities = r1Media(r0Results)
-        backgroundBallots = [backgroundStrat(voter, electabilities) for voter in voters]
-        r1Results = self.results(backgroundBallots)
-        r1Winner = index(max(r1Results))
-        
-        allResults = []
-        for foregroundSelect, foregroundStrat, r2Media in foregrounds:
-            foreground = {(ID, voter) for ID, voter in enumerate(voters)
-                          if foregroundSelect(voter)}
-            #TODO replace "stuff" with actual stuff
-            ballots = [foregroundStrat(voter, stuff) if (i, voter) in foreground
-                       else backgroundBallots[i] for i, voter in enumerate(voters)]
-            results = self.results(ballots)
-            winner = index(max(results))
-            foregroundBaseUtil = sum(voter[r1Winner] for voter in foreground)/len(foreground)
-            foregroundStratUtil = sum(voter[winner] for voter in foreground)/len(foreground)
-            totalUtil = voters.socUtils
-            
-        
-
-
     @staticmethod
     def ballotChooserFor(chooserFun):
         """Takes a chooserFun; returns a ballot chooser using that chooserFun
@@ -394,6 +356,16 @@ def rememberBallots(fun):
     getAndRemember.__name__ = fun.__name__
     getAndRemember.allTallyKeys = lambda:[]
     return getAndRemember
+
+@functools.lru_cache(maxsize=10000)
+def useStrat(voter, strategy, **kw):
+    """Returns the ballot cast by voter using strategy.
+    This function exists purely for the sake of memoization.
+    """
+    return strategy(voter, **kw)
+
+def makeResults(results, totalUtil=None, foregroundUtil=None, foregroundUtilDiff=None):
+    return (results, totalUtil, foregroundUtil, foregroundUtilDiff)
 
 def pollsToProbs(polls, uncertainty=.05):
     """Takes approval-style polling as input i.e. a list of floats in the interval [0,1],
