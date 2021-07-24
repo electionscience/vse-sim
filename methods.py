@@ -239,8 +239,13 @@ def Score(topRank=10, asClass=False):
         #>>> std(qs5)
         #2.3536762480634343
         bias5 = 2.3536762480634343
-        candScore = staticmethod(mean)
-            #"""Takes the list of votes for a candidate; returns the candidate's score."""
+
+        @staticmethod
+        def candScore(cls,scores):
+            """Takes the list of votes for a candidate; returns the candidate's score.
+
+            Don't just use mean because we want to normalize to [0,1]"""
+            return mean(scores)/cls.topRank
 
 
         def __str__(self):

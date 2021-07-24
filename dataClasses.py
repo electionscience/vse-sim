@@ -6,6 +6,7 @@ from numpy.lib.scimath import sqrt
 from numpy.core.fromnumeric import mean, std
 from numpy.lib.function_base import median
 from numpy.ma.core import floor
+from scipy.stats import beta
 from test.test_binop import isnum
 from debugDump import *
 from uuid import uuid4
@@ -367,7 +368,7 @@ def useStrat(voter, strategy, **kw):
 def makeResults(results, totalUtil=None, foregroundUtil=None, foregroundUtilDiff=None):
     return (results, totalUtil, foregroundUtil, foregroundUtilDiff)
 
-def pollsToProbs(polls, uncertainty=.05):
+def simplePollsToProbs(polls, uncertainty=.05):
     """Takes approval-style polling as input i.e. a list of floats in the interval [0,1],
     and returns a list of the estimated probabilities of each candidate winning based on
     uncertainty. Uncertainty is a float that corresponds to the difference in polling
@@ -378,3 +379,53 @@ def pollsToProbs(polls, uncertainty=.05):
     unnormalizedProbs = [2**(pollResult/uncertainty) for pollResult in polls]
     normFactor = sum(unnormalizedProbs)
     return [p/normFactor for p in unnormalizedProbs]
+
+def marginToBetaSize(twosig):
+    """Takes x, and returns a sample size n such that 2*stdev(beta(n/2,n/2))=x"""
+    return (1 / (twosig**2)) - 1
+
+def multi_beta_probs_of_highest(parms):
+    """Given a list of beta distribution params, returns a quick-and-dirty
+    approximation of the chance that each respective beta is the max across
+    all of them."""
+
+    betas = [beta(*parm) for parm in parms]
+    def multi_beta_cdf_loss(x):
+        """Given x, return the loss which (when minimized) leads x to be
+        the median of the max when drawing one sample from each of the betas."""
+
+        p = 1.
+        for beta in betas:
+            p = p * (beta.cdf(x))
+        return (0.5-p)**2
+
+    res = fmin(multi_beta_cdf_loss, np.array([.5]), disp=False)[0]
+
+    probs = np.array([1-beta.cdf(res) for beta in betas])
+    probs = probs / np.sum(probs)
+    return probs
+
+def principledPollsToProbs(polls, uncertainty=.05):
+    """Takes approval-style polling as input i.e. a list of floats in the interval [0,1],
+    and returns a list of the estimated probabilities of each candidate winning based on
+    uncertainty. Uncertainty is a float that corresponds to margin of error (2 standard deviations) for
+    a candidate that polls exactly 0.5.
+
+    >>> a = principledPollsToProbs([.5,.4,.4],.1); a
+    array([0.92336235, 0.03831882, 0.03831882])
+    >>> a[1] == a[2]
+    True
+    >>> b = principledPollsToProbs([.5,.4,.4],.2); b
+    array([0.6622815 , 0.16885925, 0.16885925])
+    >>> a[1] < b[1]
+    True
+    >>> b = principledPollsToProbs([.5,.45,.45],.1); b
+    array([0.6624054, 0.1687973, 0.1687973])
+    >>> a[1] < b[1]
+    True
+    """
+    betaSize =  marginToBetaSize(uncertainty)
+    parms = [(betaSize*poll, betaSize*(1-poll)) for poll in polls]
+    return multi_beta_probs_of_highest(parms)
+
+pollsToProbs = principledPollsToProbs
