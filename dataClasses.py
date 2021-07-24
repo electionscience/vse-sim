@@ -389,8 +389,10 @@ def paramStrat(strategy, **kw):
         strat.__name__ += "_"+str(key)[:4]+str(value)[:4]
     return strat
 
-def makeResults(results, totalUtil=None, foregroundUtil=None, foregroundUtilDiff=None):
-    return (results, totalUtil, foregroundUtil, foregroundUtilDiff)
+def makeResults(results, totalUtil=None, fgUtil=None, fgUtilDiff=None, fgSize=0,
+fgNumHelped=0, fgNumHarmed=0, fgUtilGained=0, fgUtilLost=0):
+    return (results, totalUtil, fgUtil, fgUtilDiff, fgSize,
+    fgNumHelped, fgNumHarmed, fgUtilGained, fgUtilLost)
 
 def pollsToProbs(polls, uncertainty=.05):
     """Takes approval-style polling as input i.e. a list of floats in the interval [0,1],
