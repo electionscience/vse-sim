@@ -9,6 +9,7 @@ from numpy.lib.function_base import median
 from numpy.ma.core import floor
 from scipy.stats import beta
 from test.test_binop import isnum
+from scipy.optimize import fmin
 from debugDump import *
 from uuid import uuid4
 
