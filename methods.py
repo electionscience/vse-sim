@@ -60,8 +60,8 @@ class Method(BaseMethod):
                        else backgroundBallots[i] for i, voter in enumerate(voters)]
             results = cls.results(ballots)
             winner = cls.winner(results)
-            foregroundBaseUtil = sum(voter[r1Winner] for voter in foreground)/len(foreground)
-            foregroundStratUtil = sum(voter[winner] for voter in foreground)/len(foreground)
+            foregroundBaseUtil = sum(voter[1][r1Winner] for voter in foreground)/len(foreground)
+            foregroundStratUtil = sum(voter[1][winner] for voter in foreground)/len(foreground)
             totalUtil = voters.socUtils[winner]
             allResults.append(makeResults(results=results, foregroundUtil=foregroundStratUtil,
             foregroundUtilDiff=foregroundStratUtil-foregroundBaseUtil, totalUtil=totalUtil))
