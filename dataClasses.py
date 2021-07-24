@@ -297,15 +297,30 @@ class BaseMethod:
         ballotChooser.__name__ = chooserFun.getName()
         return ballotChooser
 
-    def stratTarget2(self,places):
+    @staticmethod
+    def stratTarget2(places):
         ((frontId,frontResult), (targId, targResult)) = places[0:2]
         return (frontId, frontResult, targId, targResult)
 
-    def stratTarget3(self,places):
+    @staticmethod
+    def stratTarget3(places):
         ((frontId,frontResult), (targId, targResult)) = places[0:3:2]
         return (frontId, frontResult, targId, targResult)
 
     stratTargetFor = stratTarget2
+
+    @classmethod
+    def stratBallot(cls, voter, polls, electabilities=None):
+        """Returns a strategic (high-info) ballot, using the strategies in version 1
+        """
+        places = sorted(enumerate(polls),key=lambda x:-x[1]) #from high to low
+        frontId, frontResult, targId, targResult = cls.stratTargetFor(places)
+        n = len(polls)
+        stratGap = voter[targId] - voter[frontId]
+        ballot = [0] * len(voter)
+        cls.fillStratBallot(voter, polls, places, n, stratGap, ballot,
+                            frontId, frontResult, targId, targResult)
+        return ballot
 
     def stratBallotFor(self,polls):
         """Returns a (function which takes utilities and returns a strategic ballot)
@@ -363,6 +378,16 @@ def useStrat(voter, strategy, **kw):
     This function exists purely for the sake of memoization.
     """
     return strategy(voter, **kw)
+
+def paramStrat(strategy, **kw):
+    """A wrapper for strategy that gives it arguments in addition to voter, polls, and electabilities
+    """
+    def strat(voter, polls=None, electabilities=None):
+        return strategy(voter, polls=polls, electabilities=electabilities, **kw)
+    strat.__name__ = strategy.__name__
+    for key, value in kw.items():
+        strat.__name__ += "_"+str(key)[:4]+str(value)[:4]
+    return strat
 
 def makeResults(results, totalUtil=None, foregroundUtil=None, foregroundUtilDiff=None):
     return (results, totalUtil, foregroundUtil, foregroundUtilDiff)
