@@ -2,6 +2,7 @@
 from mydecorators import autoassign, cached_property, setdefaultattr, decorator
 import random
 import functools
+import numpy as np
 from numpy.lib.scimath import sqrt
 from numpy.core.fromnumeric import mean, std
 from numpy.lib.function_base import median
