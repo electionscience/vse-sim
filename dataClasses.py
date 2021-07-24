@@ -392,9 +392,9 @@ def paramStrat(strategy, **kw):
         strat.__name__ += "_"+str(key)[:4]+str(value)[:4]
     return strat
 
-def makeResults(method, backgroundStrat=None, fgSrat=None, numVoters=None,
+def makeResults(method=None, backgroundStrat=None, fgStrat=None, numVoters=None,
 magicBestUtil=None, magicWorstUtil=None, meanCandidateUtil=None, r0ExpectedUtil=None, r0WinnerUtil=None,
-r1WinnerUtil=None, probOfWin=None, winnerPlaceInR0=None, winnerPlaceInR1=None,
+r1WinnerUtil=None, probOfWin=None, r1WinProb=None, winnerPlaceInR0=None, winnerPlaceInR1=None,
 results=None, totalUtil=None,
 fgUtil=None, fgUtilDiff=None, fgSize=None,
 fgNumHelped=None, fgHelpedUtil=None, fgHelpedUtilDiff=None,
@@ -410,10 +410,10 @@ t1fgNumHelped=None, t1fgHelpedUtil=None, t1fgHelpedUtilDiff=None,
 t1fgNumHarmed=None, t1fgHarmedUtil=None, t1fgHarmedUtilDiff=None,
 numWinnersFound=None
 ):
-    return dict(method=method, backgroundStrat=backgroundStrat, fgSrat=fgSrat, numVoters=numVoters,
+    return dict(method=method, backgroundStrat=backgroundStrat, fgStrat=fgStrat, numVoters=numVoters,
     magicBestUtil=magicBestUtil, magicWorstUtil=magicWorstUtil, meanCandidateUtil=meanCandidateUtil,
     r0ExpectedUtil=r0ExpectedUtil, r0WinnerUtil=r0WinnerUtil,
-    r1WinnerUtil=r1WinnerUtil, probOfWin=probOfWin,
+    r1WinnerUtil=r1WinnerUtil, probOfWin=probOfWin, r1WinProb=r1WinProb,
     winnerPlaceInR0=winnerPlaceInR0, winnerPlaceInR1=winnerPlaceInR1,
     results=results, totalUtil=totalUtil,
     fgUtil=fgUtil, fgUtilDiff=fgUtilDiff, fgSize=fgSize,

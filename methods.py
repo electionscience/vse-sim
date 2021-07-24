@@ -48,12 +48,22 @@ class Method(BaseMethod):
         backgroundBallots = [useStrat(voter, backgroundStrat, electabilities=electabilities) for voter in voters]
         r1Results = cls.results(backgroundBallots)
         r1Winner = cls.winner(r1Results)
+        totalUtils = voters.socUtils
 
-        allResults = [makeResults(results=r0Results, totalUtil=voters.socUtils[r0Winner]),
-        makeResults(results=r1Results, totalUtil=voters.socUtils[r1Winner])]
+        constResults = dict(method=cls.__name__, backgroundStrat=backgroundStrat.__name__,
+        numVoters=len(voters), magicBestUtil=max(totalUtils), magicWorstUtil=min(totalUtils),
+        meanCandidateUtil=mean(totalUtils),
+        r0ExpectedUtil=sum(p*u for p, u in zip(pollsToProbs(r0Results),totalUtils)),#could use electabilities instead
+        r0WinnerUtil=totalUtils[r0Winner], r1WinProb=pollsToProbs(r0Results)[r1Winner])
+
+        allResults = [makeResults(results=r0Results, totalUtil=totalUtils[r0Winner],
+        probOfWin=pollsToProbs(r0Results)[r0Winner], **constResults),
+        makeResults(results=r1Results, totalUtil=totalUtils[r1Winner],
+        probOfWin=pollsToProbs(r0Results)[r1Winner],
+        winnerPlaceInR0=None, **constResults)]
         for foregroundSelect, foregroundStrat, r2Media in foregrounds:
             polls = tuple(r2Media(r1Results))
-            foreground = []
+            foreground = [] #(voter, ballot, eagernessToStrategize) tuples
             permbgBallots = []
             for id, voter in enumerate(voters):
                 eagerness = foregroundSelect(voter, electabilities, polls)
@@ -62,14 +72,9 @@ class Method(BaseMethod):
                     useStrat(voter, foregroundStrat, polls=polls, electabilities=electabilities), eagerness))
                 else:
                     permbgBallots.append(backgroundBallots[id])
-
-            #foreground = {(ID, voter) for ID, voter in enumerate(voters)
-                          #if foregroundSelect(voter, electabilities, polls)}
-            #fgSize = len(foreground)
-            #permbgBallots = [ballot for ID, voter in enumerate(voters) if (id, voter) not in foreground]
-            ballots = [useStrat(voter, foregroundStrat, polls=polls, electabilities=electabilities)
-                       if (i, voter) in foreground
-                       else backgroundBallots[i] for i, voter in enumerate(voters)]
+            foreground.sort(key=lambda v:-v[2]) #from most to least eager to use strategy
+            fgSize = len(foreground)
+            ballots = [ballot for _, ballot, _ in foreground] + permbgBallots
             results = cls.results(ballots)
             winner = cls.winner(results)
             foregroundBaseUtil = sum(voter[r1Winner] for voter, _, _ in foreground)/fgSize
@@ -77,20 +82,20 @@ class Method(BaseMethod):
             totalUtil = voters.socUtils[winner]
             fgHelped = []
             fgHarmed = []
-            #fgList = sorted([(id, voter, foregroundSelect(voter, electabilities, polls))
-            #for id, voter in enumerate(voters)], key=lambda v: -v[2])[:fgSize]
             if winner != r1Winner:
-                for ID, voter in foreground:
+                for voter, _, _ in foreground:
                     if voter[winner] > voter[r1Winner]:
                         fgHelped.append(voter)
                     elif voter[winner] < voter[r1Winner]:
                         fgHarmed.append(voter)
+
+
             utilGained = sum(v[winner] - v[r1Winner] for v in fgHelped)
             utilLost = sum(v[r1Winner] - v[winner] for v in fgHarmed)
             allResults.append(makeResults(results=results, fgUtil=foregroundStratUtil,
             fgUtilDiff=foregroundStratUtil-foregroundBaseUtil, totalUtil=totalUtil,
             fgSize=fgSize, fgNumHelped=len(fgHelped), fgNumHarmed=len(fgHarmed),
-            fgUtilGained=utilGained, fgUtilLost=utilLost))
+            fgHelpedUtilDiff=utilGained, fgHarmedUtilDiff=utilLost, **constResults))
         return allResults
 
 
