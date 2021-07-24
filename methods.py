@@ -252,7 +252,7 @@ def Score(topRank=10, asClass=False):
         #2.3536762480634343
         bias5 = 2.3536762480634343
 
-        @staticmethod
+        @classmethod
         def candScore(cls,scores):
             """Takes the list of votes for a candidate; returns the candidate's score.
 

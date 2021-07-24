@@ -390,10 +390,40 @@ def paramStrat(strategy, **kw):
         strat.__name__ += "_"+str(key)[:4]+str(value)[:4]
     return strat
 
-def makeResults(results, totalUtil=None, fgUtil=None, fgUtilDiff=None, fgSize=0,
-fgNumHelped=0, fgNumHarmed=0, fgUtilGained=0, fgUtilLost=0):
-    return (results, totalUtil, fgUtil, fgUtilDiff, fgSize,
-    fgNumHelped, fgNumHarmed, fgUtilGained, fgUtilLost)
+def makeResults(method, backgroundStrat=None, fgSrat=None, numVoters=None,
+magicBestUtil=None, magicWorstUtil=None, meanCandidateUtil=None, r0ExpectedUtil=None, r0WinnerUtil=None,
+r1WinnerUtil=None, probOfWin=None, winnerPlaceInR0=None, winnerPlaceInR1=None,
+results=None, totalUtil=None,
+fgUtil=None, fgUtilDiff=None, fgSize=None,
+fgNumHelped=None, fgHelpedUtil=None, fgHelpedUtilDiff=None,
+fgNumHarmed=None, fgHarmedUtil=None, fgHarmedUtilDiff=None,
+#minfg is the smallest foreground that can change the outcome to the that when the whole foreground is strategic
+#such that every member of this foreground is more eager to strategize than any voter outside it
+minfgUtil=None, minfgUtilDiff=None, minfgSize=None,
+minfgNumHelped=None, minfgHelpedUtil=None, minfgHelpedUtilDiff=None,
+minfgNumHarmed=None, minfgHarmedUtil=None, minfgHarmedUtilDiff=None,
+#t1fg is the smallest foreground that yield a different result than in r1 (pursuant to the eagerness limitation)
+t1fgUtil=None, t1fgUtilDiff=None, t1fgSize=None,
+t1fgNumHelped=None, t1fgHelpedUtil=None, t1fgHelpedUtilDiff=None,
+t1fgNumHarmed=None, t1fgHarmedUtil=None, t1fgHarmedUtilDiff=None,
+numWinnersFound=None
+):
+    return dict(method=method, backgroundStrat=backgroundStrat, fgSrat=fgSrat, numVoters=numVoters,
+    magicBestUtil=magicBestUtil, magicWorstUtil=magicWorstUtil, meanCandidateUtil=meanCandidateUtil,
+    r0ExpectedUtil=r0ExpectedUtil, r0WinnerUtil=r0WinnerUtil,
+    r1WinnerUtil=r1WinnerUtil, probOfWin=probOfWin,
+    winnerPlaceInR0=winnerPlaceInR0, winnerPlaceInR1=winnerPlaceInR1,
+    results=results, totalUtil=totalUtil,
+    fgUtil=fgUtil, fgUtilDiff=fgUtilDiff, fgSize=fgSize,
+    fgNumHelped=fgNumHelped, fgHelpedUtil=fgHelpedUtil, fgHelpedUtilDiff=fgHelpedUtilDiff,
+    fgNumHarmed=fgNumHarmed, fgHarmedUtil=fgHarmedUtil, fgHarmedUtilDiff=fgHarmedUtilDiff,
+    minfgUtil=minfgUtil, minfgUtilDiff=minfgUtilDiff, minfgSize=minfgSize,
+    minfgNumHelped=minfgNumHelped, minfgHelpedUtil=minfgHelpedUtil, minfgHelpedUtilDiff=minfgHelpedUtilDiff,
+    minfgNumHarmed=minfgNumHarmed, minfgHarmedUtil=minfgHarmedUtil, minfgHarmedUtilDiff=minfgHarmedUtilDiff,
+    t1fgUtil=t1fgUtil, t1fgUtilDiff=t1fgUtilDiff, t1fgSize=t1fgSize,
+    t1fgNumHelped=t1fgNumHelped, t1fgHelpedUtil=t1fgHelpedUtil, t1fgHelpedUtilDiff=t1fgHelpedUtilDiff,
+    t1fgNumHarmed=t1fgNumHarmed, t1fgHarmedUtil=t1fgHarmedUtil, t1fgHarmedUtilDiff=t1fgHarmedUtilDiff,
+    numWinnersFound=numWinnersFound)
 
 def simplePollsToProbs(polls, uncertainty=.05):
     """Takes approval-style polling as input i.e. a list of floats in the interval [0,1],
