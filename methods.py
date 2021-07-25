@@ -49,18 +49,22 @@ class Method(BaseMethod):
         r1Results = cls.results(backgroundBallots)
         r1Winner = cls.winner(r1Results)
         totalUtils = voters.socUtils
+        winProbs = pollsToProbs(r0Results) #Add optional argument for precision of polls?
+        #The place of the first-place candidate is 1, etc.
+        r0Places = [sorted(r0Results, reverse=True).index(result) + 1 for result in r0Results]
+        r1Places = [sorted(r1Results, reverse=True).index(result) + 1 for result in r1Results]
 
         constResults = dict(method=cls.__name__, backgroundStrat=backgroundStrat.__name__,
         numVoters=len(voters), magicBestUtil=max(totalUtils), magicWorstUtil=min(totalUtils),
         meanCandidateUtil=mean(totalUtils),
-        r0ExpectedUtil=sum(p*u for p, u in zip(pollsToProbs(r0Results),totalUtils)),#could use electabilities instead
-        r0WinnerUtil=totalUtils[r0Winner], r1WinProb=pollsToProbs(r0Results)[r1Winner])
+        r0ExpectedUtil=sum(p*u for p, u in zip(winProbs,totalUtils)),#could use electabilities instead
+        r0WinnerUtil=totalUtils[r0Winner], r1WinProb=winProbs[r1Winner], r1WinnerUtil=totalUtils[r1Winner])
 
         allResults = [makeResults(results=r0Results, totalUtil=totalUtils[r0Winner],
-        probOfWin=pollsToProbs(r0Results)[r0Winner], **constResults),
+        probOfWin=winProbs[r0Winner], **constResults),
         makeResults(results=r1Results, totalUtil=totalUtils[r1Winner],
-        probOfWin=pollsToProbs(r0Results)[r1Winner],
-        winnerPlaceInR0=None, **constResults)]
+        probOfWin=winProbs[r1Winner],
+        winnerPlaceInR0=r0Places[r1Winner], **constResults)]
         for foregroundSelect, foregroundStrat, r2Media in foregrounds:
             polls = tuple(r2Media(r1Results))
             foreground = [] #(voter, ballot, eagernessToStrategize) tuples
@@ -74,7 +78,10 @@ class Method(BaseMethod):
                     permbgBallots.append(backgroundBallots[id])
             foreground.sort(key=lambda v:-v[2]) #from most to least eager to use strategy
             fgSize = len(foreground)
-            ballots = [ballot for _, ballot, _ in foreground] + permbgBallots
+            fgBallots = [ballot for _, ballot, _ in foreground]
+            fgBaselineBallots = [useStrat(voter, backgroundStrat, electabilities=electabilities)
+                                 for voter, _, _ in foreground]
+            ballots = fgBallots + permbgBallots
             results = cls.results(ballots)
             winner = cls.winner(results)
             foregroundBaseUtil = sum(voter[r1Winner] for voter, _, _ in foreground)/fgSize
@@ -82,20 +89,28 @@ class Method(BaseMethod):
             totalUtil = voters.socUtils[winner]
             fgHelped = []
             fgHarmed = []
+            winnersFound = [(r1Winner, 0)]
+            partialResults = constResults.copy()
             if winner != r1Winner:
-                for voter, _, _ in foreground:
-                    if voter[winner] > voter[r1Winner]:
-                        fgHelped.append(voter)
-                    elif voter[winner] < voter[r1Winner]:
-                        fgHarmed.append(voter)
+                winnersFound.append((winner, fgSize))
+            i = 1
+            while i < len(winnersFound):
+                threshold = cls.stratThresholdSearch(
+                winnersFound[i][0], winnersFound[i][1], permbgBallots, fgBallots, fgBaselineBallots, winnersFound)
+                minfg = [voter for voter, _, _ in foreground][:threshold]
+                if winnersFound[i][0] == winner:
+                    prefix = "min"
+                elif r1Winner == cls.winner(cls.results(
+                permbgBallots + fgBallots[:threshold-1] + fgBaselineBallots[threshold-1:])):
+                    prefix = "t1"
+                else: prefix = "o"+str(i)
+                partialResults.update(makePartialResults(minfg, winner, r1Winner, prefix))
+                i += 1
 
-
-            utilGained = sum(v[winner] - v[r1Winner] for v in fgHelped)
-            utilLost = sum(v[r1Winner] - v[winner] for v in fgHarmed)
-            allResults.append(makeResults(results=results, fgUtil=foregroundStratUtil,
-            fgUtilDiff=foregroundStratUtil-foregroundBaseUtil, totalUtil=totalUtil,
-            fgSize=fgSize, fgNumHelped=len(fgHelped), fgNumHarmed=len(fgHarmed),
-            fgHelpedUtilDiff=utilGained, fgHarmedUtilDiff=utilLost, **constResults))
+            partialResults.update(makePartialResults([voter for voter, _, _ in foreground], winner, r1Winner, ""))
+            allResults.append(makeResults(results=results, fgStrat = foregroundStrat.__name__,
+            winnerPlaceInR0=r0Places[winner], winnerPlaceInR1=r1Places[winner],
+            probOfWin=winProbs[winner], numWinnersFound=len(winnersFound), totalUtil=totalUtil, **partialResults))
         return allResults
 
 

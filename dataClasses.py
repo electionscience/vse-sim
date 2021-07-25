@@ -164,7 +164,8 @@ class BaseMethod:
         """
         winScore = max([result for result in results if isnum(result)])
         winners = [cand for (cand, score) in enumerate(results) if score==winScore]
-        return random.choice(winners)
+        #return random.choice(winners)
+        return winners[0] #made it deterministic to prevent nondeterministic behaviors in useful functions
 
     def honBallotFor(self, voters):
         """This is where you would do any setup necessary and create an honBallot
@@ -175,6 +176,23 @@ class BaseMethod:
         """Returns a (function which takes utilities and returns a dummy ballot)
         for the given "polling" info."""
         return lambda cls, utilities, stratTally: utilities
+
+    @classmethod
+    def stratThresholdSearch(cls, targetWinner, foundAt, bgBallots, fgBallots, fgBaselineBallots, winnersFound):
+        """Returns the minimum number of strategist needed to elect targetWinner
+        and modifies winnersFound to include any additional winners found during the search"""
+        maxThreshold, minThreshold = foundAt, 0
+        while maxThreshold > minThreshold: #binary search for min foreground size
+            midpoint = int(floor((maxThreshold + minThreshold)/2))
+            midpointBallots = bgBallots + fgBallots[:midpoint] + fgBaselineBallots[midpoint:]
+            midpointWinner = cls.winner(cls.results(midpointBallots))
+            if not any(midpointWinner == w for w, _ in winnersFound):
+                winnersFound.append(midpointWinner, midpoint)
+            if midpointWinner == targetWinner:
+                maxThreshold = midpoint
+            else:
+                minThreshold = midpoint + 1
+        return maxThreshold
 
     def resultsFor(self, voters, chooser, tally=None, **kwargs):
         """create ballots and get results.
@@ -399,8 +417,8 @@ results=None, totalUtil=None,
 fgUtil=None, fgUtilDiff=None, fgSize=None,
 fgNumHelped=None, fgHelpedUtil=None, fgHelpedUtilDiff=None,
 fgNumHarmed=None, fgHarmedUtil=None, fgHarmedUtilDiff=None,
-#minfg is the smallest foreground that can change the outcome to the that when the whole foreground is strategic
-#such that every member of this foreground is more eager to strategize than any voter outside it
+#minfg is the smallest foreground that can change the outcome to equal the outcome when the whole foreground is
+#strategic, such that every member of this foreground is more eager to strategize than every voter outside it
 minfgUtil=None, minfgUtilDiff=None, minfgSize=None,
 minfgNumHelped=None, minfgHelpedUtil=None, minfgHelpedUtilDiff=None,
 minfgNumHarmed=None, minfgHarmedUtil=None, minfgHarmedUtilDiff=None,
@@ -426,6 +444,25 @@ numWinnersFound=None
     t1fgNumHelped=t1fgNumHelped, t1fgHelpedUtil=t1fgHelpedUtil, t1fgHelpedUtilDiff=t1fgHelpedUtilDiff,
     t1fgNumHarmed=t1fgNumHarmed, t1fgHarmedUtil=t1fgHarmedUtil, t1fgHarmedUtilDiff=t1fgHarmedUtilDiff,
     numWinnersFound=numWinnersFound)
+
+def makePartialResults(fgVoters, winner, r1Winner, prefix=""):
+    fgHelped = []
+    fgHarmed = []
+    numfg = len(fgVoters)
+    if winner != r1Winner:
+        for voter in fgVoters:
+            if voter[winner] > voter[r1Winner]:
+                fgHelped.append(voter)
+            elif voter[winner] < voter[r1Winner]:
+                fgHarmed.append(voter)
+
+    tempDict = dict(fgUtil=sum(v[winner] for v in fgVoters)/numfg,
+    fgUtilDiff=sum(v[winner] - v[r1Winner] for v in fgVoters)/numfg, fgSize=numfg,
+    fgNumHelped=len(fgHelped), fgHelpedUtil=sum(v[winner] for v in fgHelped),
+    fgHelpedUtilDiff= sum(v[winner] - v[r1Winner] for v in fgHelped),
+    fgNumHarmed=len(fgHarmed), fgHarmedUtil=sum(v[winner] for v in fgHarmed),
+    fgHarmedUtilDiff= sum(v[winner] - v[r1Winner] for v in fgHarmed))
+    return{prefix+key:value for key, value in tempDict.items()}
 
 def simplePollsToProbs(polls, uncertainty=.05):
     """Takes approval-style polling as input i.e. a list of floats in the interval [0,1],
