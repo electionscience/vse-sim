@@ -1,5 +1,4 @@
 
-from mydecorators import autoassign, cached_property, setdefaultattr, decorator
 import random
 import functools
 import numpy as np
@@ -10,8 +9,13 @@ from numpy.ma.core import floor
 from scipy.stats import beta
 from test.test_binop import isnum
 from scipy.optimize import fmin
-from debugDump import *
 from uuid import uuid4
+
+
+from mydecorators import autoassign, cached_property, setdefaultattr, decorator
+from debugDump import *
+from version import version
+
 
 
 from stratFunctions import *
@@ -435,23 +439,23 @@ def selectVoter(voter):
     return selectV
 
 def makeResults(method=None, backgroundStrat=None, fgStrat=None, numVoters=None,
-magicBestUtil=None, magicWorstUtil=None, meanCandidateUtil=None, r0ExpectedUtil=None, r0WinnerUtil=None,
-r1WinnerUtil=None, probOfWin=None, r1WinProb=None, winnerPlaceInR0=None, winnerPlaceInR1=None,
-results=None, totalUtil=None,
-fgUtil=None, fgUtilDiff=None, fgSize=None,
-fgNumHelped=None, fgHelpedUtil=None, fgHelpedUtilDiff=None,
-fgNumHarmed=None, fgHarmedUtil=None, fgHarmedUtilDiff=None,
-#minfg is the smallest foreground that can change the outcome to equal the outcome when the whole foreground is
-#strategic, such that every member of this foreground is more eager to strategize than every voter outside it
-minfgUtil=None, minfgUtilDiff=None, minfgSize=None,
-minfgNumHelped=None, minfgHelpedUtil=None, minfgHelpedUtilDiff=None,
-minfgNumHarmed=None, minfgHarmedUtil=None, minfgHarmedUtilDiff=None,
-#t1fg is the smallest foreground that yield a different result than in r1 (pursuant to the eagerness limitation)
-t1fgUtil=None, t1fgUtilDiff=None, t1fgSize=None,
-t1fgNumHelped=None, t1fgHelpedUtil=None, t1fgHelpedUtilDiff=None,
-t1fgNumHarmed=None, t1fgHarmedUtil=None, t1fgHarmedUtilDiff=None,
-numWinnersFound=None
-):
+        magicBestUtil=None, magicWorstUtil=None, meanCandidateUtil=None, r0ExpectedUtil=None, r0WinnerUtil=None,
+        r1WinnerUtil=None, probOfWin=None, r1WinProb=None, winnerPlaceInR0=None, winnerPlaceInR1=None,
+        results=None, totalUtil=None,
+        fgUtil=None, fgUtilDiff=None, fgSize=None,
+        fgNumHelped=None, fgHelpedUtil=None, fgHelpedUtilDiff=None,
+        fgNumHarmed=None, fgHarmedUtil=None, fgHarmedUtilDiff=None,
+        #minfg is the smallest foreground that can change the outcome to equal the outcome when the whole foreground is
+        #strategic, such that every member of this foreground is more eager to strategize than every voter outside it
+        minfgUtil=None, minfgUtilDiff=None, minfgSize=None,
+        minfgNumHelped=None, minfgHelpedUtil=None, minfgHelpedUtilDiff=None,
+        minfgNumHarmed=None, minfgHarmedUtil=None, minfgHarmedUtilDiff=None,
+        #t1fg is the smallest foreground that yield a different result than in r1 (pursuant to the eagerness limitation)
+        t1fgUtil=None, t1fgUtilDiff=None, t1fgSize=None,
+        t1fgNumHelped=None, t1fgHelpedUtil=None, t1fgHelpedUtilDiff=None,
+        t1fgNumHarmed=None, t1fgHarmedUtil=None, t1fgHarmedUtilDiff=None,
+        numWinnersFound=None
+        ):
     return dict(method=method, backgroundStrat=backgroundStrat, fgStrat=fgStrat, numVoters=numVoters,
     magicBestUtil=magicBestUtil, magicWorstUtil=magicWorstUtil, meanCandidateUtil=meanCandidateUtil,
     r0ExpectedUtil=r0ExpectedUtil, r0WinnerUtil=r0WinnerUtil,
@@ -549,3 +553,35 @@ def principledPollsToProbs(polls, uncertainty=.05):
     return multi_beta_probs_of_highest(parms)
 
 pollsToProbs = principledPollsToProbs
+
+def appendResults(filename, resultsList, globalComment = dict()):
+    """append list of results created by makeResults to a csv file.
+    for instance:
+
+    csvs.saveFile()
+    """
+    needsHeader = not os.path.isfile(baseName)
+    keys = resultsList[0].keys()  # important stuff first
+    #keys.extend(list(self.rows[0].keys()))  # any other stuff I missed; dedup later
+    keys = uniquify(keys)
+
+
+    globalComment(version = version)
+
+    with open(baseName + str(i) + ".csv", "a") as myFile:
+        if needsHeader:
+            print("# " + str(globalComment),
+            #dict(
+                        #media=self.media.__name__,
+            #              version=self.repo_version,
+            #              seed=self.seed,
+            ##              model=self.model,
+            #              methods=self.methods,
+            #              nvot=self.nvot,
+            #              ncand=self.ncand,
+            #              niter=self.niter)),
+                file=myFile)
+        dw = csv.DictWriter(myFile, keys, restval="NA")
+        dw.writeheader()
+        for r in resultsList:
+            dw.writerow(r)
