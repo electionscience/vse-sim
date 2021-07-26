@@ -141,19 +141,29 @@ class BaseMethod:
             ballots = list(ballots)
         return list(map(self.candScore,zip(*ballots)))
 
-    @staticmethod #cls is provided explicitly, not through binding
+    @classmethod
     #@rememberBallot
-    def honBallot(cls, utils):
+    def honBallot(cls, utils, **kw):
         """Takes utilities and returns an honest ballot
         """
         raise NotImplementedError("{} needs honBallot".format(cls))
 
     @classmethod
-    def lowInfoBallot(cls, utils, winProbs):
+    def lowInfoBallot(cls, utils, electabilities, **kw):
         """Takes utilities and information on each candidate's electability
         and returns a strategically optimal ballot based on that information
         """
-        raise NotImplementedError("{} lacks lowInfoBallot".format(cls))
+        return cls.honBallot(utils)
+
+    @classmethod
+    def diehardBallot(cls, utils, intensity, candToHelp, candToHurt, electabilities=None, polls=None):
+        "Returns a ballot using a diehard strategy with the given intensity"
+        return cls.honBallot(utils)
+
+    @classmethod
+    def compBallot(cls, utils, intensity, candToHelp, candToHurt, electabilities=None, polls=None):
+        "Returns a ballot using a compromising strategy with the given intensity"
+        return cls.honBallot(utils)
 
     @staticmethod
     def winner(results):
@@ -335,7 +345,7 @@ class BaseMethod:
     stratTargetFor = stratTarget2
 
     @classmethod
-    def stratBallot(cls, voter, polls, electabilities=None):
+    def stratBallot(cls, voter, polls, electabilities=None, **kw):
         """Returns a strategic (high-info) ballot, using the strategies in version 1
         """
         places = sorted(enumerate(polls),key=lambda x:-x[1]) #from high to low
@@ -405,14 +415,21 @@ def useStrat(voter, strategy, **kw):
     return strategy(voter, **kw)
 
 def paramStrat(strategy, **kw):
-    """A wrapper for strategy that gives it arguments in addition to voter, polls, and electabilities
+    """A wrapper for strategy that gives it arguments in addition to voter, polls, electabilities, and targets
     """
-    def strat(voter, polls=None, electabilities=None):
-        return strategy(voter, polls=polls, electabilities=electabilities, **kw)
+    def strat(voter, polls=None, electabilities=None, candToHelp=None, candToHurt=None):
+        return strategy(voter, polls=polls, electabilities=electabilities,
+        candToHelp=candToHelp, candToHurt=candToHurt, **kw)
     strat.__name__ = strategy.__name__
     for key, value in kw.items():
         strat.__name__ += "_"+str(key)[:4]+str(value)[:4]
     return strat
+
+def swapPolls(strategy):
+    def newStrat(voter, polls=None, electabilities=None, **kw):
+        return strategy(voter, polls=electabilities, electabilities=polls, **kw)
+    newStrat.__name__ = "pes_" + strategy.__name__
+    return newStrat
 
 def wantToHelp(voter, candToHelp, candToHurt, **kw):
     return max(voter[candToHelp] - voter[candToHurt], 0)
