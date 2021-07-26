@@ -19,7 +19,7 @@ class Method(BaseMethod):
     """
     @classmethod
     def threeRoundResults(cls, voters, backgroundStrat, foregrounds=[],
-                          r1Media=(lambda x:x), pickiness=0.4):
+                          r1Media=(lambda x:x), pickiness=0.4, customForeground=False):
         """
         Performs three elections: a single approval voting contest in which everyone
         votes honestly to give an intentionally crude estimate of electability
@@ -27,19 +27,28 @@ class Method(BaseMethod):
         then an election using no information beyond the first round of "polling" in which all voters
         use backgroundStrat, and a third round which may use the results of both the prior rounds.
         The third round is repeated for each choice of foreground.
-        A foreground is a (foregroundSelectionFunction, foregroundStrat, media) tuple
-        where foregroundSelectionFunction receives the input of
-        (voter, electabilities, media(round1Results)) and returns a positive float representing
+        A foreground is a (targetSelectionFunction, foregroundStrat, foregroundSelectionFunction, media) tuple
+        where targetSelectionFunction receives the input of (electabilities, media(round1Results)) and
+        returns (candToHelp, candToHurt).
+        foregroundSelectionFunction receives the input of
+        (voter, candToHelp, candToHurt, electabilities, media(round1Results)) and returns a positive float representing
         the voter's eagerness to be strategic if the voter will be part of the strategic foregrounds
-        and 0 if the voter will just use backgroundStrat
+        and 0 if the voter will just use backgroundStrat.
+        foregroundSelectionFunction and media are optional in each tuple.
         """
         if isinstance(backgroundStrat, str):
             backgroundStrat = getattr(cls, backgroundStrat)
         if isinstance(foregrounds, tuple):
             foregrounds = [foregrounds]
         for i, f in enumerate(foregrounds):
-            if len(f) == 2: #if media isn't provided, default to truth
-                foregrounds[i] = (f[0], f[1], lambda x:x)
+            #if media and foregroundSelectionFunction aren't provided, use defaults
+            if len(f) == 2:
+                foregrounds[i] = (f[0], f[1], wantToHelp, lambda x:x)
+            elif len(f) == 3:
+                if customForeground:
+                    foregrounds[i] = (f[0], f[1], f[2], lambda x:x)
+                else:
+                    foregrounds[i] = (f[0], f[1], wantToHelp, f[2])
 
         r0Results = Approval.results([useStrat(voter, Approval.zeroInfoBallot, pickiness=pickiness)
         for voter in voters])
@@ -65,12 +74,15 @@ class Method(BaseMethod):
         makeResults(results=r1Results, totalUtil=totalUtils[r1Winner],
         probOfWin=winProbs[r1Winner],
         winnerPlaceInR0=r0Places[r1Winner], **constResults)]
-        for foregroundSelect, foregroundStrat, r2Media in foregrounds:
+        for targetSelect, foregroundStrat, foregroundSelect, r2Media in foregrounds:
             polls = tuple(r2Media(r1Results))
+            candToHelp, candToHurt = targetSelect(electabilities=electabilities, polls=polls)
+            pollOrder = [cand for cand, poll in sorted(enumerate(polls),key=lambda x: -x[1])]
             foreground = [] #(voter, ballot, eagernessToStrategize) tuples
             permbgBallots = []
             for id, voter in enumerate(voters):
-                eagerness = foregroundSelect(voter, electabilities, polls)
+                eagerness = foregroundSelect(voter, candToHelp=candToHelp, candToHurt=candToHurt,
+                electabilities=electabilities, polls=polls)
                 if eagerness > 0:
                     foreground.append((voter,
                     useStrat(voter, foregroundStrat, polls=polls, electabilities=electabilities), eagerness))

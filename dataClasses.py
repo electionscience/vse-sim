@@ -410,6 +410,30 @@ def paramStrat(strategy, **kw):
         strat.__name__ += "_"+str(key)[:4]+str(value)[:4]
     return strat
 
+def wantToHelp(voter, candToHelp, candToHurt, **kw):
+    return max(voter[candToHelp] - voter[candToHurt], 0)
+
+def selectAB(candA, candB): #candA and candB are candidate IDs
+    def fgSelect(voter, **kw):
+        return max(voter[candA] - voter[candB], 0)
+    fgSelect.__name__ = "select"+str(candA)+str(candB)
+    return fgSelect
+
+def select21(polls, **kw):
+    pollOrder = [cand for cand, poll in sorted(enumerate(polls),key=lambda x: -x[1])]
+    return pollOrder[1], pollOrder[0]
+
+def select31(polls, **kw):
+    pollOrder = [cand for cand, poll in sorted(enumerate(polls),key=lambda x: -x[1])]
+    return pollOrder[2], pollOrder[0]
+
+def selectAll(**kw): return 1
+
+def selectVoter(voter):
+    def selectV(v, **kw):
+        return 1 if v is voter else 0
+    return selectV
+
 def makeResults(method=None, backgroundStrat=None, fgStrat=None, numVoters=None,
 magicBestUtil=None, magicWorstUtil=None, meanCandidateUtil=None, r0ExpectedUtil=None, r0WinnerUtil=None,
 r1WinnerUtil=None, probOfWin=None, r1WinProb=None, winnerPlaceInR0=None, winnerPlaceInR1=None,
