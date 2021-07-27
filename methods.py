@@ -269,6 +269,50 @@ class Plurality(RankedMethod):
     #     return dict(strat=strat, isStrat=isStrat, stratGap=stratGap)
 
 
+def top2(noRunoffMethod):
+    """Returns a top-2 variant of the given voting method
+    """
+    class Top2Version(noRunoffMethod):
+        """Ballots are (r1Ballot, r2Preferences) tuples
+        """
+        @classmethod
+        def results(cls, ballots):
+            r1Ballots, r2Preferences = zip(*ballots)
+            baseResults = super().results(r1Ballots)
+            (runnerUp,top) = sorted(range(len(baseResults)), key=lambda i: baseResults[i])[-2:]
+            upset = sum(sign(rank[runnerUp] - rank[top]) for rank in r2Preferences)
+            if upset > 0:
+                baseResults[runnerUp] = baseResults[top] + 0.01
+            return baseResults
+
+        @classmethod
+        def prefOrder(cls, utils):
+            order = [0]*len(utils)
+            Borda.fillPrefOrder(utils, order)
+            return order
+
+        @classmethod
+        def honBallot(cls, utils, **kw):
+            return super().honBallot(utils, **kw), cls.prefOrder(utils)
+
+        @classmethod
+        def lowInfoBallot(cls, utils, electabilities, polls=None, pollingUncertainty=.15, **kw):
+            return (super().lowInfoBallot(utils, electabilities, pollingUncertainty),
+            cls.prefOrder(utils))
+
+        @classmethod
+        def compBallot(cls, utils, intensity, candToHelp, candToHurt, **kw):
+            return (super().compBallot(utils, intensity, candToHelp, candToHurt),
+            cls.prefOrder(utils))
+
+        @classmethod
+        def diehardBallot(cls, utils, intensity, candToHelp, candToHurt, **kw):
+            return (super().diehardBallot(utils, intensity, candToHelp, candToHurt),
+            cls.prefOrder(utils))
+    Top2Version.__name__ = noRunoffMethod.__name__ + "Top2"
+    return Top2Version
+
+PluralityTop2 = top2(Plurality)
 
 def Score(topRank=10, asClass=False):
     class Score0to(Method):
@@ -437,6 +481,8 @@ class Approval(Score(1,True)):
             return super().compBallot(utils, 2, candToHelp, candToHurt, **kw)
         else:
             return super().compBallot(utils, intensity, candToHelp, candToHurt, **kw)
+
+ApprovalTop2 = top2(Approval)
 
 def BulletyApprovalWith(bullets=0.5, asClass=False):
     class BulletyApproval(Score(1,True)):
