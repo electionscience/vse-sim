@@ -562,7 +562,7 @@ def STAR(topRank=5):
             eRunnerUpUtil = sum(u*p for u, p in zip(utils, runnerUpProbs(winProbs)))
             #scoreCoefficients[i] is how vauable it is for i to have a high score
             scoreCoefficients = [scoreImportance*(u-eRunnerUpUtil)*p
-                                 for u, p in zip(utils, runnerUpProbs)]
+                                 for u, p in zip(utils, runnerUpProbs(winProbs))]
 
             #create a tentative ballot
             numCands = len(utils)
