@@ -546,7 +546,7 @@ def multi_beta_probs_of_highest(parms):
     probs = probs / np.sum(probs)
     return probs
 
-def principledPollsToProbs(polls, uncertainty=.05):
+def principledPollsToProbs(polls, uncertainty=.15):
     """Takes approval-style polling as input i.e. a list of floats in the interval [0,1],
     and returns a list of the estimated probabilities of each candidate winning based on
     uncertainty. Uncertainty is a float that corresponds to margin of error (2 standard deviations) for
@@ -570,6 +570,11 @@ def principledPollsToProbs(polls, uncertainty=.05):
     return multi_beta_probs_of_highest(parms)
 
 pollsToProbs = principledPollsToProbs
+
+def runnerUpProbs(winProbs):
+    unnormalizedRunnerUpProbs = [p*(1-p) for p in winProbs]
+    normFactor = sum(unnormalizedRunnerUpProbs)
+    return [u/normFactor for u in unnormalizedRunnerUpProbs]
 
 def appendResults(filename, resultsList, globalComment = dict()):
     """append list of results created by makeResults to a csv file.

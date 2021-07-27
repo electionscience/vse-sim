@@ -176,8 +176,9 @@ class Borda(Method):
         return ballot
 
     @classmethod
-    def lowInfoBallot(cls, utils, electabilities, polls=None, pollingUncertainty=.3, **kw):
-        winProbs = pollsToProbs(electabilities, pollingUncertainty)
+    def lowInfoBallot(cls, utils, electabilities, polls=None, winProbs=None, pollingUncertainty=.3, **kw):
+        if not winProbs:
+            winProbs = pollsToProbs(electabilities, pollingUncertainty)
         expectedUtility = sum(u*p for u, p in zip(utils, winProbs))
         scores = [(u - expectedUtility)*p for u, p in zip(utils, winProbs)]
         ballot = [0] * len(utils)
@@ -232,8 +233,9 @@ class Plurality(RankedMethod):
         return ballot
 
     @classmethod
-    def lowInfoBallot(cls, utils, electabilities, polls=None, pollingUncertainty=.15, **kw):
-        winProbs = pollsToProbs(electabilities, pollingUncertainty)
+    def lowInfoBallot(cls, utils, electabilities=None, polls=None, pollingUncertainty=.15, winProbs=None, **kw):
+        if not winProbs:
+            winProbs = pollsToProbs(electabilities, pollingUncertainty)
         expectedUtility = sum(u*p for u, p in zip(utils, winProbs))
         scores = [(u - expectedUtility)*p for u, p in zip(utils, winProbs)]
         return cls.oneVote(scores, scores.index(max(scores)))
@@ -296,8 +298,11 @@ def top2(noRunoffMethod):
             return super().honBallot(utils, **kw), cls.prefOrder(utils)
 
         @classmethod
-        def lowInfoBallot(cls, utils, electabilities, polls=None, pollingUncertainty=.15, **kw):
-            return (super().lowInfoBallot(utils, electabilities, pollingUncertainty),
+        def lowInfoBallot(cls, utils, electabilities=None, polls=None, winProbs=None, pollingUncertainty=.15, **kw):
+            if not winProbs:
+                winProbs = pollsToProbs(electabilities, pollingUncertainty)
+            return (super().lowInfoBallot(utils, winProbs=runnerUpProbs(winProbs),
+            pollingUncertainty=pollingUncertainty),
             cls.prefOrder(utils))
 
         @classmethod
@@ -393,15 +398,17 @@ def Score(topRank=10, asClass=False):
             return [floor((cls.topRank + .99) * (util-bot) / scale) for util in utils]
 
         @classmethod
-        def lowInfoBallot(cls, utils, electabilities, polls=None, pollingUncertainty=.15, **kw):
-            winProbs = pollsToProbs(electabilities, pollingUncertainty)
+        def lowInfoBallot(cls, utils, electabilities=None, polls=None, winProbs=None, pollingUncertainty=.15, **kw):
+            if not winProbs:
+                winProbs = pollsToProbs(electabilities, pollingUncertainty)
             expectedUtility = sum(u*p for u, p in zip(utils, winProbs))
             return [cls.topRank if u > expectedUtility else 0 for u in utils]
 
         @classmethod
-        def lowInfoIntermediateBallot(cls, utils, electabilities, polls=None,
-        pollingUncertainty=.15, midScoreWillingness=0.7, **kw):
-            winProbs = pollsToProbs(electabilities, pollingUncertainty)
+        def lowInfoIntermediateBallot(cls, utils, electabilities=None, polls=None,
+        winProbs=None, pollingUncertainty=.15, midScoreWillingness=0.7, **kw):
+            if not winProbs:
+                winProbs = pollsToProbs(electabilities, pollingUncertainty)
             expectedUtility = sum(u*p for u, p in zip(utils, winProbs))
             if all(u == utils[0] for u in utils[1:]):
                 return [0]*len(utils)
@@ -544,17 +551,15 @@ def STAR(topRank=5):
             return baseResults
 
         @classmethod
-        def lowInfoBallot(cls, utils, electabilities, polls=None,
+        def lowInfoBallot(cls, utils, electabilities=None, polls=None, winProbs=None,
         pollingUncertainty=.15, scoreImportance=0.17, **kw):
-            winProbs = pollsToProbs(electabilities, pollingUncertainty)
+            if not winProbs:
+                winProbs = pollsToProbs(electabilities, pollingUncertainty)
             #runoffCoefficients[i][j] is how valuable it is to score i over j
             runoffCoefficients = [[(u1 - u2)*p1*p2
                                    for u2, p2 in zip(utils, winProbs)]
                                   for u1, p1 in zip(utils, winProbs)]
-            unnormalizedRunnerUpProbs = [p*(1-p) for p in winProbs]
-            normFactor = sum(unnormalizedRunnerUpProbs)
-            runnerUpProbs = [u/normFactor for u in unnormalizedRunnerUpProbs]
-            eRunnerUpUtil = sum(u*p for u, p in zip(utils, runnerUpProbs))
+            eRunnerUpUtil = sum(u*p for u, p in zip(utils, runnerUpProbs(winProbs)))
             #scoreCoefficients[i] is how vauable it is for i to have a high score
             scoreCoefficients = [scoreImportance*(u-eRunnerUpUtil)*p
                                  for u, p in zip(utils, runnerUpProbs)]
@@ -589,6 +594,61 @@ def STAR(topRank=5):
                         ballot[cand] -= 1
                         improvementFound = True
             return ballot
+
+        @classmethod
+        def compBallot(cls, utils, intensity, candToHelp, candToHurt, baseBallotFunc=None, **kw):
+            if baseBallotFunc is None: baseBallotFunc = cls.honBallot
+            baseBallot = baseBallotFunc(utils, candToHelp=candToHelp, candToHurt=candToHurt, **kw)
+            helpUtil, hurtUtil = utils[candToHelp], utils[candToHurt]
+            if intensity < 1 or helpUtil <= hurtUtil:
+                return baseBallot
+            if intensity == 1:
+                for i, u in enumerate(utils):
+                    if u >= helpUtil:
+                        baseBallot[i] = max(4, baseBallot[i])
+                    elif u <= hurtUtil:
+                        baseBallot[i] = 0
+            if intensity == 2:
+                for i, u in enumerate(utils):
+                    if u >= helpUtil:
+                        baseBallot[i] = 5
+                    elif u <= hurtUtil:
+                        baseBallot[i] = 0
+            if intensity >= 3:
+                baseBallot = [1 if u > hurtUtil else 0 for u in utils]
+                baseBallot[candToHelp] = 5
+            return baseBallot
+
+        @classmethod
+        def diehardBallot(cls, utils, intensity, candToHelp, candToHurt, polls=None, baseBallotFunc=None, **kw):
+            if baseBallotFunc is None: baseBallotFunc = cls.honBallot
+            baseBallot = baseBallotFunc(utils, polls=polls, candToHelp=candToHelp, candToHurt=candToHurt, **kw)
+            helpUtil, hurtUtil = utils[candToHelp], utils[candToHurt]
+            if intensity < 1 or helpUtil <= hurtUtil:
+                return baseBallot
+            if intensity == 1:
+                for i, u in enumerate(utils):
+                    if u <= hurtUtil:
+                        baseBallot[i] = min(1, baseBallot[i])
+                    elif u >= helpUtil:
+                        baseBallot[i] = 5
+            if intensity == 2:
+                for i, u in enumerate(utils):
+                    if u <= hurtUtil:
+                        baseBallot[i] = 0
+                    elif u >= helpUtil:
+                        baseBallot[i] = 5
+            if intensity >= 3:
+                for i, u in enumerate(utils):
+                    if u >= helpUtil:
+                        baseBallot[i] = 5
+                    elif polls[i] < polls[candToHelp]:
+                        baseBallot[i] = 4
+                    else:
+                        baseBallot[i] = 0
+                    baseBallot[candToHurt] = 0
+            return baseBallot
+
 
     return STAR0to()
 
@@ -858,10 +918,11 @@ class Irv(Method):
         return ballot
 
     @classmethod
-    def lowInfoBallot(cls, utils, electabilities, polls=None, pollingUncertainty=.15, **kw):
+    def lowInfoBallot(cls, utils, electabilities, polls=None, pollingUncertainty=.15, winProbs=None, **kw):
         """Electabilities should be interpreted as a metric for the ability to win in the final round.
         """
-        winProbs = pollsToProbs(electabilities, pollingUncertainty)
+        if not winProbs:
+            winProbs = pollsToProbs(electabilities, pollingUncertainty)
         expectedUtility = sum(u*p for u, p in zip(utils, winProbs))
         scores = [(u - expectedUtility)*p for u, p in zip(utils, winProbs)]
         goodCandidates = sorted(filter(lambda x: x[1] > 0, enumerate(scores)), key=lambda x:x[1]) #from worst to best score
@@ -1197,6 +1258,31 @@ class Schulze(RankedMethod):
             cls.fillPrefOrder(voter, ballot,
                 whichCands=[c for (c, r) in places[1:]],
                 lowSlot=0)
+
+    @classmethod #copy-pasted from Irv. The alternatives seemed uglier.
+    def compBallot(cls, utils, intensity, candToHelp, candToHurt=None, **kw):
+        """Useless unless there's a cycle
+        """
+        ballot = cls.honBallot(utils)
+        if intensity < 3: return ballot
+        helpRank = ballot[candToHelp]
+        for cand, rank in enumerate(ballot):
+            if rank > helpRank:
+                ballot[cand] -= 1
+        ballot[candToHelp] = len(utils) - 1
+        return ballot
+
+    @classmethod
+    def diehardBallot(cls, utils, intensity, candToHurt, candToHelp=None, **kw):
+        """Buries candToHurt"""
+        ballot = cls.honBallot(utils)
+        if intensity < 3: return ballot
+        hurtRank = ballot[candToHurt]
+        for cand, rank in enumerate(ballot):
+            if rank < hurtRank:
+                ballot[cand] += 1
+        ballot[candToHurt] = 0
+        return ballot
 
 class Rp(Schulze):
     def resolveCycle(self, cmat, n):
