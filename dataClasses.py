@@ -167,6 +167,10 @@ class BaseMethod:
         "Returns a ballot using a compromising strategy with the given intensity"
         return cls.honBallot(utils)
 
+    #lists of which diehard and compromising strategies are available for a voting method
+    diehardLevels = []
+    compLevels = []
+
     @staticmethod
     def winner(results):
         """Simply find the winner once scores are already calculated. Override for
@@ -607,9 +611,30 @@ def tieFor2NumIntegration(polls, uncertainty):
     normFactor = sum(unnormalizedProbs)
     return [u/normFactor for u in unnormalizedProbs]
 
-def tieFor2Probs(polls, uncertainty=..075):
-    return tieFor2NumIntegration(tuple(polls), uncertainty)
+def tieFor2Probs(polls, uncertainty=.15):
+    if len(polls) < 3: return [0]*len(polls)
+    return tieFor2NumIntegration(tuple(polls), uncertainty/2)
 
+def tieFor2Estimate(probs):
+    """Estimates the probability of each candidate being in a tie for second place,
+    normalized such that they sum to 1"""
+    EXP = 2
+
+    unnormalized = [x*(1-x)*(
+    sum(sum((y*z)**EXP for k, z in enumerate(probs) if i != k != j)
+    for j, y in enumerate(probs) if i != j)
+    /sum(y**EXP for j, y in enumerate(probs) if i != j)
+    )**(1/EXP) for i, x in enumerate(probs)]
+
+    normFactor = sum(unnormalized)
+    return [u/normFactor for u in unnormalized]
+
+
+def adaptiveTieFor2(polls, uncertainty=.15):
+    if len(polls) < 6:
+        return tieFor2Probs(polls, uncertainty)
+    else:
+        return tieFor2Estimate(pollsToProbs(polls, uncertainty))
 
 def appendResults(filename, resultsList, globalComment = dict()):
     """append list of results created by makeResults to a csv file.

@@ -210,6 +210,7 @@ RatedMethod = RankedMethod #Should have same strategies available, plus more
 class Plurality(RankedMethod):
 
     nRanks = 2
+    compLevels = [3]
 
     @staticmethod
     def oneVote(utils, forWhom):
@@ -300,8 +301,8 @@ def top2(noRunoffMethod):
         @classmethod
         def lowInfoBallot(cls, utils, electabilities=None, polls=None, winProbs=None, pollingUncertainty=.15, **kw):
             if not winProbs:
-                winProbs = pollsToProbs(electabilities, pollingUncertainty)
-            return (super().lowInfoBallot(utils, winProbs=runnerUpProbs(winProbs),
+                winProbs = adaptiveTieFor2(electabilities, pollingUncertainty)
+            return (super().lowInfoBallot(utils, winProbs=winProbs,
             pollingUncertainty=pollingUncertainty),
             cls.prefOrder(utils))
 
@@ -317,7 +318,15 @@ def top2(noRunoffMethod):
     Top2Version.__name__ = noRunoffMethod.__name__ + "Top2"
     return Top2Version
 
-PluralityTop2 = top2(Plurality)
+class PluralityTop2(top2(Plurality)):
+    """top2(Plurality) can yield ridiculous results when used by the entire electorate
+    since it's based on causal decision theory. This class fixes that.
+    """
+    @classmethod
+    def lowInfoBallot(cls, utils, electabilities=None, **kw):
+        if electabilities and utils.index(max(utils)) == electabilities.index(max(electabilities)):
+            return cls.honBallot(utils)
+        else: return super().lowInfoBallot(utils, electabilities=electabilities, **kw)
 
 def Score(topRank=10, asClass=False):
     class Score0to(Method):
@@ -356,6 +365,8 @@ def Score(topRank=10, asClass=False):
         #>>> std(qs5)
         #2.3536762480634343
         bias5 = 2.3536762480634343
+        compLevels = [1,2]
+        diehardLevels = [1,2]
 
         @classmethod
         def candScore(cls,scores):
@@ -463,6 +474,8 @@ def Score(topRank=10, asClass=False):
     return Score0to()
 
 class Approval(Score(1,True)):
+    diehardLevels = [1]
+    compLevels = [1]
     @classmethod
     def zeroInfoBallot(cls, utils, electabilities=None, polls=None, pickiness=0, **kw):
         """Returns a ballot based on utils and pickiness
@@ -529,6 +542,8 @@ def STAR(topRank=5):
     class STAR0to(score0to):
 
         stratTargetFor = Method.stratTarget3
+        diehardLevels = [1,2,3]
+        compLevels = [1,2,3]
 
         @classmethod
         def results(self, ballots, **kwargs):
@@ -559,10 +574,10 @@ def STAR(topRank=5):
             runoffCoefficients = [[(u1 - u2)*p1*p2
                                    for u2, p2 in zip(utils, winProbs)]
                                   for u1, p1 in zip(utils, winProbs)]
-            eRunnerUpUtil = sum(u*p for u, p in zip(utils, runnerUpProbs(winProbs)))
+            eRunnerUpUtil = sum(u*p for u, p in zip(utils, adaptiveTieFor2(electabilities)))
             #scoreCoefficients[i] is how vauable it is for i to have a high score
             scoreCoefficients = [scoreImportance*(u-eRunnerUpUtil)*p
-                                 for u, p in zip(utils, runnerUpProbs(winProbs))]
+                                 for u, p in zip(utils, adaptiveTieFor2(electabilities))]
 
             #create a tentative ballot
             numCands = len(utils)
@@ -854,6 +869,7 @@ class Irv(Method):
     """
 
     stratTargetFor = Method.stratTarget3
+    compLevels = [3]
 
     def resort(self, ballots, loser, ncand, piles):
         """No error checking; only works for exhaustive ratings."""
@@ -1124,6 +1140,10 @@ class V321(Mav):
         return rememberBallots(stratBallot)
 
 class Schulze(RankedMethod):
+
+    diehardLevels = [3]
+    compLevels = [3]
+    
     def resolveCycle(self, cmat, n):
 
         beatStrength = [[0] * n] * n
