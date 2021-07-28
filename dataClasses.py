@@ -9,6 +9,8 @@ from numpy.ma.core import floor
 from scipy.stats import beta
 from test.test_binop import isnum
 from scipy.optimize import fmin
+import scipy.stats as stats
+import scipy.integrate as integrate
 from uuid import uuid4
 
 
@@ -575,6 +577,39 @@ def runnerUpProbs(winProbs):
     unnormalizedRunnerUpProbs = [p*(1-p) for p in winProbs]
     normFactor = sum(unnormalizedRunnerUpProbs)
     return [u/normFactor for u in unnormalizedRunnerUpProbs]
+
+def product(l):
+    result = 1
+    for i in l: result *= i
+    return result
+
+@functools.lru_cache
+def tieFor2NumIntegration(polls, uncertainty):
+    """Takes approval polling as input and returns a list of the estimated "probabilities" of each candidate
+    being in a two-way tie for second places, normalized such that the sum is 1.
+    """
+    n = len(polls)
+    tieProbs = [[0]*n for i in range(n)]
+    for t1 in range(n):
+        for t2 in range(t1+1, n):
+            def integrand(x):
+                indicesLeft=list(range(t1)) + list(range(t1+1, t2)) + list(range(t2+1, n))
+                return (stats.norm.pdf(x, loc=polls[t1], scale=uncertainty)
+                *stats.norm.pdf(x, loc=polls[t2], scale=uncertainty)
+                *sum(
+                product((1 - stats.norm.cdf(x, loc=polls[j], scale=uncertainty))
+                if i == j else stats.norm.cdf(x, loc=polls[j], scale=uncertainty)
+                for j in indicesLeft)
+                for i in indicesLeft))
+            tieProbs[t1][t2] = integrate.quad(integrand, 0, 1)[0]
+            tieProbs[t2][t1] = tieProbs[t1][t2]
+    unnormalizedProbs = [sum(l) for l in tieProbs]
+    normFactor = sum(unnormalizedProbs)
+    return [u/normFactor for u in unnormalizedProbs]
+
+def tieFor2Probs(polls, uncertainty=..075):
+    return tieFor2NumIntegration(tuple(polls), uncertainty)
+
 
 def appendResults(filename, resultsList, globalComment = dict()):
     """append list of results created by makeResults to a csv file.
