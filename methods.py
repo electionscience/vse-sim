@@ -585,6 +585,108 @@ class Irv(Method):
                 i -= 1
         #assert list(range(n)) == sorted(ballot)
         assert i == -1
+        
+class IrvPrime(Method):
+    """
+    IRV Prime.
+    
+    See https://electowiki.org/wiki/IRV_Prime
+    """
+
+    stratTargetFor = Method.stratTarget3
+
+    def resort(self, ballots, loser, ncand, piles):
+        """No error checking; only works for exhaustive ratings."""
+        #print("resort",ballots, loser, ncand)
+        #print(piles)
+        for ballot in ballots:
+            if loser < 0:
+                nextrank = ncand - 1
+            else:
+                nextrank = ballot[loser] - 1
+            while 1:
+                try:
+                    piles[ballot.index(nextrank)].append(ballot)
+                    break
+                except AttributeError:
+                    nextrank -= 1
+                    if nextrank < 0:
+                        raise
+
+    def results(self, ballots, **kwargs):
+        """IRV Prime results.
+
+        >>> IrvPrime().resultsFor(DeterministicModel(3)(5,3),Irv().honBallot)["results"]
+        [0, 1, 2]
+        >>> IrvPrime().results([[0,1,2]])[2]
+        2
+        >>> IrvPrime().results([[0,1,2],[2,1,0]])[1]
+        0
+        >>> IrvPrime().results([[0,1,2]] * 4 + [[2,1,0]] * 3 + [[1,2,0]] * 2)
+        [2, 0, 1]
+        """
+        if type(ballots) is not list:
+            ballots = list(ballots)
+        ncand = len(ballots[0])
+        results = [-1] * ncand
+        piles = [[] for i in range(ncand)]
+        loserpile = ballots
+        loser = -1
+        for i in range(ncand):
+            self.resort(loserpile, loser, ncand, piles)
+            negscores = ["x" if isnum(pile) else -len(pile)
+                         for pile in piles]
+            loser = self.winner(negscores)
+            results[loser] = i
+            loserpile, piles[loser] = piles[loser], -1
+        return results
+
+
+    @staticmethod #cls is provided explicitly, not through binding
+    @rememberBallot
+    def honBallot(cls, voter):
+        """Takes utilities and returns an honest ballot
+
+        >>> IrvPrime.honBallot(Irv,Voter([4,1,6,3]))
+        [2, 0, 3, 1]
+        """
+        ballot = [-1] * len(voter)
+        order = sorted(enumerate(voter), key=lambda x:x[1])
+        for i, cand in enumerate(order):
+            ballot[cand[0]] = i
+        #print("hballot",ballot)
+        return ballot
+
+
+    @classmethod
+    def fillStratBallot(cls, voter, polls, places, n, stratGap, ballot,
+                        frontId, frontResult, targId, targResult):
+        """
+        >>> IrvPrime().stratBallotFor([3,2,1,0])(IrvPrime,Voter([3,6,5,2]))
+        [1, 2, 3, 0]
+        """
+        i = n - 1
+        winnerQ = voter[frontId]
+        targQ = voter[targId]
+        placesToFill = list(range(n-1,0,-1))
+        if targQ > winnerQ:
+            ballot[targId] = i
+            i -= 1
+            del placesToFill[-2]
+        for j in placesToFill:
+            nextLoser, loserScore = places[j] #all but winner, low to high
+            if voter[nextLoser] > winnerQ:
+                ballot[nextLoser] = i
+                i -= 1
+        ballot[frontId] = i
+        i -= 1
+        for j in placesToFill:
+            nextLoser, loserScore = places[j]
+            if voter[nextLoser] <= winnerQ:
+                ballot[nextLoser] = i
+                i -= 1
+        #assert list(range(n)) == sorted(ballot)
+        assert i == -1
 
 class V321(Mav):
     baseCuts = [-.1,.8]
