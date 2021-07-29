@@ -12,7 +12,7 @@ from scipy.optimize import fmin
 from uuid import uuid4
 
 
-from mydecorators import autoassign, cached_property, setdefaultattr, decorator
+from mydecorators import autoassign, cached_property, setdefaultattr, decorator, uniquify
 from debugDump import *
 from version import version
 

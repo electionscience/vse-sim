@@ -369,7 +369,7 @@ class KSModel(DimModel): #Kitchen sink
     #dc = dimensional cluster; vc = voter cluster
     def __init__(self, dcdecay=(1,1), dccut = .2,
             wcdecay=(1,1), wccut = .2,
-            wcalpha=1, vccaring=(3,1.5)):
+            wcalpha=1, vccaring=(6,3)):
         pass
 
     def __str__(self):
