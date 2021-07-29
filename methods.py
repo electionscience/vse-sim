@@ -467,6 +467,12 @@ def makeScoreMethod(topRank=10, asClass=False):
             else:
                 return [cls.topRank if u > utils[candToHurt] else 0 for u in utils]
 
+        @classmethod
+        def bulletBallot(cls, utils, **kw):
+            best = utils.index(max(utils))
+            ballot = [0]*len(utils)
+            ballot[best] = cls.topRank
+            return ballot
 
         @classmethod
         def fillStratBallot(cls, voter, polls, places, n, stratGap, ballot,
@@ -524,7 +530,10 @@ class Approval(makeScoreMethod(1,True)):
         else:
             return super().compBallot(utils, intensity, candToHelp, candToHurt, **kw)
 
-class ApprovalTop2(top2(Approval)): pass
+class ApprovalTop2(top2(Approval)):
+    @classmethod
+    def bulletBallot(cls, utils, **kw):
+        return super().bulletBallot(utils), cls.prefOrder(utils)
 
 def BulletyApprovalWith(bullets=0.5, asClass=False):
     class BulletyApproval(Score(1,True)):
