@@ -571,8 +571,9 @@ def principledPollsToProbs(polls, uncertainty=.15):
     >>> a[1] < b[1]
     True
     """
+    nonzeroPolls = [poll if poll > 0 else 0.01 for poll in polls]
     betaSize =  marginToBetaSize(uncertainty)
-    parms = [(betaSize*poll, betaSize*(1-poll)) for poll in polls]
+    parms = [(betaSize*poll, betaSize*(1-poll)) for poll in nonzeroPolls]
     return multi_beta_probs_of_highest(parms)
 
 pollsToProbs = principledPollsToProbs
