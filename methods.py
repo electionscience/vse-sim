@@ -660,7 +660,7 @@ def STAR(topRank=5):
             return baseBallot
 
 
-    return STAR0to()
+    return STAR0to
 
 
 def toVote(cutoffs, util):
@@ -866,6 +866,7 @@ class Irv(Method):
     stratTargetFor = Method.stratTarget3
     compLevels = [3]
 
+    @classmethod
     def resort(self, ballots, loser, ncand, piles):
         """No error checking; only works for exhaustive ratings."""
         #print("resort",ballots, loser, ncand)

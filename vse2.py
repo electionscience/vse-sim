@@ -39,6 +39,7 @@ class CsvBatch:
             else:
                 ms.append(m)
         for i in range(niter):
+            if i>0 and i%10 == 0: print('Interation:', i)
             electorate = model(nvot, ncand)
             for method, bgStrat, fgs in ms:
                 result = method.threeRoundResults(electorate, bgStrat, fgs, r1Media=r1Media, r2Media=r2Media)
@@ -60,3 +61,6 @@ class CsvBatch:
         for r in self.rows:
             dw.writerow(r)
         myFile.close()
+
+
+def compareStrats(method, model, backgroundStrat, nvot, ncand, niter): pass

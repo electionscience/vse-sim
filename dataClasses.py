@@ -207,7 +207,7 @@ class BaseMethod:
             midpointBallots = bgBallots + fgBallots[:midpoint] + fgBaselineBallots[midpoint:]
             midpointWinner = cls.winner(cls.results(midpointBallots))
             if not any(midpointWinner == w for w, _ in winnersFound):
-                winnersFound.append(midpointWinner, midpoint)
+                winnersFound.append((midpointWinner, midpoint))
             if midpointWinner == targetWinner:
                 maxThreshold = midpoint
             else:
@@ -477,7 +477,7 @@ def makeResults(method=None, backgroundStrat=None, fgStrat=None, numVoters=None,
         t1fgUtil=None, t1fgUtilDiff=None, t1fgSize=None,
         t1fgNumHelped=None, t1fgHelpedUtil=None, t1fgHelpedUtilDiff=None,
         t1fgNumHarmed=None, t1fgHarmedUtil=None, t1fgHarmedUtilDiff=None,
-        numWinnersFound=None
+        numWinnersFound=None, **kw
         ):
     return dict(method=method, backgroundStrat=backgroundStrat, fgStrat=fgStrat, numVoters=numVoters,
     numCandidates=numCandidates, magicBestUtil=magicBestUtil, magicWorstUtil=magicWorstUtil,
@@ -552,6 +552,7 @@ def multi_beta_probs_of_highest(parms):
     probs = probs / np.sum(probs)
     return probs
 
+@functools.lru_cache
 def principledPollsToProbs(polls, uncertainty=.15):
     """Takes approval-style polling as input i.e. a list of floats in the interval [0,1],
     and returns a list of the estimated probabilities of each candidate winning based on
@@ -576,7 +577,8 @@ def principledPollsToProbs(polls, uncertainty=.15):
     parms = [(betaSize*poll, betaSize*(1-poll)) for poll in nonzeroPolls]
     return multi_beta_probs_of_highest(parms)
 
-pollsToProbs = principledPollsToProbs
+def pollsToProbs(polls, uncertainty=.15):
+    return principledPollsToProbs(tuple(polls), uncertainty)
 
 def runnerUpProbs(winProbs):
     unnormalizedRunnerUpProbs = [p*(1-p) for p in winProbs]
@@ -616,6 +618,7 @@ def tieFor2Probs(polls, uncertainty=.15):
     if len(polls) < 3: return [0]*len(polls)
     return tieFor2NumIntegration(tuple(polls), uncertainty/2)
 
+@functools.lru_cache
 def tieFor2Estimate(probs):
     """Estimates the probability of each candidate being in a tie for second place,
     normalized such that they sum to 1"""
@@ -635,7 +638,7 @@ def adaptiveTieFor2(polls, uncertainty=.15):
     if len(polls) < 6:
         return tieFor2Probs(polls, uncertainty)
     else:
-        return tieFor2Estimate(pollsToProbs(polls, uncertainty))
+        return tieFor2Estimate(tuple(pollsToProbs(polls, uncertainty)))
 
 def appendResults(filename, resultsList, globalComment = dict()):
     """append list of results created by makeResults to a csv file.
