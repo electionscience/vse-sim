@@ -461,7 +461,7 @@ def selectVoter(voter):
         return 1 if v is voter else 0
     return selectV
 
-def makeResults(method=None, backgroundStrat=None, fgStrat=None, numVoters=None,
+def makeResults(method=None, backgroundStrat=None, fgStrat=None, numVoters=None, numCandidates=None,
         magicBestUtil=None, magicWorstUtil=None, meanCandidateUtil=None, r0ExpectedUtil=None, r0WinnerUtil=None,
         r1WinnerUtil=None, probOfWin=None, r1WinProb=None, winnerPlaceInR0=None, winnerPlaceInR1=None,
         results=None, totalUtil=None,
@@ -480,8 +480,8 @@ def makeResults(method=None, backgroundStrat=None, fgStrat=None, numVoters=None,
         numWinnersFound=None
         ):
     return dict(method=method, backgroundStrat=backgroundStrat, fgStrat=fgStrat, numVoters=numVoters,
-    magicBestUtil=magicBestUtil, magicWorstUtil=magicWorstUtil, meanCandidateUtil=meanCandidateUtil,
-    r0ExpectedUtil=r0ExpectedUtil, r0WinnerUtil=r0WinnerUtil,
+    numCandidates=numCandidates, magicBestUtil=magicBestUtil, magicWorstUtil=magicWorstUtil,
+    meanCandidateUtil=meanCandidateUtil, r0ExpectedUtil=r0ExpectedUtil, r0WinnerUtil=r0WinnerUtil,
     r1WinnerUtil=r1WinnerUtil, probOfWin=probOfWin, r1WinProb=r1WinProb,
     winnerPlaceInR0=winnerPlaceInR0, winnerPlaceInR1=winnerPlaceInR1,
     results=results, totalUtil=totalUtil,
@@ -507,8 +507,8 @@ def makePartialResults(fgVoters, winner, r1Winner, prefix=""):
             elif voter[winner] < voter[r1Winner]:
                 fgHarmed.append(voter)
 
-    tempDict = dict(fgUtil=sum(v[winner] for v in fgVoters)/numfg,
-    fgUtilDiff=sum(v[winner] - v[r1Winner] for v in fgVoters)/numfg, fgSize=numfg,
+    tempDict = dict(fgUtil=sum(v[winner] for v in fgVoters)/numfg if numfg else 0,
+    fgUtilDiff=sum(v[winner] - v[r1Winner] for v in fgVoters)/numfg if numfg else 0, fgSize=numfg,
     fgNumHelped=len(fgHelped), fgHelpedUtil=sum(v[winner] for v in fgHelped),
     fgHelpedUtilDiff= sum(v[winner] - v[r1Winner] for v in fgHelped),
     fgNumHarmed=len(fgHarmed), fgHarmedUtil=sum(v[winner] for v in fgHarmed),

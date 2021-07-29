@@ -19,7 +19,7 @@ class Method(BaseMethod):
     """
     @classmethod
     def threeRoundResults(cls, voters, backgroundStrat, foregrounds=[],
-                          r1Media=(lambda x:x), pickiness=0.4, customForeground=False):
+                          r1Media=(lambda x:x), r2Media=(lambda x:x),pickiness=0.3):
         """
         Performs three elections: a single approval voting contest in which everyone
         votes honestly to give an intentionally crude estimate of electability
@@ -27,28 +27,23 @@ class Method(BaseMethod):
         then an election using no information beyond the first round of "polling" in which all voters
         use backgroundStrat, and a third round which may use the results of both the prior rounds.
         The third round is repeated for each choice of foreground.
-        A foreground is a (targetSelectionFunction, foregroundStrat, foregroundSelectionFunction, media) tuple
+        A foreground is a (foregroundStrat, targetSelectionFunction, foregroundSelectionFunction) tuple
         where targetSelectionFunction receives the input of (electabilities, media(round1Results)) and
         returns (candToHelp, candToHurt).
         foregroundSelectionFunction receives the input of
-        (voter, candToHelp, candToHurt, electabilities, media(round1Results)) and returns a positive float representing
+        (voter, candToHelp, candToHurt, electabilities, r2Media(round1Results)) and returns a positive float representing
         the voter's eagerness to be strategic if the voter will be part of the strategic foregrounds
         and 0 if the voter will just use backgroundStrat.
-        foregroundSelectionFunction and media are optional in each tuple.
+        foregroundSelectionFunction is optional in each tuple.
         """
         if isinstance(backgroundStrat, str):
             backgroundStrat = getattr(cls, backgroundStrat)
         if isinstance(foregrounds, tuple):
             foregrounds = [foregrounds]
         for i, f in enumerate(foregrounds):
-            #if media and foregroundSelectionFunction aren't provided, use defaults
+            #ifforegroundSelectionFunction isn't provided, use default
             if len(f) == 2:
-                foregrounds[i] = (f[0], f[1], wantToHelp, lambda x:x)
-            elif len(f) == 3:
-                if customForeground:
-                    foregrounds[i] = (f[0], f[1], f[2], lambda x:x)
-                else:
-                    foregrounds[i] = (f[0], f[1], wantToHelp, f[2])
+                foregrounds[i] = (f[0], f[1], wantToHelp)
 
         r0Results = Approval.results([useStrat(voter, Approval.zeroInfoBallot, pickiness=pickiness)
         for voter in voters])
@@ -64,8 +59,8 @@ class Method(BaseMethod):
         r1Places = [sorted(r1Results, reverse=True).index(result) + 1 for result in r1Results]
 
         constResults = dict(method=cls.__name__, backgroundStrat=backgroundStrat.__name__,
-        numVoters=len(voters), magicBestUtil=max(totalUtils), magicWorstUtil=min(totalUtils),
-        meanCandidateUtil=mean(totalUtils),
+        numVoters=len(voters), numCandidates=len(voters[0]), magicBestUtil=max(totalUtils),
+        magicWorstUtil=min(totalUtils), meanCandidateUtil=mean(totalUtils),
         r0ExpectedUtil=sum(p*u for p, u in zip(winProbs,totalUtils)),#could use electabilities instead
         r0WinnerUtil=totalUtils[r0Winner], r1WinProb=winProbs[r1Winner], r1WinnerUtil=totalUtils[r1Winner])
 
@@ -74,7 +69,7 @@ class Method(BaseMethod):
         makeResults(results=r1Results, totalUtil=totalUtils[r1Winner],
         probOfWin=winProbs[r1Winner],
         winnerPlaceInR0=r0Places[r1Winner], **constResults)]
-        for targetSelect, foregroundStrat, foregroundSelect, r2Media in foregrounds:
+        for foregroundStrat, targetSelect, foregroundSelect in foregrounds:
             polls = tuple(r2Media(r1Results))
             candToHelp, candToHurt = targetSelect(electabilities=electabilities, polls=polls)
             pollOrder = [cand for cand, poll in sorted(enumerate(polls),key=lambda x: -x[1])]
@@ -98,8 +93,8 @@ class Method(BaseMethod):
             ballots = fgBallots + permbgBallots
             results = cls.results(ballots)
             winner = cls.winner(results)
-            foregroundBaseUtil = sum(voter[r1Winner] for voter, _, _ in foreground)/fgSize
-            foregroundStratUtil = sum(voter[winner] for voter, _, _ in foreground)/fgSize
+            #foregroundBaseUtil = sum(voter[r1Winner] for voter, _, _ in foreground)/fgSize if fgSize else 0
+            #foregroundStratUtil = sum(voter[winner] for voter, _, _ in foreground)/fgSize if fgSize else 0
             totalUtil = voters.socUtils[winner]
             fgHelped = []
             fgHarmed = []
@@ -1143,7 +1138,7 @@ class Schulze(RankedMethod):
 
     diehardLevels = [3]
     compLevels = [3]
-    
+
     def resolveCycle(self, cmat, n):
 
         beatStrength = [[0] * n] * n
