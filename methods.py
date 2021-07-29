@@ -58,7 +58,7 @@ class Method(BaseMethod):
         r0Places = [sorted(r0Results, reverse=True).index(result) + 1 for result in r0Results]
         r1Places = [sorted(r1Results, reverse=True).index(result) + 1 for result in r1Results]
 
-        constResults = dict(method=cls.__name__, backgroundStrat=backgroundStrat.__name__,
+        constResults = dict(method=cls.__name__, electorate=voters.id, backgroundStrat=backgroundStrat.__name__,
         numVoters=len(voters), numCandidates=len(voters[0]), magicBestUtil=max(totalUtils),
         magicWorstUtil=min(totalUtils), meanCandidateUtil=mean(totalUtils),
         r0ExpectedUtil=sum(p*u for p, u in zip(winProbs,totalUtils)),#could use electabilities instead

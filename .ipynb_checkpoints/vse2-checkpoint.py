@@ -1,21 +1,18 @@
-
-import csv
-import os
-import multiprocessing
-import time
-import random
-
 from mydecorators import autoassign, cached_property, setdefaultattr, timeit
 from methods import *
 from voterModels import *
 from dataClasses import *
 from debugDump import *
+import csv
+import os
+
+
 
 class CsvBatch:
     #@timeit
     #@autoassign
     def __init__(self, model, methodsAndStrats,
-            nvot, ncand, niter, r1Media=truth, r2Media=truth, seed=None):
+    nvot, ncand, niter, r1Media=truth, r2Media=truth, seed=None):
         """methodsAndStrats is a list of (votingMethod, backgroundStrat, foregrounds).
         A voting method my be given in place of such a tuple, in which case backgroundSrat and foregrounds
         will be determined automatically.
@@ -26,7 +23,7 @@ class CsvBatch:
         """
         self.rows = []
         if (seed is None):
-            seed = time.time()
+            seed = str(niter)
             self.seed = seed
         random.seed(seed)
         ms = []
@@ -41,12 +38,12 @@ class CsvBatch:
                     ms.append((m, bg, fgs))
             else:
                 ms.append(m)
-        args = (nvot, ncand, ms, r1Media, r2Media)
-        with multiprocessing.Pool(processes=7) as pool:
-            results = pool.starmap(oneStepWorker, [args + (seed, i) for i in range(niter)])
-            for result in results:
+        for i in range(niter):
+            if i>0 and i%10 == 0: print('Interation:', i)
+            electorate = model(nvot, ncand)
+            for method, bgStrat, fgs in ms:
+                result = method.threeRoundResults(electorate, bgStrat, fgs, r1Media=r1Media, r2Media=r2Media)
                 self.rows.extend(result)
-
         for row in self.rows: row['voterModel'] = str(model)
 
     def saveFile(self, baseName="SimResults"):
@@ -65,19 +62,5 @@ class CsvBatch:
             dw.writerow(r)
         myFile.close()
 
-def oneStepWorker(nvot, ncand, ms, r1Media, r2Media, baseSeed=None, i = 0):
-
-    if i>0 and i%10 == 0: print('Interation:', i)
-    if baseSeed is not None:
-        random.seed(baseSeed + i)
-
-    electorate = model(nvot, ncand)
-    rows = []
-    for method, bgStrat, fgs in ms:
-        results = method.threeRoundResults(electorate, bgStrat, fgs, r1Media=r1Media, r2Media=r2Media)
-        for result in results:
-            result["seed"] = seed
-        self.rows.extend(results)
-    return rows
 
 def compareStrats(method, model, backgroundStrat, nvot, ncand, niter): pass

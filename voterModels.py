@@ -7,6 +7,9 @@ from numpy.lib.function_base import median
 from numpy.ma.core import floor
 from scipy.stats import beta
 from test.test_binop import isnum
+from uuid import uuid4
+
+
 from debugDump import *
 
 class Voter(tuple):
@@ -116,6 +119,13 @@ class PersonalityVoter(Voter):
 class Electorate(list):
     """A list of voters.
     Each voter is a list of candidate utilities"""
+
+    @cached_property
+    def id(self):
+        """Get a repeatable uuid
+        """
+        return uuid4()
+
     @cached_property
     def socUtils(self):
         """Return mean utility across electorate for each candidate: their social utilities.

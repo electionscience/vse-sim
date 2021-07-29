@@ -552,7 +552,7 @@ def multi_beta_probs_of_highest(parms):
     probs = probs / np.sum(probs)
     return probs
 
-@functools.lru_cache
+@functools.lru_cache(maxsize=1000)
 def principledPollsToProbs(polls, uncertainty=.15):
     """Takes approval-style polling as input i.e. a list of floats in the interval [0,1],
     and returns a list of the estimated probabilities of each candidate winning based on
@@ -590,7 +590,7 @@ def product(l):
     for i in l: result *= i
     return result
 
-@functools.lru_cache
+@functools.lru_cache(maxsize=1000)
 def tieFor2NumIntegration(polls, uncertainty):
     """Takes approval polling as input and returns a list of the estimated "probabilities" of each candidate
     being in a two-way tie for second places, normalized such that the sum is 1.
@@ -618,7 +618,7 @@ def tieFor2Probs(polls, uncertainty=.15):
     if len(polls) < 3: return [0]*len(polls)
     return tieFor2NumIntegration(tuple(polls), uncertainty/2)
 
-@functools.lru_cache
+@functools.lru_cache(maxsize=1000)
 def tieFor2Estimate(probs):
     """Estimates the probability of each candidate being in a tie for second place,
     normalized such that they sum to 1"""
