@@ -19,7 +19,7 @@ class Method(BaseMethod):
     """
     @classmethod
     def threeRoundResults(cls, voters, backgroundStrat, foregrounds=[],
-                          r1Media=(lambda x:x), pickiness=0.4, customForeground=False):
+                          r1Media=(lambda x:x), r2Media=(lambda x:x),pickiness=0.3):
         """
         Performs three elections: a single approval voting contest in which everyone
         votes honestly to give an intentionally crude estimate of electability
@@ -27,28 +27,23 @@ class Method(BaseMethod):
         then an election using no information beyond the first round of "polling" in which all voters
         use backgroundStrat, and a third round which may use the results of both the prior rounds.
         The third round is repeated for each choice of foreground.
-        A foreground is a (targetSelectionFunction, foregroundStrat, foregroundSelectionFunction, media) tuple
+        A foreground is a (foregroundStrat, targetSelectionFunction, foregroundSelectionFunction) tuple
         where targetSelectionFunction receives the input of (electabilities, media(round1Results)) and
         returns (candToHelp, candToHurt).
         foregroundSelectionFunction receives the input of
-        (voter, candToHelp, candToHurt, electabilities, media(round1Results)) and returns a positive float representing
+        (voter, candToHelp, candToHurt, electabilities, r2Media(round1Results)) and returns a positive float representing
         the voter's eagerness to be strategic if the voter will be part of the strategic foregrounds
         and 0 if the voter will just use backgroundStrat.
-        foregroundSelectionFunction and media are optional in each tuple.
+        foregroundSelectionFunction is optional in each tuple.
         """
         if isinstance(backgroundStrat, str):
             backgroundStrat = getattr(cls, backgroundStrat)
         if isinstance(foregrounds, tuple):
             foregrounds = [foregrounds]
         for i, f in enumerate(foregrounds):
-            #if media and foregroundSelectionFunction aren't provided, use defaults
+            #ifforegroundSelectionFunction isn't provided, use default
             if len(f) == 2:
-                foregrounds[i] = (f[0], f[1], wantToHelp, lambda x:x)
-            elif len(f) == 3:
-                if customForeground:
-                    foregrounds[i] = (f[0], f[1], f[2], lambda x:x)
-                else:
-                    foregrounds[i] = (f[0], f[1], wantToHelp, f[2])
+                foregrounds[i] = (f[0], f[1], wantToHelp)
 
         r0Results = Approval.results([useStrat(voter, Approval.zeroInfoBallot, pickiness=pickiness)
         for voter in voters])
@@ -64,8 +59,8 @@ class Method(BaseMethod):
         r1Places = [sorted(r1Results, reverse=True).index(result) + 1 for result in r1Results]
 
         constResults = dict(method=cls.__name__, backgroundStrat=backgroundStrat.__name__,
-        numVoters=len(voters), magicBestUtil=max(totalUtils), magicWorstUtil=min(totalUtils),
-        meanCandidateUtil=mean(totalUtils),
+        numVoters=len(voters), numCandidates=len(voters[0]), magicBestUtil=max(totalUtils),
+        magicWorstUtil=min(totalUtils), meanCandidateUtil=mean(totalUtils),
         r0ExpectedUtil=sum(p*u for p, u in zip(winProbs,totalUtils)),#could use electabilities instead
         r0WinnerUtil=totalUtils[r0Winner], r1WinProb=winProbs[r1Winner], r1WinnerUtil=totalUtils[r1Winner])
 
@@ -74,7 +69,7 @@ class Method(BaseMethod):
         makeResults(results=r1Results, totalUtil=totalUtils[r1Winner],
         probOfWin=winProbs[r1Winner],
         winnerPlaceInR0=r0Places[r1Winner], **constResults)]
-        for targetSelect, foregroundStrat, foregroundSelect, r2Media in foregrounds:
+        for foregroundStrat, targetSelect, foregroundSelect in foregrounds:
             polls = tuple(r2Media(r1Results))
             candToHelp, candToHurt = targetSelect(electabilities=electabilities, polls=polls)
             pollOrder = [cand for cand, poll in sorted(enumerate(polls),key=lambda x: -x[1])]
@@ -85,7 +80,9 @@ class Method(BaseMethod):
                 electabilities=electabilities, polls=polls)
                 if eagerness > 0:
                     foreground.append((voter,
-                    useStrat(voter, foregroundStrat, polls=polls, electabilities=electabilities), eagerness))
+                    useStrat(voter, foregroundStrat, polls=polls, electabilities=electabilities,
+                    candToHelp=candToHelp, candToHurt=candToHurt),
+                    eagerness))
                 else:
                     permbgBallots.append(backgroundBallots[id])
             foreground.sort(key=lambda v:-v[2]) #from most to least eager to use strategy
@@ -96,8 +93,8 @@ class Method(BaseMethod):
             ballots = fgBallots + permbgBallots
             results = cls.results(ballots)
             winner = cls.winner(results)
-            foregroundBaseUtil = sum(voter[r1Winner] for voter, _, _ in foreground)/fgSize
-            foregroundStratUtil = sum(voter[winner] for voter, _, _ in foreground)/fgSize
+            #foregroundBaseUtil = sum(voter[r1Winner] for voter, _, _ in foreground)/fgSize if fgSize else 0
+            #foregroundStratUtil = sum(voter[winner] for voter, _, _ in foreground)/fgSize if fgSize else 0
             totalUtil = voters.socUtils[winner]
             fgHelped = []
             fgHarmed = []
@@ -174,8 +171,9 @@ class Borda(Method):
         return ballot
 
     @classmethod
-    def lowInfoBallot(cls, utils, electabilities, polls=None, pollingUncertainty=.1):
-        winProbs = pollsToProbs(electabilities, pollingUncertainty)
+    def lowInfoBallot(cls, utils, electabilities, polls=None, winProbs=None, pollingUncertainty=.3, **kw):
+        if not winProbs:
+            winProbs = pollsToProbs(electabilities, pollingUncertainty)
         expectedUtility = sum(u*p for u, p in zip(utils, winProbs))
         scores = [(u - expectedUtility)*p for u, p in zip(utils, winProbs)]
         ballot = [0] * len(utils)
@@ -207,6 +205,7 @@ RatedMethod = RankedMethod #Should have same strategies available, plus more
 class Plurality(RankedMethod):
 
     nRanks = 2
+    compLevels = [3]
 
     @staticmethod
     def oneVote(utils, forWhom):
@@ -230,11 +229,20 @@ class Plurality(RankedMethod):
         return ballot
 
     @classmethod
-    def lowInfoBallot(cls, utils, electabilities, polls=None, pollingUncertainty=.07):
-        winProbs = pollsToProbs(electabilities, pollingUncertainty)
+    def lowInfoBallot(cls, utils, electabilities=None, polls=None, pollingUncertainty=.15, winProbs=None, **kw):
+        if not winProbs:
+            winProbs = pollsToProbs(electabilities, pollingUncertainty)
         expectedUtility = sum(u*p for u, p in zip(utils, winProbs))
         scores = [(u - expectedUtility)*p for u, p in zip(utils, winProbs)]
         return cls.oneVote(scores, scores.index(max(scores)))
+
+    @classmethod
+    def compBallot(cls, utils, intensity, candToHelp, candToHurt, **kw):
+        if intensity < 3 or utils[candToHelp] <= utils[candToHurt]:
+            return super().compBallot(utils, intensity, candToHelp, candToHurt, **kw)
+        else:
+            return cls.oneVote(utils, candToHelp)
+
     #
     # @classmethod
     # def xxstratBallot(cls, voter, polls, places, n,
@@ -259,6 +267,61 @@ class Plurality(RankedMethod):
     #     return dict(strat=strat, isStrat=isStrat, stratGap=stratGap)
 
 
+def top2(noRunoffMethod):
+    """Returns a top-2 variant of the given voting method
+    """
+    class Top2Version(noRunoffMethod):
+        """Ballots are (r1Ballot, r2Preferences) tuples
+        """
+        @classmethod
+        def results(cls, ballots):
+            r1Ballots, r2Preferences = zip(*ballots)
+            baseResults = super().results(r1Ballots)
+            (runnerUp,top) = sorted(range(len(baseResults)), key=lambda i: baseResults[i])[-2:]
+            upset = sum(sign(rank[runnerUp] - rank[top]) for rank in r2Preferences)
+            if upset > 0:
+                baseResults[runnerUp] = baseResults[top] + 0.01
+            return baseResults
+
+        @classmethod
+        def prefOrder(cls, utils):
+            order = [0]*len(utils)
+            Borda.fillPrefOrder(utils, order)
+            return order
+
+        @classmethod
+        def honBallot(cls, utils, **kw):
+            return super().honBallot(utils, **kw), cls.prefOrder(utils)
+
+        @classmethod
+        def lowInfoBallot(cls, utils, electabilities=None, polls=None, winProbs=None, pollingUncertainty=.15, **kw):
+            if not winProbs:
+                winProbs = adaptiveTieFor2(electabilities, pollingUncertainty)
+            return (super().lowInfoBallot(utils, winProbs=winProbs,
+            pollingUncertainty=pollingUncertainty),
+            cls.prefOrder(utils))
+
+        @classmethod
+        def compBallot(cls, utils, intensity, candToHelp, candToHurt, **kw):
+            return (super().compBallot(utils, intensity, candToHelp, candToHurt),
+            cls.prefOrder(utils))
+
+        @classmethod
+        def diehardBallot(cls, utils, intensity, candToHelp, candToHurt, **kw):
+            return (super().diehardBallot(utils, intensity, candToHelp, candToHurt),
+            cls.prefOrder(utils))
+    Top2Version.__name__ = noRunoffMethod.__name__ + "Top2"
+    return Top2Version
+
+class PluralityTop2(top2(Plurality)):
+    """top2(Plurality) can yield ridiculous results when used by the entire electorate
+    since it's based on causal decision theory. This class fixes that.
+    """
+    @classmethod
+    def lowInfoBallot(cls, utils, electabilities=None, **kw):
+        if electabilities and utils.index(max(utils)) == electabilities.index(max(electabilities)):
+            return cls.honBallot(utils)
+        else: return super().lowInfoBallot(utils, electabilities=electabilities, **kw)
 
 def Score(topRank=10, asClass=False):
     class Score0to(Method):
@@ -297,6 +360,8 @@ def Score(topRank=10, asClass=False):
         #>>> std(qs5)
         #2.3536762480634343
         bias5 = 2.3536762480634343
+        compLevels = [1,2]
+        diehardLevels = [1,2]
 
         @classmethod
         def candScore(cls,scores):
@@ -305,6 +370,17 @@ def Score(topRank=10, asClass=False):
             Don't just use mean because we want to normalize to [0,1]"""
             return mean(scores)/cls.topRank
 
+        @classmethod
+        def interpolatedBallot(cls, utils, lowThreshold, highThreshold):
+            ballot = []
+            for util in utils:
+                if util < lowThreshold:
+                    ballot.append(0)
+                elif util > highThreshold:
+                    ballot.append(cls.topRank)
+                else:
+                    ballot.append(floor((cls.topRank + .99)*(util-lowThreshold)/(highThreshold-lowThreshold)))
+            return ballot
 
         def __str__(self):
             if self.topRank == 1:
@@ -328,15 +404,17 @@ def Score(topRank=10, asClass=False):
             return [floor((cls.topRank + .99) * (util-bot) / scale) for util in utils]
 
         @classmethod
-        def lowInfoBallot(cls, utils, electabilities, polls=None, pollingUncertainty=.07):
-            winProbs = pollsToProbs(electabilities, pollingUncertainty)
+        def lowInfoBallot(cls, utils, electabilities=None, polls=None, winProbs=None, pollingUncertainty=.15, **kw):
+            if not winProbs:
+                winProbs = pollsToProbs(electabilities, pollingUncertainty)
             expectedUtility = sum(u*p for u, p in zip(utils, winProbs))
             return [cls.topRank if u > expectedUtility else 0 for u in utils]
 
         @classmethod
-        def lowInfoIntermediateBallot(cls, utils, electabilities, polls=None,
-        pollingUncertainty=.07, midScoreWillingness=0.7):
-            winProbs = pollsToProbs(electabilities, pollingUncertainty)
+        def lowInfoIntermediateBallot(cls, utils, electabilities=None, polls=None,
+        winProbs=None, pollingUncertainty=.15, midScoreWillingness=0.7, **kw):
+            if not winProbs:
+                winProbs = pollsToProbs(electabilities, pollingUncertainty)
             expectedUtility = sum(u*p for u, p in zip(utils, winProbs))
             if all(u == utils[0] for u in utils[1:]):
                 return [0]*len(utils)
@@ -344,15 +422,26 @@ def Score(topRank=10, asClass=False):
             highThreshold = min(max(utils), expectedUtility + midScoreWillingness*std(utils))
             #this is wrong. We should use a standard deviation that's weighted
             #by each candidate's chance of winning
-            ballot = []
-            for util in utils:
-                if util < lowThreshold:
-                    ballot.append(0)
-                elif util > highThreshold:
-                    ballot.append(cls.topRank)
-                else:
-                    ballot.append(floor((cls.topRank + .99)*(util-lowThreshold)/(highThreshold-lowThreshold)))
-            return ballot
+            return cls.interpolatedBallot(utils, lowThreshold, highThreshold)
+
+        @classmethod
+        def diehardBallot(cls, utils, intensity, candToHelp, candToHurt, **kw):
+            if intensity < 1 or utils[candToHelp] <= utils[candToHurt]:
+                return super().diehardBallot(utils, intensity, candToHelp, candToHurt, **kw)
+            if intensity == 1:
+                return cls.interpolatedBallot(utils, utils[candToHurt], utils[candToHelp])
+            else:
+                return [cls.topRank if u >= utils[candToHelp] else 0 for u in utils]
+
+        @classmethod
+        def compBallot(cls, utils, intensity, candToHelp, candToHurt, **kw):
+            if intensity < 1 or utils[candToHelp] <= utils[candToHurt]:
+                return super().diehardBallot(utils, intensity, candToHelp, candToHurt, **kw)
+            if intensity == 1:
+                return cls.interpolatedBallot(utils, utils[candToHurt], utils[candToHelp])
+            else:
+                return [cls.topRank if u > utils[candToHurt] else 0 for u in utils]
+
 
         @classmethod
         def fillStratBallot(cls, voter, polls, places, n, stratGap, ballot,
@@ -380,8 +469,10 @@ def Score(topRank=10, asClass=False):
     return Score0to()
 
 class Approval(Score(1,True)):
+    diehardLevels = [1]
+    compLevels = [1]
     @classmethod
-    def zeroInfoBallot(cls, utils, electabilities=None, polls=None, pickiness=0):
+    def zeroInfoBallot(cls, utils, electabilities=None, polls=None, pickiness=0, **kw):
         """Returns a ballot based on utils and pickiness
         pickiness=0 corresponds to lowInfoBallot with equal polling for all candidates
         pickiness=1 corresponds to bullet voting
@@ -391,6 +482,22 @@ class Approval(Score(1,True)):
         normalizedUtils = [(u - expectedUtility)/(best - expectedUtility)
                            for u in utils]
         return [1 if u >= pickiness else 0 for u in normalizedUtils]
+
+    @classmethod
+    def diehardBallot(cls, utils, intensity, candToHelp, candToHurt, **kw):
+        if intensity == 1:
+            return super().diehardBallot(utils, 2, candToHelp, candToHurt, **kw)
+        else:
+            return super().diehardBallot(utils, intensity, candToHelp, candToHurt, **kw)
+
+    @classmethod
+    def compBallot(cls, utils, intensity, candToHelp, candToHurt, **kw):
+        if intensity == 1:
+            return super().compBallot(utils, 2, candToHelp, candToHurt, **kw)
+        else:
+            return super().compBallot(utils, intensity, candToHelp, candToHurt, **kw)
+
+ApprovalTop2 = top2(Approval)
 
 def BulletyApprovalWith(bullets=0.5, asClass=False):
     class BulletyApproval(Score(1,True)):
@@ -430,6 +537,8 @@ def STAR(topRank=5):
     class STAR0to(score0to):
 
         stratTargetFor = Method.stratTarget3
+        diehardLevels = [1,2,3]
+        compLevels = [1,2,3]
 
         @classmethod
         def results(self, ballots, **kwargs):
@@ -452,19 +561,18 @@ def STAR(topRank=5):
             return baseResults
 
         @classmethod
-        def lowInfoBallot(cls, utils, electabilities, polls=None, pollingUncertainty=.07, scoreImportance=0.17):
-            winProbs = pollsToProbs(electabilities, pollingUncertainty)
+        def lowInfoBallot(cls, utils, electabilities=None, polls=None, winProbs=None,
+        pollingUncertainty=.15, scoreImportance=0.17, **kw):
+            if not winProbs:
+                winProbs = pollsToProbs(electabilities, pollingUncertainty)
             #runoffCoefficients[i][j] is how valuable it is to score i over j
             runoffCoefficients = [[(u1 - u2)*p1*p2
                                    for u2, p2 in zip(utils, winProbs)]
                                   for u1, p1 in zip(utils, winProbs)]
-            unnormalizedRunnerUpProbs = [p*(1-p) for p in winProbs]
-            normFactor = sum(unnormalizedRunnerUpProbs)
-            runnerUpProbs = [u/normFactor for u in unnormalizedRunnerUpProbs]
-            eRunnerUpUtil = sum(u*p for u, p in zip(utils, runnerUpProbs))
+            eRunnerUpUtil = sum(u*p for u, p in zip(utils, adaptiveTieFor2(electabilities)))
             #scoreCoefficients[i] is how vauable it is for i to have a high score
             scoreCoefficients = [scoreImportance*(u-eRunnerUpUtil)*p
-                                 for u, p in zip(utils, runnerUpProbs)]
+                                 for u, p in zip(utils, adaptiveTieFor2(electabilities))]
 
             #create a tentative ballot
             numCands = len(utils)
@@ -497,7 +605,62 @@ def STAR(topRank=5):
                         improvementFound = True
             return ballot
 
-    return STAR0to()
+        @classmethod
+        def compBallot(cls, utils, intensity, candToHelp, candToHurt, baseBallotFunc=None, **kw):
+            if baseBallotFunc is None: baseBallotFunc = cls.honBallot
+            baseBallot = baseBallotFunc(utils, candToHelp=candToHelp, candToHurt=candToHurt, **kw)
+            helpUtil, hurtUtil = utils[candToHelp], utils[candToHurt]
+            if intensity < 1 or helpUtil <= hurtUtil:
+                return baseBallot
+            if intensity == 1:
+                for i, u in enumerate(utils):
+                    if u >= helpUtil:
+                        baseBallot[i] = max(4, baseBallot[i])
+                    elif u <= hurtUtil:
+                        baseBallot[i] = 0
+            if intensity == 2:
+                for i, u in enumerate(utils):
+                    if u >= helpUtil:
+                        baseBallot[i] = 5
+                    elif u <= hurtUtil:
+                        baseBallot[i] = 0
+            if intensity >= 3:
+                baseBallot = [1 if u > hurtUtil else 0 for u in utils]
+                baseBallot[candToHelp] = 5
+            return baseBallot
+
+        @classmethod
+        def diehardBallot(cls, utils, intensity, candToHelp, candToHurt, polls=None, baseBallotFunc=None, **kw):
+            if baseBallotFunc is None: baseBallotFunc = cls.honBallot
+            baseBallot = baseBallotFunc(utils, polls=polls, candToHelp=candToHelp, candToHurt=candToHurt, **kw)
+            helpUtil, hurtUtil = utils[candToHelp], utils[candToHurt]
+            if intensity < 1 or helpUtil <= hurtUtil:
+                return baseBallot
+            if intensity == 1:
+                for i, u in enumerate(utils):
+                    if u <= hurtUtil:
+                        baseBallot[i] = min(1, baseBallot[i])
+                    elif u >= helpUtil:
+                        baseBallot[i] = 5
+            if intensity == 2:
+                for i, u in enumerate(utils):
+                    if u <= hurtUtil:
+                        baseBallot[i] = 0
+                    elif u >= helpUtil:
+                        baseBallot[i] = 5
+            if intensity >= 3:
+                for i, u in enumerate(utils):
+                    if u >= helpUtil:
+                        baseBallot[i] = 5
+                    elif polls[i] < polls[candToHelp]:
+                        baseBallot[i] = 4
+                    else:
+                        baseBallot[i] = 0
+                    baseBallot[candToHurt] = 0
+            return baseBallot
+
+
+    return STAR0to
 
 
 def toVote(cutoffs, util):
@@ -701,7 +864,9 @@ class Irv(Method):
     """
 
     stratTargetFor = Method.stratTarget3
+    compLevels = [3]
 
+    @classmethod
     def resort(self, ballots, loser, ncand, piles):
         """No error checking; only works for exhaustive ratings."""
         #print("resort",ballots, loser, ncand)
@@ -765,10 +930,11 @@ class Irv(Method):
         return ballot
 
     @classmethod
-    def lowInfoBallot(cls, utils, electabilities, polls=None, pollingUncertainty=.1):
+    def lowInfoBallot(cls, utils, electabilities, polls=None, pollingUncertainty=.15, winProbs=None, **kw):
         """Electabilities should be interpreted as a metric for the ability to win in the final round.
         """
-        winProbs = pollsToProbs(electabilities, pollingUncertainty)
+        if not winProbs:
+            winProbs = pollsToProbs(electabilities, pollingUncertainty)
         expectedUtility = sum(u*p for u, p in zip(utils, winProbs))
         scores = [(u - expectedUtility)*p for u, p in zip(utils, winProbs)]
         goodCandidates = sorted(filter(lambda x: x[1] > 0, enumerate(scores)), key=lambda x:x[1]) #from worst to best score
@@ -779,6 +945,16 @@ class Irv(Method):
             ballot[order[i][0]] = i
         return ballot
 
+    @classmethod
+    def compBallot(cls, utils, intensity, candToHelp, candToHurt=None, **kw):
+        ballot = cls.honBallot(utils)
+        if intensity < 3: return ballot
+        helpRank = ballot[candToHelp]
+        for cand, rank in enumerate(ballot):
+            if rank > helpRank:
+                ballot[cand] -= 1
+        ballot[candToHelp] = len(utils) - 1
+        return ballot
 
     @classmethod
     def fillStratBallot(cls, voter, polls, places, n, stratGap, ballot,
@@ -960,6 +1136,10 @@ class V321(Mav):
         return rememberBallots(stratBallot)
 
 class Schulze(RankedMethod):
+
+    diehardLevels = [3]
+    compLevels = [3]
+
     def resolveCycle(self, cmat, n):
 
         beatStrength = [[0] * n] * n
@@ -1094,6 +1274,31 @@ class Schulze(RankedMethod):
             cls.fillPrefOrder(voter, ballot,
                 whichCands=[c for (c, r) in places[1:]],
                 lowSlot=0)
+
+    @classmethod #copy-pasted from Irv. The alternatives seemed uglier.
+    def compBallot(cls, utils, intensity, candToHelp, candToHurt=None, **kw):
+        """Useless unless there's a cycle
+        """
+        ballot = cls.honBallot(utils)
+        if intensity < 3: return ballot
+        helpRank = ballot[candToHelp]
+        for cand, rank in enumerate(ballot):
+            if rank > helpRank:
+                ballot[cand] -= 1
+        ballot[candToHelp] = len(utils) - 1
+        return ballot
+
+    @classmethod
+    def diehardBallot(cls, utils, intensity, candToHurt, candToHelp=None, **kw):
+        """Buries candToHurt"""
+        ballot = cls.honBallot(utils)
+        if intensity < 3: return ballot
+        hurtRank = ballot[candToHurt]
+        for cand, rank in enumerate(ballot):
+            if rank < hurtRank:
+                ballot[cand] += 1
+        ballot[candToHurt] = 0
+        return ballot
 
 class Rp(Schulze):
     def resolveCycle(self, cmat, n):

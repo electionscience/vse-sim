@@ -9,6 +9,8 @@ from numpy.ma.core import floor
 from scipy.stats import beta
 from test.test_binop import isnum
 from scipy.optimize import fmin
+import scipy.stats as stats
+import scipy.integrate as integrate
 from uuid import uuid4
 
 
@@ -141,19 +143,33 @@ class BaseMethod:
             ballots = list(ballots)
         return list(map(self.candScore,zip(*ballots)))
 
-    @staticmethod #cls is provided explicitly, not through binding
+    @classmethod
     #@rememberBallot
-    def honBallot(cls, utils):
+    def honBallot(cls, utils, **kw):
         """Takes utilities and returns an honest ballot
         """
         raise NotImplementedError("{} needs honBallot".format(cls))
 
     @classmethod
-    def lowInfoBallot(cls, utils, winProbs):
+    def lowInfoBallot(cls, utils, electabilities, **kw):
         """Takes utilities and information on each candidate's electability
         and returns a strategically optimal ballot based on that information
         """
-        raise NotImplementedError("{} lacks lowInfoBallot".format(cls))
+        return cls.honBallot(utils)
+
+    @classmethod
+    def diehardBallot(cls, utils, intensity, candToHelp, candToHurt, electabilities=None, polls=None):
+        "Returns a ballot using a diehard strategy with the given intensity"
+        return cls.honBallot(utils)
+
+    @classmethod
+    def compBallot(cls, utils, intensity, candToHelp, candToHurt, electabilities=None, polls=None):
+        "Returns a ballot using a compromising strategy with the given intensity"
+        return cls.honBallot(utils)
+
+    #lists of which diehard and compromising strategies are available for a voting method
+    diehardLevels = []
+    compLevels = []
 
     @staticmethod
     def winner(results):
@@ -191,7 +207,7 @@ class BaseMethod:
             midpointBallots = bgBallots + fgBallots[:midpoint] + fgBaselineBallots[midpoint:]
             midpointWinner = cls.winner(cls.results(midpointBallots))
             if not any(midpointWinner == w for w, _ in winnersFound):
-                winnersFound.append(midpointWinner, midpoint)
+                winnersFound.append((midpointWinner, midpoint))
             if midpointWinner == targetWinner:
                 maxThreshold = midpoint
             else:
@@ -335,7 +351,7 @@ class BaseMethod:
     stratTargetFor = stratTarget2
 
     @classmethod
-    def stratBallot(cls, voter, polls, electabilities=None):
+    def stratBallot(cls, voter, polls, electabilities=None, **kw):
         """Returns a strategic (high-info) ballot, using the strategies in version 1
         """
         places = sorted(enumerate(polls),key=lambda x:-x[1]) #from high to low
@@ -405,14 +421,21 @@ def useStrat(voter, strategy, **kw):
     return strategy(voter, **kw)
 
 def paramStrat(strategy, **kw):
-    """A wrapper for strategy that gives it arguments in addition to voter, polls, and electabilities
+    """A wrapper for strategy that gives it arguments in addition to voter, polls, electabilities, and targets
     """
-    def strat(voter, polls=None, electabilities=None):
-        return strategy(voter, polls=polls, electabilities=electabilities, **kw)
+    def strat(voter, polls=None, electabilities=None, candToHelp=None, candToHurt=None):
+        return strategy(voter, polls=polls, electabilities=electabilities,
+        candToHelp=candToHelp, candToHurt=candToHurt, **kw)
     strat.__name__ = strategy.__name__
     for key, value in kw.items():
         strat.__name__ += "_"+str(key)[:4]+str(value)[:4]
     return strat
+
+def swapPolls(strategy):
+    def newStrat(voter, polls=None, electabilities=None, **kw):
+        return strategy(voter, polls=electabilities, electabilities=polls, **kw)
+    newStrat.__name__ = "pes_" + strategy.__name__
+    return newStrat
 
 def wantToHelp(voter, candToHelp, candToHurt, **kw):
     return max(voter[candToHelp] - voter[candToHurt], 0)
@@ -438,7 +461,7 @@ def selectVoter(voter):
         return 1 if v is voter else 0
     return selectV
 
-def makeResults(method=None, backgroundStrat=None, fgStrat=None, numVoters=None,
+def makeResults(method=None, backgroundStrat=None, fgStrat=None, numVoters=None, numCandidates=None,
         magicBestUtil=None, magicWorstUtil=None, meanCandidateUtil=None, r0ExpectedUtil=None, r0WinnerUtil=None,
         r1WinnerUtil=None, probOfWin=None, r1WinProb=None, winnerPlaceInR0=None, winnerPlaceInR1=None,
         results=None, totalUtil=None,
@@ -454,11 +477,11 @@ def makeResults(method=None, backgroundStrat=None, fgStrat=None, numVoters=None,
         t1fgUtil=None, t1fgUtilDiff=None, t1fgSize=None,
         t1fgNumHelped=None, t1fgHelpedUtil=None, t1fgHelpedUtilDiff=None,
         t1fgNumHarmed=None, t1fgHarmedUtil=None, t1fgHarmedUtilDiff=None,
-        numWinnersFound=None
+        numWinnersFound=None, **kw
         ):
     return dict(method=method, backgroundStrat=backgroundStrat, fgStrat=fgStrat, numVoters=numVoters,
-    magicBestUtil=magicBestUtil, magicWorstUtil=magicWorstUtil, meanCandidateUtil=meanCandidateUtil,
-    r0ExpectedUtil=r0ExpectedUtil, r0WinnerUtil=r0WinnerUtil,
+    numCandidates=numCandidates, magicBestUtil=magicBestUtil, magicWorstUtil=magicWorstUtil,
+    meanCandidateUtil=meanCandidateUtil, r0ExpectedUtil=r0ExpectedUtil, r0WinnerUtil=r0WinnerUtil,
     r1WinnerUtil=r1WinnerUtil, probOfWin=probOfWin, r1WinProb=r1WinProb,
     winnerPlaceInR0=winnerPlaceInR0, winnerPlaceInR1=winnerPlaceInR1,
     results=results, totalUtil=totalUtil,
@@ -484,8 +507,8 @@ def makePartialResults(fgVoters, winner, r1Winner, prefix=""):
             elif voter[winner] < voter[r1Winner]:
                 fgHarmed.append(voter)
 
-    tempDict = dict(fgUtil=sum(v[winner] for v in fgVoters)/numfg,
-    fgUtilDiff=sum(v[winner] - v[r1Winner] for v in fgVoters)/numfg, fgSize=numfg,
+    tempDict = dict(fgUtil=sum(v[winner] for v in fgVoters)/numfg if numfg else 0,
+    fgUtilDiff=sum(v[winner] - v[r1Winner] for v in fgVoters)/numfg if numfg else 0, fgSize=numfg,
     fgNumHelped=len(fgHelped), fgHelpedUtil=sum(v[winner] for v in fgHelped),
     fgHelpedUtilDiff= sum(v[winner] - v[r1Winner] for v in fgHelped),
     fgNumHarmed=len(fgHarmed), fgHarmedUtil=sum(v[winner] for v in fgHarmed),
@@ -529,7 +552,8 @@ def multi_beta_probs_of_highest(parms):
     probs = probs / np.sum(probs)
     return probs
 
-def principledPollsToProbs(polls, uncertainty=.05):
+@functools.lru_cache
+def principledPollsToProbs(polls, uncertainty=.15):
     """Takes approval-style polling as input i.e. a list of floats in the interval [0,1],
     and returns a list of the estimated probabilities of each candidate winning based on
     uncertainty. Uncertainty is a float that corresponds to margin of error (2 standard deviations) for
@@ -548,11 +572,73 @@ def principledPollsToProbs(polls, uncertainty=.05):
     >>> a[1] < b[1]
     True
     """
+    nonzeroPolls = [poll if poll > 0 else 0.01 for poll in polls]
     betaSize =  marginToBetaSize(uncertainty)
-    parms = [(betaSize*poll, betaSize*(1-poll)) for poll in polls]
+    parms = [(betaSize*poll, betaSize*(1-poll)) for poll in nonzeroPolls]
     return multi_beta_probs_of_highest(parms)
 
-pollsToProbs = principledPollsToProbs
+def pollsToProbs(polls, uncertainty=.15):
+    return principledPollsToProbs(tuple(polls), uncertainty)
+
+def runnerUpProbs(winProbs):
+    unnormalizedRunnerUpProbs = [p*(1-p) for p in winProbs]
+    normFactor = sum(unnormalizedRunnerUpProbs)
+    return [u/normFactor for u in unnormalizedRunnerUpProbs]
+
+def product(l):
+    result = 1
+    for i in l: result *= i
+    return result
+
+@functools.lru_cache
+def tieFor2NumIntegration(polls, uncertainty):
+    """Takes approval polling as input and returns a list of the estimated "probabilities" of each candidate
+    being in a two-way tie for second places, normalized such that the sum is 1.
+    """
+    n = len(polls)
+    tieProbs = [[0]*n for i in range(n)]
+    for t1 in range(n):
+        for t2 in range(t1+1, n):
+            def integrand(x):
+                indicesLeft=list(range(t1)) + list(range(t1+1, t2)) + list(range(t2+1, n))
+                return (stats.norm.pdf(x, loc=polls[t1], scale=uncertainty)
+                *stats.norm.pdf(x, loc=polls[t2], scale=uncertainty)
+                *sum(
+                product((1 - stats.norm.cdf(x, loc=polls[j], scale=uncertainty))
+                if i == j else stats.norm.cdf(x, loc=polls[j], scale=uncertainty)
+                for j in indicesLeft)
+                for i in indicesLeft))
+            tieProbs[t1][t2] = integrate.quad(integrand, 0, 1)[0]
+            tieProbs[t2][t1] = tieProbs[t1][t2]
+    unnormalizedProbs = [sum(l) for l in tieProbs]
+    normFactor = sum(unnormalizedProbs)
+    return [u/normFactor for u in unnormalizedProbs]
+
+def tieFor2Probs(polls, uncertainty=.15):
+    if len(polls) < 3: return [0]*len(polls)
+    return tieFor2NumIntegration(tuple(polls), uncertainty/2)
+
+@functools.lru_cache
+def tieFor2Estimate(probs):
+    """Estimates the probability of each candidate being in a tie for second place,
+    normalized such that they sum to 1"""
+    EXP = 2
+
+    unnormalized = [x*(1-x)*(
+    sum(sum((y*z)**EXP for k, z in enumerate(probs) if i != k != j)
+    for j, y in enumerate(probs) if i != j)
+    /sum(y**EXP for j, y in enumerate(probs) if i != j)
+    )**(1/EXP) for i, x in enumerate(probs)]
+
+    normFactor = sum(unnormalized)
+    return [u/normFactor for u in unnormalized]
+
+
+def adaptiveTieFor2(polls, uncertainty=.15):
+    if len(polls) < 6:
+        return tieFor2Probs(polls, uncertainty)
+    else:
+        return tieFor2Estimate(tuple(pollsToProbs(polls, uncertainty)))
 
 def appendResults(filename, resultsList, globalComment = dict()):
     """append list of results created by makeResults to a csv file.
