@@ -141,6 +141,13 @@ class Borda(Method):
 
     nRanks = 999 # infinity
 
+    @classmethod
+    def results(self, ballots, **kwargs):
+        if type(ballots) is not list:
+            ballots = list(ballots)
+        n = len(ballots[0])
+        return list(map(lambda x: mean(x)/n,zip(*ballots)))
+
     @staticmethod
     def fillPrefOrder(voter, ballot,
             whichCands=None, #None means "all"; otherwise, an iterable of cand indexes
