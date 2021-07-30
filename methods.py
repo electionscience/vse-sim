@@ -65,10 +65,10 @@ class Method(BaseMethod):
         r0WinnerUtil=totalUtils[r0Winner], r1WinProb=winProbs[r1Winner], r1WinnerUtil=totalUtils[r1Winner])
 
         allResults = [makeResults(results=r0Results, totalUtil=totalUtils[r0Winner],
-        probOfWin=winProbs[r0Winner], **constResults),
-        makeResults(results=r1Results, totalUtil=totalUtils[r1Winner],
-        probOfWin=winProbs[r1Winner],
-        winnerPlaceInR0=r0Places[r1Winner], **constResults)]
+                probOfWin=winProbs[r0Winner], **constResults),
+                makeResults(results=r1Results, totalUtil=totalUtils[r1Winner],
+                probOfWin=winProbs[r1Winner],
+                winnerPlaceInR0=r0Places[r1Winner], **constResults)]
         for foregroundStrat, targetSelect, foregroundSelect in foregrounds:
             polls = tuple(r2Media(r1Results))
             candToHelp, candToHurt = targetSelect(electabilities=electabilities, polls=polls)
@@ -534,7 +534,7 @@ def STAR(topRank=5):
 
     score0to = Score(topRank,True)
 
-    class STAR0to(score0to):
+    class STAR(score0to):
 
         stratTargetFor = Method.stratTarget3
         diehardLevels = [1,2,3]
@@ -660,7 +660,7 @@ def STAR(topRank=5):
             return baseBallot
 
 
-    return STAR0to
+    return STAR
 
 
 def toVote(cutoffs, util):
