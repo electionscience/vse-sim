@@ -570,7 +570,7 @@ def makeSTARMethod(topRank=5):
 
     score0to = makeScoreMethod(topRank,True)
 
-    class STAR(score0to):
+    class STAR0to(score0to):
 
         stratTargetFor = Method.stratTarget3
         diehardLevels = [1,2,3]
