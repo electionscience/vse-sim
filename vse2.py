@@ -67,7 +67,7 @@ class CsvBatch:
 
 def oneStepWorker(model, nvot, ncand, ms, r1Media, r2Media, baseSeed=None, i = 0):
 
-    if i>0 and i%10 == 0: print('Interation:', i)
+    if i>0 and i%10 == 0: print('Iteration:', i)
     if baseSeed is not None:
         random.seed(baseSeed + i)
 
