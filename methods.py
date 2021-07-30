@@ -979,8 +979,8 @@ class Irv(Method):
     winProbs=None, info='e', **kw):
         """Electabilities should be interpreted as a metric for the ability to win in the final round.
         """
-        if info == 'p':
-            electabilities = polls
+        #if info == 'p': commented out because this can't handle IRV polls
+            #electabilities = polls
         if not winProbs:
             winProbs = pollsToProbs(electabilities, pollingUncertainty)
         expectedUtility = sum(u*p for u, p in zip(utils, winProbs))
