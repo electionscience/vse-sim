@@ -31,17 +31,17 @@ class CsvBatch:
         random.seed(seed)
         ms = []
         for m in methodsAndStrats:
-            if issubclass(m, Method):
+            if isinstance(m, type) and issubclass(m, Method):
                 fgs = []
                 for targetFunc in [select21, select31]:
-                    fgs.extend([(paramStrat(m.diehardBallot, intensity=i), targetFunc) for i in m.diehardLevels]
-                    + [(paramStrat(m.compBallot, intensity=i), targetFunc) for i in m.compLevels])
-                    fgs.append((swapPolls(m.lowInfoBallot), targetFunc))
+                    fgs.extend([(m.diehardBallot, targetFunc, {'intensity':i}) for i in m.diehardLevels]
+                    + [(m.compBallot, targetFunc, {'intensity':i}) for i in m.compLevels])
+                    fgs.append((m.lowInfoBallot, targetFunc, {'info':'p'}))
                 for bg in [m.honBallot, m.lowInfoBallot]:
                     ms.append((m, bg, fgs))
             else:
                 ms.append(m)
-        args = (nvot, ncand, ms, r1Media, r2Media)
+        args = (model, nvot, ncand, ms, r1Media, r2Media)
         with multiprocessing.Pool(processes=7) as pool:
             results = pool.starmap(oneStepWorker, [args + (seed, i) for i in range(niter)])
             for result in results:
@@ -65,7 +65,7 @@ class CsvBatch:
             dw.writerow(r)
         myFile.close()
 
-def oneStepWorker(nvot, ncand, ms, r1Media, r2Media, baseSeed=None, i = 0):
+def oneStepWorker(model, nvot, ncand, ms, r1Media, r2Media, baseSeed=None, i = 0):
 
     if i>0 and i%10 == 0: print('Interation:', i)
     if baseSeed is not None:
@@ -76,8 +76,6 @@ def oneStepWorker(nvot, ncand, ms, r1Media, r2Media, baseSeed=None, i = 0):
     for method, bgStrat, fgs in ms:
         results = method.threeRoundResults(electorate, bgStrat, fgs, r1Media=r1Media, r2Media=r2Media)
         for result in results:
-            result["seed"] = seed
-        self.rows.extend(results)
+            result["seed"] = baseSeed + i
+        rows.extend(results)
     return rows
-
-def compareStrats(method, model, backgroundStrat, nvot, ncand, niter): pass

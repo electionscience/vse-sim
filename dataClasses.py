@@ -158,6 +158,10 @@ class BaseMethod:
         return cls.honBallot(utils)
 
     @classmethod
+    def abstain(cls, utils, **kw):
+        return [0]*len(utils)
+
+    @classmethod
     def diehardBallot(cls, utils, intensity, candToHelp, candToHurt, electabilities=None, polls=None):
         "Returns a ballot using a diehard strategy with the given intensity"
         return cls.honBallot(utils)
@@ -453,6 +457,9 @@ def select21(polls, **kw):
 def select31(polls, **kw):
     pollOrder = [cand for cand, poll in sorted(enumerate(polls),key=lambda x: -x[1])]
     return pollOrder[2], pollOrder[0]
+
+def nullTarget(*args, **kw):
+    return 0, 0
 
 def selectAll(**kw): return 1
 
