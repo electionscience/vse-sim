@@ -474,8 +474,8 @@ def selectVoter(voter):
 def makeResults(method=None, backgroundStrat=None, fgStrat=None, numVoters=None, numCandidates=None,
         magicBestUtil=None, magicWorstUtil=None, meanCandidateUtil=None, r0ExpectedUtil=None, r0WinnerUtil=None,
         r1WinnerUtil=None, probOfWin=None, r1WinProb=None, winnerPlaceInR0=None, winnerPlaceInR1=None,
-        results=None, totalUtil=None, deciderUtilDiffs=None,
-        fgUtil=None, fgUtilDiff=None, fgSize=None,
+        results=None, bgArgs=None, fgArgs=None, totalUtil=None, deciderUtilDiffs=None,
+        fgUtil=None, fgUtilDiff=None, fgSize=None, fgTargets=None,
         fgNumHelped=None, fgHelpedUtil=None, fgHelpedUtilDiff=None,
         fgNumHarmed=None, fgHarmedUtil=None, fgHarmedUtilDiff=None,
         #minfg is the smallest foreground that can change the outcome to equal the outcome when the whole foreground is
@@ -499,11 +499,11 @@ def makeResults(method=None, backgroundStrat=None, fgStrat=None, numVoters=None,
         **kw
         ):
     return dict(electorate=electorate,
-            method=method, backgroundStrat=backgroundStrat, fgStrat=fgStrat, numVoters=numVoters,
+            method=method, backgroundStrat=backgroundStrat, fgStrat=fgStrat, fgTargets=fgTargets, numVoters=numVoters,
             numCandidates=numCandidates, magicBestUtil=magicBestUtil, magicWorstUtil=magicWorstUtil,
             meanCandidateUtil=meanCandidateUtil, r0ExpectedUtil=r0ExpectedUtil, r0WinnerUtil=r0WinnerUtil,
             r1WinnerUtil=r1WinnerUtil, probOfWin=probOfWin, r1WinProb=r1WinProb,
-            winnerPlaceInR0=winnerPlaceInR0, winnerPlaceInR1=winnerPlaceInR1,
+            winnerPlaceInR0=winnerPlaceInR0, winnerPlaceInR1=winnerPlaceInR1, bgArgs=bgArgs, fgArgs=fgArgs,
             results=results, totalUtil=totalUtil, deciderUtilDiffs=deciderUtilDiffs,
             fgUtil=fgUtil, fgUtilDiff=fgUtilDiff, fgSize=fgSize,
             fgNumHelped=fgNumHelped, fgHelpedUtil=fgHelpedUtil, fgHelpedUtilDiff=fgHelpedUtilDiff,
@@ -669,7 +669,7 @@ def tieFor2Estimate(probs):
 
 
 def adaptiveTieFor2(polls, uncertainty=.15):
-    if len(polls) < 6:
+    if False and len(polls) < 6:
         return tieFor2Probs(polls, uncertainty)
     else:
         return tieFor2Estimate(tuple(pollsToProbs(polls, uncertainty)))

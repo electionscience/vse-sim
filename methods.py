@@ -68,7 +68,7 @@ class Method(BaseMethod):
 
         constResults = dict(method=cls.__name__, electorate=voters.id, backgroundStrat=backgroundStrat.__name__,
         numVoters=len(voters), numCandidates=len(voters[0]), magicBestUtil=max(totalUtils),
-        magicWorstUtil=min(totalUtils), meanCandidateUtil=mean(totalUtils),
+        magicWorstUtil=min(totalUtils), meanCandidateUtil=mean(totalUtils), bgArgs=bgArgs,
         r0ExpectedUtil=sum(p*u for p, u in zip(winProbs,totalUtils)),#could use electabilities instead
         r0WinnerUtil=totalUtils[r0Winner], r1WinProb=winProbs[r1Winner], r1WinnerUtil=totalUtils[r1Winner])
 
@@ -77,6 +77,7 @@ class Method(BaseMethod):
                 makeResults(results=r1Results, totalUtil=totalUtils[r1Winner],
                 probOfWin=winProbs[r1Winner],
                 winnerPlaceInR0=r0Places[r1Winner], **constResults)]
+        allResults[0]['method'] = 'ApprovalPoll'
         for foregroundStrat, targetSelect, foregroundSelect, fgArgs in foregrounds:
             polls = tuple(r2Media(r1Results))
             candToHelp, candToHurt = targetSelect(electabilities=electabilities, polls=polls)
@@ -131,6 +132,7 @@ class Method(BaseMethod):
             partialResults['deciderUtilDiffs'] = sorted(deciderUtilDiffs, key=lambda x:x[1])
             partialResults.update(makePartialResults([voter for voter, _, _ in foreground], winner, r1Winner, ""))
             allResults.append(makeResults(results=results, fgStrat = foregroundStrat.__name__,
+            fgTargets=targetSelect.__name__, fgArgs=fgArgs,
             winnerPlaceInR0=r0Places[winner], winnerPlaceInR1=r1Places[winner],
             probOfWin=winProbs[winner], numWinnersFound=len(winnersFound), totalUtil=totalUtil, **partialResults))
         return allResults

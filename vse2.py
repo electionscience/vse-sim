@@ -39,7 +39,7 @@ class CsvBatch:
                     + [(m.compBallot, targetFunc, {'intensity':i}) for i in m.compLevels])
                     fgs.append((m.lowInfoBallot, targetFunc, {'info':'e'}))
                 for bg in [m.honBallot, m.lowInfoBallot]:
-                    ms.append((m, bg, fgs))
+                    ms.append((m, bg, fgs, {'pollingUncertainty':0.4}))
             else:
                 ms.append(m)
         args = (model, nvot, ncand, ms, pickiness, pollingError, r1Media, r2Media)
@@ -74,8 +74,9 @@ def oneStepWorker(model, nvot, ncand, ms, pickiness, pollingError, r1Media, r2Me
 
     electorate = model(nvot, ncand)
     rows = []
-    for method, bgStrat, fgs in ms:
-        results = method.threeRoundResults(electorate, bgStrat, fgs, r1Media=r1Media, r2Media=r2Media, pickiness = pickiness, pollingError = pollingError)
+    for method, bgStrat, fgs, bgArgs in ms:
+        results = method.threeRoundResults(electorate, bgStrat, fgs, bgArgs=bgArgs,
+                r1Media=r1Media, r2Media=r2Media, pickiness = pickiness, pollingError = pollingError)
         for result in results:
             result["seed"] = baseSeed + i
         rows.extend(results)
