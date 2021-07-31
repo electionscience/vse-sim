@@ -19,7 +19,8 @@ class Method(BaseMethod):
     """
     @classmethod
     def threeRoundResults(cls, voters, backgroundStrat, foregrounds=[], bgArgs = {},
-                          r1Media=(lambda x:x), r2Media=(lambda x:x),pickiness=0.3):
+                          r1Media=(lambda x:x), r2Media=(lambda x:x),
+                          pickiness=0.3, pollingError=0.2):
         """
         Performs three elections: a single approval voting contest in which everyone
         votes honestly to give an intentionally crude estimate of electability
@@ -60,7 +61,7 @@ class Method(BaseMethod):
         r1Results = cls.results(backgroundBallots)
         r1Winner = cls.winner(r1Results)
         totalUtils = voters.socUtils
-        winProbs = pollsToProbs(r0Results) #Add optional argument for precision of polls?
+        winProbs = pollsToProbs(r0Results, pollingError) #Add optional argument for precision of polls?
         #The place of the first-place candidate is 1, etc.
         r0Places = [sorted(r0Results, reverse=True).index(result) + 1 for result in r0Results]
         r1Places = [sorted(r1Results, reverse=True).index(result) + 1 for result in r1Results]

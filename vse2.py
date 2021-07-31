@@ -15,7 +15,8 @@ class CsvBatch:
     #@timeit
     #@autoassign
     def __init__(self, model, methodsAndStrats,
-            nvot, ncand, niter, r1Media=truth, r2Media=truth, seed=None):
+            nvot, ncand, niter, r1Media=truth, r2Media=truth, seed=None,
+            pickiness=0.4, pollingError=0.3):
         """methodsAndStrats is a list of (votingMethod, backgroundStrat, foregrounds).
         A voting method my be given in place of such a tuple, in which case backgroundSrat and foregrounds
         will be determined automatically.
@@ -41,7 +42,7 @@ class CsvBatch:
                     ms.append((m, bg, fgs))
             else:
                 ms.append(m)
-        args = (model, nvot, ncand, ms, r1Media, r2Media)
+        args = (model, nvot, ncand, ms, r1Media, r2Media, pickiness, pollingError)
         with multiprocessing.Pool(processes=7) as pool:
             results = pool.starmap(oneStepWorker, [args + (seed, i) for i in range(niter)])
             for result in results:
@@ -65,7 +66,7 @@ class CsvBatch:
             dw.writerow(r)
         myFile.close()
 
-def oneStepWorker(model, nvot, ncand, ms, r1Media, r2Media, baseSeed=None, i = 0):
+def oneStepWorker(model, nvot, ncand, ms, r1Media, pickiness, pollingError, r2Media, baseSeed=None, i = 0):
 
     if i>0 and i%10 == 0: print('Iteration:', i)
     if baseSeed is not None:
@@ -74,7 +75,7 @@ def oneStepWorker(model, nvot, ncand, ms, r1Media, r2Media, baseSeed=None, i = 0
     electorate = model(nvot, ncand)
     rows = []
     for method, bgStrat, fgs in ms:
-        results = method.threeRoundResults(electorate, bgStrat, fgs, r1Media=r1Media, r2Media=r2Media)
+        results = method.threeRoundResults(electorate, bgStrat, fgs, r1Media=r1Media, r2Media=r2Media, pickiness = pickiness, pollingError = pollingError)
         for result in results:
             result["seed"] = baseSeed + i
         rows.extend(results)
