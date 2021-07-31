@@ -35,8 +35,33 @@ library(scatterD3)
 # 
 # fvse = rbind(fvse,fread("wtf2.csv"))
 
-fvse = fread("target3.csv")
-fuzVses = fvse[,mean(util-rand)/mean(best-rand),by=list(method,chooser)]
+fvse = fread("PS2AIx1.csv")
+fvse[,mean((r1WinnerUtil - meanCandidateUtil) / (magicBestUtil - meanCandidateUtil)),by=.(method,backgroundStrat)]
+dcast(fvse, electorate + method,)
+fvse[backgroundStrat=="honBallot" & fgStrat != "",
+     list(
+       vse=mean((r1WinnerUtil - meanCandidateUtil) / (magicBestUtil - meanCandidateUtil)),
+       fgMatters=mean(fgUtilDiff != 0),
+       fgUtilDiff=mean(fgUtilDiff),
+       fgHelpedUtilDiff=mean(fgHelpedUtilDiff),
+       fgHarmedUtilDiff=mean(fgHarmedUtilDiff)),
+     by=.(method,backgroundStrat, fgStrat)]
+
+
+fvse[backgroundStrat=="lowInfoBallot" & fgStrat != "",
+     list(
+       vse=mean((r1WinnerUtil - meanCandidateUtil) / (magicBestUtil - meanCandidateUtil)),
+       fgMatters=mean(fgUtilDiff != 0),
+       fgUtilDiff=mean(fgUtilDiff),
+       fgHelpedUtilDiff=mean(fgHelpedUtilDiff),
+       fgHarmedUtilDiff=mean(fgHarmedUtilDiff)),
+     by=.(method,backgroundStrat, fgStrat)]
+
+
+
+
+
+fuzVses = fvse[,mean(util-rand)/mean(best-rand),by=list(method,chooser,fgStrat)]
 etype = fvse[method=="Schulze" & chooser=="honBallot",tallyVal0,by=eid]
 names(etype) = c("eid","scenario")
 setkey(etype,eid)
