@@ -42,7 +42,7 @@ class CsvBatch:
                     ms.append((m, bg, fgs))
             else:
                 ms.append(m)
-        args = (model, nvot, ncand, ms, r1Media, r2Media, pickiness, pollingError)
+        args = (model, nvot, ncand, ms, pickiness, pollingError, r1Media, r2Media)
         with multiprocessing.Pool(processes=7) as pool:
             results = pool.starmap(oneStepWorker, [args + (seed, i) for i in range(niter)])
             for result in results:
