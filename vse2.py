@@ -36,7 +36,7 @@ class CsvBatch:
                 for targetFunc in [select21, select31]:
                     fgs.extend([(m.diehardBallot, targetFunc, {'intensity':i}) for i in m.diehardLevels]
                     + [(m.compBallot, targetFunc, {'intensity':i}) for i in m.compLevels])
-                    fgs.append((m.lowInfoBallot, targetFunc, {'info':'p'}))
+                    fgs.append((m.lowInfoBallot, targetFunc, {'info':'e'}))
                 for bg in [m.honBallot, m.lowInfoBallot]:
                     ms.append((m, bg, fgs))
             else:
