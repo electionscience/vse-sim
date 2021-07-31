@@ -108,21 +108,26 @@ class Method(BaseMethod):
             winnersFound = [(r1Winner, 0)]
             partialResults = constResults.copy()
             if winner != r1Winner:
-                winnersFound.append((winner, fgSize))
+                winnersFound.append((winner, fgSize - 1))
             i = 1
+            deciderUtilDiffs = []
             while i < len(winnersFound):
+                thisWinner = winnersFound[i][0]
                 threshold = cls.stratThresholdSearch(
-                winnersFound[i][0], winnersFound[i][1], permbgBallots, fgBallots, fgBaselineBallots, winnersFound)
+                thisWinner, winnersFound[i][1], permbgBallots, fgBallots, fgBaselineBallots, winnersFound)
                 minfg = [voter for voter, _, _ in foreground][:threshold]
-                if winnersFound[i][0] == winner:
+                prevWinner = cls.winner(cls.results(
+                permbgBallots + fgBallots[:threshold-1] + fgBaselineBallots[threshold-1:]))
+                if thisWinner == winner:
                     prefix = "min"
-                elif r1Winner == cls.winner(cls.results(
-                permbgBallots + fgBallots[:threshold-1] + fgBaselineBallots[threshold-1:])):
+                elif r1Winner == prevWinner:
                     prefix = "t1"
                 else: prefix = "o"+str(i)
                 partialResults.update(makePartialResults(minfg, winner, r1Winner, prefix))
+                deciderUtils = foreground[threshold][0] #The deciding voter
+                deciderUtilDiffs.append((deciderUtils[thisWinner] - deciderUtils[prevWinner], threshold))
                 i += 1
-
+            partialResults['deciderUtilDiffs'] = sorted(deciderUtilDiffs, key=lambda x:x[1])
             partialResults.update(makePartialResults([voter for voter, _, _ in foreground], winner, r1Winner, ""))
             allResults.append(makeResults(results=results, fgStrat = foregroundStrat.__name__,
             winnerPlaceInR0=r0Places[winner], winnerPlaceInR1=r1Places[winner],
@@ -135,6 +140,13 @@ class Borda(Method):
     candScore = staticmethod(mean)
 
     nRanks = 999 # infinity
+
+    @classmethod
+    def results(self, ballots, **kwargs):
+        if type(ballots) is not list:
+            ballots = list(ballots)
+        n = len(ballots[0])
+        return list(map(lambda x: mean(x)/n,zip(*ballots)))
 
     @staticmethod
     def fillPrefOrder(voter, ballot,

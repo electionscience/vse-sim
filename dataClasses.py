@@ -355,9 +355,11 @@ class BaseMethod:
     stratTargetFor = stratTarget2
 
     @classmethod
-    def stratBallot(cls, voter, polls, electabilities=None, **kw):
+    def stratBallot(cls, voter, polls, electabilities=None, info='p', **kw):
         """Returns a strategic (high-info) ballot, using the strategies in version 1
         """
+        if info == 'e':
+            polls = electabilities
         places = sorted(enumerate(polls),key=lambda x:-x[1]) #from high to low
         frontId, frontResult, targId, targResult = cls.stratTargetFor(places)
         n = len(polls)
@@ -468,10 +470,11 @@ def selectVoter(voter):
         return 1 if v is voter else 0
     return selectV
 
+#The following function is my great shame
 def makeResults(method=None, backgroundStrat=None, fgStrat=None, numVoters=None, numCandidates=None,
         magicBestUtil=None, magicWorstUtil=None, meanCandidateUtil=None, r0ExpectedUtil=None, r0WinnerUtil=None,
         r1WinnerUtil=None, probOfWin=None, r1WinProb=None, winnerPlaceInR0=None, winnerPlaceInR1=None,
-        results=None, totalUtil=None,
+        results=None, totalUtil=None, deciderUtilDiffs=None,
         fgUtil=None, fgUtilDiff=None, fgSize=None,
         fgNumHelped=None, fgHelpedUtil=None, fgHelpedUtilDiff=None,
         fgNumHarmed=None, fgHarmedUtil=None, fgHarmedUtilDiff=None,
@@ -501,7 +504,7 @@ def makeResults(method=None, backgroundStrat=None, fgStrat=None, numVoters=None,
             meanCandidateUtil=meanCandidateUtil, r0ExpectedUtil=r0ExpectedUtil, r0WinnerUtil=r0WinnerUtil,
             r1WinnerUtil=r1WinnerUtil, probOfWin=probOfWin, r1WinProb=r1WinProb,
             winnerPlaceInR0=winnerPlaceInR0, winnerPlaceInR1=winnerPlaceInR1,
-            results=results, totalUtil=totalUtil,
+            results=results, totalUtil=totalUtil, deciderUtilDiffs=deciderUtilDiffs,
             fgUtil=fgUtil, fgUtilDiff=fgUtilDiff, fgSize=fgSize,
             fgNumHelped=fgNumHelped, fgHelpedUtil=fgHelpedUtil, fgHelpedUtilDiff=fgHelpedUtilDiff,
             fgNumHarmed=fgNumHarmed, fgHarmedUtil=fgHarmedUtil, fgHarmedUtilDiff=fgHarmedUtilDiff,
