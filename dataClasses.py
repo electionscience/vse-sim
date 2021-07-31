@@ -452,6 +452,9 @@ def selectAB(candA, candB): #candA and candB are candidate IDs
     fgSelect.__name__ = "select"+str(candA)+str(candB)
     return fgSelect
 
+def selectRand(polls, **kw):
+    return 0, 1
+
 def select21(polls, **kw):
     pollOrder = [cand for cand, poll in sorted(enumerate(polls),key=lambda x: -x[1])]
     return pollOrder[1], pollOrder[0]
