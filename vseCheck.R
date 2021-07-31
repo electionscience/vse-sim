@@ -35,7 +35,7 @@ library(scatterD3)
 # 
 # fvse = rbind(fvse,fread("wtf2.csv"))
 
-fvse = fread("PS2AIx1.csv")
+fvse = fread("6candPicky2.csv")
 fvse[,mean((r1WinnerUtil - meanCandidateUtil) / (magicBestUtil - meanCandidateUtil)),by=.(method,backgroundStrat)]
 dcast(fvse, electorate + method,)
 fvse[backgroundStrat=="honBallot" & fgStrat != "",
@@ -52,7 +52,7 @@ fvse[backgroundStrat=="lowInfoBallot" & fgStrat != "",
      list(
        vse=mean((r1WinnerUtil - meanCandidateUtil) / (magicBestUtil - meanCandidateUtil)),
        fgMatters=mean(fgUtilDiff != 0),
-       fgUtilDiff=mean(fgUtilDiff),
+       fgVSEDiff=mean(r1WinnerUtil, fgUtil),
        fgHelpedUtilDiff=mean(fgHelpedUtilDiff),
        fgHarmedUtilDiff=mean(fgHarmedUtilDiff)),
      by=.(method,backgroundStrat, fgStrat)]
