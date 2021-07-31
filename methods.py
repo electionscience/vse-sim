@@ -1398,6 +1398,7 @@ class Rp(Schulze):
 
 class Minimax(Schulze):
     """Smith Minimax margins"""
+    @classmethod
     def resolveCycle(self, cmat, n):
         winCount = [sum(1 if matchup > 0 else 0 for matchup in row) for row in cmat]
         smithSet = set(candID for candID, wins in enumerate(winCount) if wins == max(winCount))

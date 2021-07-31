@@ -17,10 +17,10 @@ class CsvBatch:
     def __init__(self, model, methodsAndStrats,
             nvot, ncand, niter, r1Media=truth, r2Media=truth, seed=None,
             pickiness=0.4, pollingError=0.3):
-        """methodsAndStrats is a list of (votingMethod, backgroundStrat, foregrounds).
-        A voting method my be given in place of such a tuple, in which case backgroundSrat and foregrounds
+        """methodsAndStrats is a list of (votingMethod, backgroundStrat, foregrounds, bgArgs).
+        A voting method my be given in place of such a tuple, in which case backgroundSrat, foregrounds, and bgArgs
         will be determined automatically.
-        foregrounds are (targetSelectionFunction, foregroundStrat, foregroundSelectionFunction) tuples.
+        foregrounds are (targetSelectionFunction, foregroundStrat, foregroundSelectionFunction, fgArgs) tuples.
         foregroundSelectionFunction is optional.
         nvot and ncand gives the number of voters and candidates in each election, and niter is how many
         electorates will be generated and have all the methods and strategies run on them.
