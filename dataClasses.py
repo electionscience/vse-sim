@@ -499,6 +499,7 @@ def makeResults(method=None, backgroundStrat=None, fgStrat=None, numVoters=None,
         o2fgHarmedUtilDiff=None,o3fgHarmedUtilDiff=None,
         o2fgHelpedUtil=None, o3fgHelpedUtil=None,
         o2fgHarmedUtil=None,o3fgHarmedUtil=None,
+        totalStratUtilDiff=None,
         **kw
         ):
     return dict(electorate=electorate,
@@ -524,7 +525,8 @@ def makeResults(method=None, backgroundStrat=None, fgStrat=None, numVoters=None,
             o2fgNumHarmed=o2fgNumHarmed,o3fgNumHarmed=o3fgNumHarmed,
             o2fgHarmedUtilDiff=o2fgHarmedUtilDiff,o3fgHarmedUtilDiff=o3fgHarmedUtilDiff,
             o2fgHelpedUtil=o2fgHelpedUtil, o3fgHelpedUtil=o3fgHelpedUtil,
-            o2fgHarmedUtil=o2fgHarmedUtil,o3fgHarmedUtil=o3fgHarmedUtil,)
+            o2fgHarmedUtil=o2fgHarmedUtil,o3fgHarmedUtil=o3fgHarmedUtil,
+            totalStratUtilDiff=totalStratUtilDiff,)
 
 def makePartialResults(fgVoters, winner, r1Winner, prefix=""):
     fgHelped = []

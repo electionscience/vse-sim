@@ -8,7 +8,7 @@ from numpy.ma.core import floor, ceil
 from numpy import percentile, argsort, sign
 from test.test_binop import isnum
 from debugDump import *
-from math import log
+from math import log, nan
 
 from stratFunctions import *
 from dataClasses import *
@@ -112,7 +112,12 @@ class Method(BaseMethod):
             if winner != r1Winner:
                 winnersFound.append((winner, fgSize - 1))
             i = 1
-            deciderUtilDiffs = []
+            deciderMargUtilDiffs = []
+            if fgSize: #If not I should be quitting earlier than this but easier to just fake it.
+                lastVoter = foreground[fgSize - 1][0]
+            else: #zero-sized foreground
+                lastVoter = [0.] * len(r1Results)
+            deciderUtilDiffs = [(lastVoter[winner] - lastVoter[r1Winner] , nan, fgSize)]
             while i < len(winnersFound):
                 thisWinner = winnersFound[i][0]
                 threshold = cls.stratThresholdSearch(
@@ -127,9 +132,25 @@ class Method(BaseMethod):
                 else: prefix = "o"+str(i)
                 partialResults.update(makePartialResults(minfg, winner, r1Winner, prefix))
                 deciderUtils = foreground[threshold][0] #The deciding voter
-                deciderUtilDiffs.append((deciderUtils[thisWinner] - deciderUtils[prevWinner], threshold))
+                if threshold == 0: #this shouldn't actually matter as we'll end up ignoring it anyway
+                                #, so having the wrong utilities would be OK. But let's get it right.
+                    predeciderUtils = [0.] * len(r1Results)
+                else:
+                    predeciderUtils = foreground[threshold - 1][0] #The one before the deciding voter
+                deciderUtilDiffs.append((predeciderUtils[thisWinner] - predeciderUtils[r1Winner],
+                                        deciderUtils[thisWinner] - deciderUtils[r1Winner],
+                                        threshold))
+                deciderMargUtilDiffs.append((deciderUtils[thisWinner] - deciderUtils[prevWinner], threshold))
                 i += 1
-            partialResults['deciderUtilDiffs'] = sorted(deciderUtilDiffs, key=lambda x:x[1])
+            deciderUtilDiffs = sorted(deciderUtilDiffs, key=lambda x:x[2])
+            partialResults['deciderMargUtilDiffs'] = sorted(deciderMargUtilDiffs, key=lambda x:x[1])
+
+            totalStratUtilDiff = 0
+            for i in range(len(deciderUtilDiffs) - 1):
+                totalStratUtilDiff += ((deciderUtilDiffs[i][1] + deciderUtilDiffs[i+1][0]) / 2 * #Use average over endpoints to interpolate average over range
+                                        (deciderUtilDiffs[i+1][2] - deciderUtilDiffs[i][2]))
+            partialResults['totalStratUtilDiff'] = totalStratUtilDiff
+
             partialResults.update(makePartialResults([voter for voter, _, _ in foreground], winner, r1Winner, ""))
             allResults.append(makeResults(results=results, fgStrat = foregroundStrat.__name__,
             fgTargets=targetSelect.__name__, fgArgs=fgArgs,
