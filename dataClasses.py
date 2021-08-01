@@ -463,6 +463,10 @@ def select31(polls, **kw):
     pollOrder = [cand for cand, poll in sorted(enumerate(polls),key=lambda x: -x[1])]
     return pollOrder[2], pollOrder[0]
 
+def select012(polls, r0polls, **kw):
+    pollOrder = [cand for cand, poll in sorted(enumerate(r0polls),key=lambda x: -x[1])]
+    return pollOrder[0], pollOrder[1]
+
 def nullTarget(*args, **kw):
     return 0, 0
 

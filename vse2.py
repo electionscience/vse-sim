@@ -34,7 +34,7 @@ class CsvBatch:
         for m in methodsAndStrats:
             if isinstance(m, type) and issubclass(m, Method):
                 fgs = []
-                for targetFunc in [select21, select31, selectRand]:
+                for targetFunc in [select21, select31, selectRand, select012]:
                     fgs.extend([(m.diehardBallot, targetFunc, {'intensity':i}) for i in m.diehardLevels]
                     + [(m.compBallot, targetFunc, {'intensity':i}) for i in m.compLevels])
                     fgs.append((m.lowInfoBallot, targetFunc, {'info':'e'}))

@@ -80,7 +80,7 @@ class Method(BaseMethod):
         allResults[0]['method'] = 'ApprovalPoll'
         for foregroundStrat, targetSelect, foregroundSelect, fgArgs in foregrounds:
             polls = tuple(r2Media(r1Results))
-            candToHelp, candToHurt = targetSelect(electabilities=electabilities, polls=polls)
+            candToHelp, candToHurt = targetSelect(electabilities=electabilities, polls=polls, r0polls=electabilities)
             pollOrder = [cand for cand, poll in sorted(enumerate(polls),key=lambda x: -x[1])]
             foreground = [] #(voter, ballot, eagernessToStrategize) tuples
             permbgBallots = []
