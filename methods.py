@@ -1224,6 +1224,7 @@ class Schulze(RankedMethod):
     diehardLevels = [3]
     compLevels = [3]
 
+    @classmethod
     def resolveCycle(self, cmat, n):
 
         beatStrength = [[0] * n] * n
@@ -1385,6 +1386,7 @@ class Schulze(RankedMethod):
         return ballot
 
 class Rp(Schulze):
+    @classmethod
     def resolveCycle(self, cmat, n):
         """Note: mutates cmat destructively.
 
