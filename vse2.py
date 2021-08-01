@@ -50,16 +50,17 @@ class CsvBatch:
 
         for row in self.rows: row['voterModel'] = str(model)
 
-    def saveFile(self, baseName="SimResults"):
+    def saveFile(self, baseName="SimResults", newFile=True):
         """print the result of doVse in an accessible format.
         for instance:
 
         csvs.saveFile()
         """
         i = 1
-        while os.path.isfile(baseName + str(i) + ".csv"):
-            i += 1
-        myFile = open(baseName + str(i) + ".csv", "w")
+        if newFile:
+            while os.path.isfile(baseName + str(i) + ".csv"):
+                i += 1
+        myFile = open(baseName + (str(i) if newFile else "") + ".csv", "w")
         dw = csv.DictWriter(myFile, self.rows[0].keys(), restval="NA")
         dw.writeheader()
         for r in self.rows:
