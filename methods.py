@@ -417,7 +417,7 @@ def makeScoreMethod(topRank=10, asClass=False):
         #2.3536762480634343
         bias5 = 2.3536762480634343
         compLevels = [1,2]
-        diehardLevels = [1,2]
+        diehardLevels = [1,2, 4]
 
         @classmethod
         def candScore(cls,scores):
@@ -491,6 +491,8 @@ def makeScoreMethod(topRank=10, asClass=False):
                 return super().diehardBallot(utils, intensity, candToHelp, candToHurt, **kw)
             if intensity == 1:
                 return cls.interpolatedBallot(utils, utils[candToHurt], utils[candToHelp])
+            if intensity == 4:
+                return cls.bulletBallot(utils)
             else:
                 return [cls.topRank if u >= utils[candToHelp] else 0 for u in utils]
 
@@ -538,7 +540,7 @@ def makeScoreMethod(topRank=10, asClass=False):
 class Score(makeScoreMethod(5, True)): pass
 
 class Approval(makeScoreMethod(1,True)):
-    diehardLevels = [1]
+    diehardLevels = [1, 4]
     compLevels = [1]
     @classmethod
     def zeroInfoBallot(cls, utils, electabilities=None, polls=None, pickiness=0, **kw):
@@ -566,10 +568,10 @@ class Approval(makeScoreMethod(1,True)):
         else:
             return super().compBallot(utils, intensity, candToHelp, candToHurt, **kw)
 
-class ApprovalTop2(top2(Approval)):
-    @classmethod
-    def bulletBallot(cls, utils, **kw):
-        return super().bulletBallot(utils), cls.prefOrder(utils)
+class ApprovalTop2(top2(Approval)): pass
+    #@classmethod
+    #def bulletBallot(cls, utils, **kw):
+        #return super().bulletBallot(utils), cls.prefOrder(utils)
 
 def BulletyApprovalWith(bullets=0.5, asClass=False):
     class BulletyApproval(Score(1,True)):
@@ -609,7 +611,7 @@ def makeSTARMethod(topRank=5):
     class STAR0to(score0to):
 
         stratTargetFor = Method.stratTarget3
-        diehardLevels = [1,2,3]
+        diehardLevels = [1,2,3,4]
         compLevels = [1,2,3]
 
         @classmethod
@@ -725,7 +727,7 @@ def makeSTARMethod(topRank=5):
                         baseBallot[i] = 0
                     elif u >= helpUtil:
                         baseBallot[i] = 5
-            if intensity >= 3:
+            if intensity == 3:
                 for i, u in enumerate(utils):
                     if u >= helpUtil:
                         baseBallot[i] = 5
@@ -734,6 +736,8 @@ def makeSTARMethod(topRank=5):
                     else:
                         baseBallot[i] = 0
                     baseBallot[candToHurt] = 0
+            if intensity == 4:
+                return cls.bulletBallot(utils)
             return baseBallot
 
     if topRank==5:
