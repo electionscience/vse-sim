@@ -35,129 +35,131 @@ library(scatterD3)
 # 
 # fvse = rbind(fvse,fread("wtf2.csv"))
 
-fvse = fread("6candPicky2.csv")
-fvse[,mean((r1WinnerUtil - meanCandidateUtil) / (magicBestUtil - meanCandidateUtil)),by=.(method,backgroundStrat)]
-dcast(fvse, electorate + method,)
-fvse[backgroundStrat=="honBallot" & fgStrat != "",
+fvse = fread("bigdat5.csv")
+vses = fvse[method != "ApprovalPoll",list(VSE=mean((r1WinnerUtil - meanCandidateUtil) / 
+                      (magicBestUtil - meanCandidateUtil))),by=.(method,backgroundStrat)]
+dcast(vses, method ~ backgroundStrat)
+vses
+
+fromhons = fvse[backgroundStrat=="honBallot" & fgStrat == "lowInfoBallot" & method != "Minimax",
      list(
        vse=mean((r1WinnerUtil - meanCandidateUtil) / (magicBestUtil - meanCandidateUtil)),
        fgMatters=mean(fgUtilDiff != 0),
-       fgUtilDiff=mean(fgUtilDiff),
-       fgHelpedUtilDiff=mean(fgHelpedUtilDiff),
-       fgHarmedUtilDiff=mean(fgHarmedUtilDiff)),
-     by=.(method,backgroundStrat, fgStrat)]
+       VSEDiff=mean((totalUtil - r1WinnerUtil) / (magicBestUtil - meanCandidateUtil)),
+       #margStrategicRegret=mean(margStrategicRegret),
+       avgStrategicRegret=mean((avgStrategicRegret) / (magicBestUtil - meanCandidateUtil) / 21),
+       fgHelpedUtilDiff=mean((fgHelpedUtilDiff) / (magicBestUtil - meanCandidateUtil) / 21),
+       fgHarmedUtilDiff=mean((fgHarmedUtilDiff) / (magicBestUtil - meanCandidateUtil) / 21)
+     ),
+     by=.(method,backgroundStrat, fgStrat, fgArgs)]
+fromhons
 
-
-fvse[backgroundStrat=="lowInfoBallot" & fgStrat != "",
+fromawares = fvse[((backgroundStrat=="lowInfoBallot"  & method != "Minimax") | (backgroundStrat=="honBallot" &method == "Minimax")) & !fgStrat %in% c("", "lowInfoBallot"),
      list(
        vse=mean((r1WinnerUtil - meanCandidateUtil) / (magicBestUtil - meanCandidateUtil)),
        fgMatters=mean(fgUtilDiff != 0),
-       fgVSEDiff=mean(r1WinnerUtil, fgUtil),
-       fgHelpedUtilDiff=mean(fgHelpedUtilDiff),
-       fgHarmedUtilDiff=mean(fgHarmedUtilDiff)),
-     by=.(method,backgroundStrat, fgStrat)]
+       VSEDiff=mean((totalUtil - r1WinnerUtil) / (magicBestUtil - meanCandidateUtil)),
+       #margStrategicRegret=mean(margStrategicRegret),
+       avgStrategicRegret=mean(avgStrategicRegret / (magicBestUtil - meanCandidateUtil) / 21),
+       fgHelpedUtilDiff=mean(fgHelpedUtilDiff  / (magicBestUtil - meanCandidateUtil) / 21),
+       fgHarmedUtilDiff=mean(fgHarmedUtilDiff / (magicBestUtil - meanCandidateUtil) / 21)),
+     by=.(method,backgroundStrat, fgStrat, fgArgs, fgTargets)]
+fromawares
 
-
-
-
-
-fuzVses = fvse[,mean(util-rand)/mean(best-rand),by=list(method,chooser,fgStrat)]
-etype = fvse[method=="Schulze" & chooser=="honBallot",tallyVal0,by=eid]
-names(etype) = c("eid","scenario")
-setkey(etype,eid)
-setkey(fvse,eid)
-fvse=fvse[etype]
-
-interestingStrats = c("honBallot","smartOss","stratBallot","Oss.hon_strat.","Oss.hon_Prob.strat50_hon50..","Prob.strat50_hon50.")
-honestScenarios = fvse[chooser %in% interestingStrats,list(vse=mean(util-rand)/mean(best-rand),frequency=.N/dim(etype)[1]),by=list(scenario,chooser,method)]
-honestScenarios2 = fvse[chooser %in% interestingStrats,list(vse=mean(util-rand)/mean(best-rand),frequency=.N/dim(etype)[1]),by=list(chooser,method)]
-write.csv(honestScenarios,"byScenario.csv")
-hmethodlist = honestScenarios2[,method]
-methods = unique(hmethodlist)
-# methodOrder = methods[c(8,9,14,15,10,#15, #IRNR
-#                         11,12, #rp
-#                         5,4,3,2,1,6,7,13
-#                         #,15 #IRNR at end
-#                         )]
-allMethodOrder = c("Plurality", "Borda", "Mav", "Mj", "Irv", "Schulze", "Rp", 
-                "BulletyApproval60", "IdealApproval", "Score0to2", "Score0to10", 
-                "Score0to1000", "Srv0to10", "Srv0to2", "V321")
-methodOrder = c("Plurality", "Irv", "BulletyApproval60", "Srv0to10", "V321")
-allMethodOrder= unique(c(methodOrder,allMethodOrder))
-methodNames = c("Plurality", "IRV", "Approval", "SRV", "3-2-1", 
-                allMethodOrder[(length(methodOrder)+1):length(allMethodOrder)])
-scenarios = c("cycle", "easy", "spoiler", "squeeze", "chicken", "other")
-scenarioFreq = honestScenarios[,list(freq=mean(frequency)),by=scenario]
-setkey(scenarioFreq,scenario)
-scenarioLabelBase2 = c("2. Easy\n(Cond #1 = Plur #1)", 
-                      "5. Chicken dilemma\n(Cond #3 = Plur3 #1)",
-                      "6. Other\n",
-                      "4. Center squeeze\n(Cond #1 = Plur3 #3)",
-                      "3. Spoiler\n(Cond #1 = Plur3 #1)",
-                      "1. Condorcet cycle\n"
-) 
-scenarioLabelBase = c(
-                      "1.Cond. cycle",
-                      "2.Easy", 
-                      "3.Spoiler",
-                      "4.Ctr. squeeze",
-                      "5.Chicken dilem.",
-                      "6.Other"
-) 
-scenarioLabel = paste0(scenarioLabelBase," (~",round(scenarioFreq[scenarios,freq]*100),"%)")
-stratLabel = c("a.100% honest",
-               "d.Smart 1-sided strat.",
-               "f.100% strat.",
-               "e.100% 1-sided strat.","b.50% 1-sided strat.","c.50% strat.")
-methodOrder = methods #comment out
-honestScenarios[,method:=factor(hmethodlist,levels=allMethodOrder,
-                                labels=paste(c(paste0(" ",as.character(1:9)),as.character(10:length(allMethodOrder))),allMethodOrder,sep=". "))]
-honestScenarios[,strategy:=factor(chooser, levels=interestingStrats,labels=stratLabel)]
-honestScenarios[,`Scenario type`:=factor(scenario,levels=scenarios,labels=scenarioLabel)]
-honestScenarios[vse<0,vse:=vse/10]
-scatterD3(data = honestScenarios[!is.na(method),], x = vse, y = method, col_var = strategy, symbol_var = `Scenario type`, left_margin = 90, xlim=c(-.2,1.0), size_var=frequency)
-
-numbers = paste0(c(paste0(" ",as.character(1:9)),as.character(10:99)),".")
-spaces = c(" ", "\U00a0", "\U2000", "\U2001", "\U2002", "\U2003", "\U2004")
-binarycount = expand.grid(1:7,1:7)
-invisnumbers = rep(NA,dim(binarycount)[1])
-for (i in 1:length(invisnumbers)) {
-  invisnumbers[i] = paste0(spaces[as.numeric(binarycount[i,2:1])],collapse="")
+besttargets = function(grouped) {
+  grouped[,target:=fgTargets[order(-avgStrategicRegret)[1]], by=.(method,backgroundStrat, fgStrat, fgArgs)]
+#  justBest = grouped[target,,]
+  chosen = grouped[grouped[, .I[avgStrategicRegret == max(avgStrategicRegret)], by = .(method,backgroundStrat, fgStrat, fgArgs)]$V1]
 }
-numbers = invisnumbers
-
-numberedNames = paste(numbers[1:length(methodNames)],methodNames,sep=" ")
-
-
-honestScenarios2[,method:=factor(hmethodlist,levels=allMethodOrder,labels=numberedNames)]
-honestScenarios2[,strategy:=factor(chooser, levels=interestingStrats,labels=stratLabel)]
-#honestScenarios2[,`Scenario type`:=factor(scenario,levels=scenarios,labels=scenarioLabel)]
-honestScenarios2[vse<0,vse:=vse/10]
-
-#[-grep("IRNR",honestScenarios2[,as.character(method)])]
-scatterD3(data = honestScenarios2[as.character(method) %in% levels(honestScenarios2[,method])[1:5],], x = vse, y = method, col_var = strategy, left_margin = 90, xlim=c(.7,1.0))
-
-fvse[,works:=as.integer(tallyVal1)]
-
-#strategic function
-stratWorks = fvse[chooser=="Oss.hon_strat.",list(stratWorks=mean(works==1,na.rm=T),
-                                    stratBackfire=mean(works==-1,na.rm=T),
-                                    frequency=.N/dim(etype)[1]),by=list(method,scenario)]
-
-stratWorks[,`Scenario type`:=factor(scenario,levels=scenarios,labels=scenarioLabel)]
-scatterD3(data = stratWorks, x = stratWorks, y = stratBackfire, xlim=c(0,1.0),ylim=c(0,1.0), symbol_var = `Scenario type`, size_var=frequency, col_var=method)
-
-
-
-stratWorksAg = fvse[chooser=="Oss.hon_strat.",list(stratWorks=mean(works==1,na.rm=T),
-                                                 stratBackfire=mean(works==-1,na.rm=T)),
-                    by=list(method)]
-
-scatterD3(data = stratWorksAg, x = stratWorks, y = stratBackfire, xlim=c(0,1.0),ylim=c(0,1.0), col_var=method, lab=method)
-
-honestScenarios2[,VSE:=vse*100]
+bestfromawares = besttargets(fromawares)
+bestfromawares
 
 library(ggplot2)
 library(ggthemes)
-ggplot(data = honestScenarios2[as.character(method) %in% levels(honestScenarios2[,method])[c(1:3,5)],], aes(x = VSE, y = method, group = method)) + geom_line(size=3) + xlim(70,100) + theme_gdocs() + theme(axis.title.y=element_blank()) + xlab("% Voter Satisfaction Efficiency (VSE)")
-#(I think that refining the strategies can improve the function:backfire balance, but it's a)
+library(dplyr)
+library(forcats)
+library(scales)
+
+#vse as bars
+(ggplot(data = vses, aes(x = VSE, y = method, group = method)) 
+  + geom_line(size=3) + xlim(.65,1.00) + theme_gdocs() 
+  + theme(axis.title.y=element_blank()) + xlab("% Voter Satisfaction Efficiency (VSE)")) 
+
+#vse as dots
+(
+vses[!(method=="Minimax" & backgroundStrat=="lowInfoBallot"),] %>% 
+    mutate(method = method 
+                    %>% fct_reorder(VSE, .fun='mean') 
+                    %>% recode(`STAR`="STAR", 
+                               `PluralityTop2`="Plurality Top Two", 
+                               `Minimax`="Smith/Minimax", 
+                               `Irv`="IRV (RCV)", 
+                               `ApprovalTop2`="Approval Top Two", 
+                               ),
+                                  #to=c("STAR", "Plurality/Runoff", "Plurality", "Smith/Minimax", irv="IRV (RCV)", "Approval/Runoff", "Approval")))
+           #VSE = VSE * 100
+           ) %>%
+    ggplot(
+          aes(x = VSE, y = as.factor(method), color = backgroundStrat)) 
+  + scale_x_continuous(labels=scales::percent_format(accuracy = 1), limits=c(.68, 1.0))
+    + geom_point(size=3) #+ xlim(.65,1.00) 
+  + theme_gdocs() 
+    + theme(axis.title.y=element_blank()) + xlab("% Voter Satisfaction Efficiency (VSE)")
+    + labs(color="Voter Behavior") + scale_colour_colorblind(labels = c("Honest / Naive", "Viability-aware"))
+   # + scale_y_discrete(breaks=c("STAR", "Plurality", "PluralityTop2", "Minimax", "Irv", "ApprovalTop2", "Approval"),
+  #                     labels=c("STAR", "Plurality/Runoff", "Plurality", "Smith/Minimax", irv="IRV (RCV)", "Approval/Runoff", "Approval"))
+) 
+
+#ASR for viability-aware
+(
+  fromhons %>% 
+    mutate(method = method 
+           %>% fct_reorder(avgStrategicRegret, .fun='mean') 
+           %>% recode(`STAR`="STAR", 
+                      `PluralityTop2`="Plurality w/Runoff", 
+                      `Minimax`="Smith/Minimax", 
+                      `Irv`="IRV (RCV)", 
+                      `ApprovalTop2`="Approval w/Runoff", 
+           ),
+           #to=c("STAR", "Plurality/Runoff", "Plurality", "Smith/Minimax", irv="IRV (RCV)", "Approval/Runoff", "Approval")))
+           #VSE = VSE * 100
+    ) %>%
+    ggplot(
+      aes(x = avgStrategicRegret, y = as.factor(method))) 
+  + scale_x_continuous(labels=scales::percent_format(accuracy = 1), limits=c(-.01, .25))
+  + geom_point(size=3) #+ xlim(.65,1.00) 
+  + theme_gdocs() 
+  + theme(axis.title.y=element_blank()) + xlab("% Average Strategic Regret (ASR) for not casting a viability-aware ballot")
+  #+ labs(color="Voter Behavior") 
+  #+ scale_colour_colorblind(labels = c("Honest / Naive", "Viability-aware"))
+  # + scale_y_discrete(breaks=c("STAR", "Plurality", "PluralityTop2", "Minimax", "Irv", "ApprovalTop2", "Approval"),
+  #                     labels=c("STAR", "Plurality/Runoff", "Plurality", "Smith/Minimax", irv="IRV (RCV)", "Approval/Runoff", "Approval"))
+) 
+
+
+#ASR for targeted strategy
+(
+  bestfromawares %>% 
+    mutate(method = method 
+           %>% fct_reorder(avgStrategicRegret, .fun='mean') 
+           %>% recode(`STAR`="STAR", 
+                      `PluralityTop2`="Plurality Top Two", 
+                      `Minimax`="Smith/Minimax", 
+                      `Irv`="IRV (RCV)", 
+                      `ApprovalTop2`="Approval Top Two", 
+           ),
+           #to=c("STAR", "Plurality/Runoff", "Plurality", "Smith/Minimax", irv="IRV (RCV)", "Approval/Runoff", "Approval")))
+           #VSE = VSE * 100
+    ) %>%
+    ggplot(
+      aes(x = avgStrategicRegret, y = as.factor(method), shape = as.factor(fgStrat), color = fgArgs)) 
+  + scale_x_continuous(labels=scales::percent_format(accuracy = 1))
+  + geom_point(size=3) #+ xlim(.65,1.00) 
+  + theme_gdocs() 
+  + theme(axis.title.y=element_blank()) + xlab("% Average Strategic Regret (ASR) for not using targeted strategy")
+  + labs(color="Strategy level", shape="Strategy type") 
+  + scale_colour_colorblind(labels = c("Honest", "Semi-honest", "Dishonest"))
+  + scale_shape(labels = c("Compromise", "Die-hard"))
+  # + scale_y_discrete(breaks=c("STAR", "Plurality", "PluralityTop2", "Minimax", "Irv", "ApprovalTop2", "Approval"),
+  #                     labels=c("STAR", "Plurality/Runoff", "Plurality", "Smith/Minimax", irv="IRV (RCV)", "Approval/Runoff", "Approval"))
+) 

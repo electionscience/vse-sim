@@ -118,6 +118,7 @@ class Method(BaseMethod):
             else: #zero-sized foreground
                 lastVoter = [0.] * len(r1Results)
             deciderUtilDiffs = [(lastVoter[winner] - lastVoter[r1Winner] , nan, fgSize)]
+            allUtilDiffs = [([voter[0][winner] - voter[0][r1Winner] for voter in foreground], fgSize)]
             while i < len(winnersFound):
                 thisWinner = winnersFound[i][0]
                 threshold = cls.stratThresholdSearch(
@@ -140,16 +141,25 @@ class Method(BaseMethod):
                 deciderUtilDiffs.append((predeciderUtils[thisWinner] - predeciderUtils[r1Winner],
                                         deciderUtils[thisWinner] - deciderUtils[r1Winner],
                                         threshold))
+                allUtilDiffs.append(([voter[0][thisWinner] - voter[0][r1Winner] for voter in foreground[:threshold+1]],
+                                        threshold))
                 deciderMargUtilDiffs.append((deciderUtils[thisWinner] - deciderUtils[prevWinner], threshold))
                 i += 1
-            deciderUtilDiffs = sorted(deciderUtilDiffs, key=lambda x:x[2])
             partialResults['deciderMargUtilDiffs'] = sorted(deciderMargUtilDiffs, key=lambda x:x[1])
 
             totalStratUtilDiff = 0
+            margStrategicRegret = 0
+            avgStrategicRegret = 0
+            deciderUtilDiffs = sorted(deciderUtilDiffs, key=lambda x:x[2])
+            allUtilDiffs = sorted(allUtilDiffs, key=lambda x:x[1])
             for i in range(len(deciderUtilDiffs) - 1):
                 totalStratUtilDiff += ((deciderUtilDiffs[i][1] + deciderUtilDiffs[i+1][0]) / 2 * #Use average over endpoints to interpolate average over range
                                         (deciderUtilDiffs[i+1][2] - deciderUtilDiffs[i][2]))
+                margStrategicRegret += sum(allUtilDiffs[i+1][0][allUtilDiffs[i][1]:allUtilDiffs[i+1][1]])
+                avgStrategicRegret += mean(allUtilDiffs[i+1][0]) * (allUtilDiffs[i+1][1] - allUtilDiffs[i][1])
             partialResults['totalStratUtilDiff'] = totalStratUtilDiff
+            partialResults['margStrategicRegret'] = margStrategicRegret
+            partialResults['avgStrategicRegret'] = avgStrategicRegret
 
             partialResults.update(makePartialResults([voter for voter, _, _ in foreground], winner, r1Winner, ""))
             allResults.append(makeResults(results=results, fgStrat = foregroundStrat.__name__,
