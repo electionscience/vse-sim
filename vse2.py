@@ -78,6 +78,10 @@ def oneStepWorker(model, nvot, ncand, ms, pickiness, pollingError, r1Media, r2Me
         results = method.threeRoundResults(electorate, bgStrat, fgs, bgArgs=bgArgs,
                 r1Media=r1Media, r2Media=r2Media, pickiness = pickiness, pollingError = pollingError)
         for result in results:
-            result["seed"] = baseSeed + i
+            result.update(dict(
+                    seed = baseSeed + i,
+                    pickiness = pickiness,
+                    pollingError = pollingError,
+                ))
         rows.extend(results)
     return rows
