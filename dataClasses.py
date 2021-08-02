@@ -352,4 +352,4 @@ def rememberBallots(fun):
 class CandidateWithCount:
     def __init__(self, c = [], v = 0):
         self.candidate = c
-        self.votes = c
+        self.votes = v

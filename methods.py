@@ -508,11 +508,11 @@ class Irv(Method):
     def eliminateCandidate(self, inputPrefs, toEliminate):
         """Gets a dictionary of the form {ranking as tuple, vote count} with toEliminate removed"""
 
-        if toEliminate is None or toEliminate is not CandidateWithCount:
+        if not isinstance(toEliminate, CandidateWithCount):
             return inputPrefs
 
         prefs = {}
-        for ranking, votes in inputPrefs.iteritems():
+        for ranking, votes in inputPrefs.items():
             newranking = []
             for candidate in ranking:
                 if candidate != toEliminate.candidate:
@@ -527,17 +527,27 @@ class Irv(Method):
     def candidateVotes(self, prefSchedule):
         """Gets a list of CandidateWithCount, from highest to lowest"""
         candidates = {}
-        for ranking, votes in prefSchedule.iteritems():
+        for ranking, votes in prefSchedule.items():
             candidate = ranking[0]
             if candidate in candidates:
                 candidates[candidate].votes += votes
             else:
                 candidates[candidate] = CandidateWithCount(candidate, votes)
 
-        return sorted(candidates.values(), key=lambda c: c.votes)
+        # Simply for VSE which requires ranking of non-winners; in real election we don't really
+        # care
+        alternates = []
+        trackedalt = set()
+        for ranking, votes in prefSchedule.items():
+            for alternate in ranking[1:]:
+                if (alternate not in candidates) and alternate not in trackedalt:
+                    alternates.append(CandidateWithCount(alternate, 0))
+                    trackedalt.add(alternate)
 
-    def getLeast(self, prefSchedule, keep = {}):
-        for candidate in reversed(self.candidateVotes(prefSchedule)):
+        return sorted(candidates.values(), key=lambda c: (c.votes, c.candidate), reverse = True) + alternates
+
+    def getLeast(self, voteRanking, keep = {}):
+        for candidate in reversed(voteRanking):
             if not candidate.candidate in keep:
                 return candidate
         pass
@@ -631,7 +641,7 @@ class IrvPrime(Irv):
         >>> IrvPrime().results([[0,1,2],[2,1,0]])[1]
         0
         >>> IrvPrime().results([[0,1,2]] * 4 + [[2,1,0]] * 3 + [[1,2,0]] * 2)
-        [2, 0, 1]
+        [1, 2, 0]
         """
         if type(ballots) is not list:
             ballots = list(ballots)
@@ -645,20 +655,20 @@ class IrvPrime(Irv):
         # Find all candidates that can beat classic IRV winner; this may be a subset
         # of schwartz/smith, but it's all that matters
         ncand = len(ballots[0])
-        winnersPrime = {}
+        winnersPrime = set()
         for possibleWinner in range(ncand):
             if possibleWinner in winners:
                 continue
 
             numWins = 0
             numLosses = 0
-            for ranking, votes in remaining.iteritems():
+            for ranking, votes in remaining.items():
                 possibleWinnerRanking = winnerRanking = len(ranking) + 1
                 for pos in range(len(ranking)):
                     if ranking[pos] == possibleWinner:
                         possibleWinnerRanking = pos
                     # We can change this to a loop if there's > 1 winner
-                    elif ranking[pos] == winners[0]:
+                    elif ranking[pos] == next(iter(winners)):
                         winnerRanking = pos
                 if possibleWinnerRanking < winnerRanking:
                     numWins += votes
@@ -673,7 +683,7 @@ class IrvPrime(Irv):
         for i in range(ncand):
             votes = self.candidateVotes(remaining)
             toEliminate = self.getLeast(votes, keepers)
-            if toEliminate is None or toEliminate is not CandidateWithCount:
+            if not isinstance(toEliminate, CandidateWithCount):
                 # Begin "step 4", i.e. continue elimination without preserving anyone
                 keepers = {}
                 toEliminate = self.getLeast(votes)
