@@ -261,7 +261,22 @@ def BulletyApprovalWith(bullets=0.5, asClass=False):
 
 
 def Srv(topRank=10):
-    "Score Runoff Voting"
+    """Score Runoff Voting
+        >>> Srv().resultsFor(DeterministicModel(3)(5,3),Irv().honBallot)["results"]
+        [0.8, 1.2, 1.21]
+        >>> Srv().results([[0,1,2]])[2]
+        2.0
+        >>> Srv().results([[0,1,2],[2,1,0]])[1]
+        1.0
+        >>> Srv().results([[0,1,2]] * 4 + [[2,1,0]] * 3 + [[1,2,0]] * 2)
+        [0.8888888888888888, 1.2222222222222223, 0.8888888888888888]
+        >>> Srv().results([[2,1,0]] * 100 + [[1,0,2]] + [[0,2,1]] * 100)
+        [1.502537313432836, 1.492537313432836, 0.5074626865671642]
+        >>> Srv().results([[1,2,0]] * 8 + [[2,0,1]] * 6 + [[0,1,2]] * 5)
+        [1.0526315789473684, 1.105263157894737, 0.8421052631578947]
+        >>> Srv().results([[0,4,3,1,2]] * 5 + [[1,4,3,2,1]] * 4 + [[2,3,4,0,1]] * 6)
+        [1.0666666666666667, 3.6, 3.4, 0.8666666666666667, 1.3333333333333333]
+    """
 
     score0to = Score(topRank,True)
 
@@ -270,17 +285,7 @@ def Srv(topRank=10):
         stratTargetFor = Method.stratTarget3
 
         def results(self, ballots, **kwargs):
-            """Srv results.
-
-            >>> Srv().resultsFor(DeterministicModel(3)(5,3),Irv().honBallot)["results"]
-            [0, 1, 2]
-            >>> Srv().results([[0,1,2]])[2]
-            2
-            >>> Srv().results([[0,1,2],[2,1,0]])[1]
-            0
-            >>> Srv().results([[0,1,2]] * 4 + [[2,1,0]] * 3 + [[1,2,0]] * 2)
-            [2, 0, 1]
-            """
+            """Srv results."""
             baseResults = super(Srv0to, self).results(ballots, **kwargs)
             (runnerUp,top) = sorted(range(len(baseResults)), key=lambda i: baseResults[i])[-2:]
             upset = sum(sign(ballot[runnerUp] - ballot[top]) for ballot in ballots)
@@ -646,6 +651,8 @@ class IrvPrime(Irv):
         [1, 0, 2]
         >>> IrvPrime().results([[1,2,0]] * 8 + [[2,0,1]] * 6 + [[0,1,2]] * 5)
         [0, 1, 2]
+        >>> IrvPrime().results([[0,4,3,1,2]] * 5 + [[1,4,3,2,1]] * 4 + [[2,3,4,0,1]] * 6)
+        [4, 2, 3, 0, 1]
         """
         if type(ballots) is not list:
             ballots = list(ballots)
