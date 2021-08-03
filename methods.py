@@ -642,6 +642,10 @@ class IrvPrime(Irv):
         0
         >>> IrvPrime().results([[0,1,2]] * 4 + [[2,1,0]] * 3 + [[1,2,0]] * 2)
         [1, 2, 0]
+        >>> IrvPrime().results([[2,1,0]] * 100 + [[1,0,2]] + [[0,2,1]] * 100)
+        [1, 0, 2]
+        >>> IrvPrime().results([[1,2,0]] * 8 + [[2,0,1]] * 6 + [[0,1,2]] * 5)
+        [0, 1, 2]
         """
         if type(ballots) is not list:
             ballots = list(ballots)
