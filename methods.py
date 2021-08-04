@@ -522,6 +522,8 @@ class Irv(Method):
             for candidate in ranking:
                 if candidate != toEliminate.candidate:
                     newranking.append(candidate)
+            if (len(newranking) == 0):
+                continue
             newkey = tuple(newranking)
             if newkey in prefs:
                 prefs[newkey] += votes
@@ -649,23 +651,36 @@ class IrvPrime(Irv):
         [1, 2, 0]
         >>> IrvPrime().results([[2,1,0]] * 100 + [[1,0,2]] + [[0,2,1]] * 100)
         [1, 0, 2]
+        >>> # Favorite betrayal example from http://rangevoting.org/IncentToExagg.html
         >>> IrvPrime().results([[1,2,0]] * 8 + [[2,0,1]] * 6 + [[0,1,2]] * 5)
         [0, 1, 2]
         >>> IrvPrime().results([[0,4,3,1,2]] * 5 + [[1,4,3,2,1]] * 4 + [[2,3,4,0,1]] * 6)
         [4, 2, 3, 0, 1]
+        >>> # Elections 3-5 from http://votingmatters.org.uk/ISSUE6/P4.HTM
+        >>> IrvPrime().results([[0,1,2,3,4,5]] * 12 + [[2,0,1,3,4,5]] * 11 + [[1,2,0,3,4,5]] * 10 +
+        ...     [[3,4,5]] * 27)
+        [1, 2, 3, 0, 4, 5]
+        >>> IrvPrime().results([[0,1]] * 11 + [[1]] * 7 + [[2]] * 12)
+        [1, 2, 0]
+        >>> IrvPrime().results([[0,3,2,1]] * 5 + [[1,2,0,3]] * 5 + [[2,0,1,3]] * 8 +
+        ...    [[3,0,1,2]] * 4 + [[3,1,2,0]] * 8)
+        [0, 3, 2, 1]
+        >>> IrvPrime().results([[0,2,1,3]] * 6 + [[0,3,1,2]] * 3 + [[0,3,2,1]] * 3 +
+        ...     [[1,2,0,3]] * 4 + [[2,0,1,3]] * 4 + [[3,1,2,0]] * 5)
+        [2, 0, 3, 1]
         """
         if type(ballots) is not list:
             ballots = list(ballots)
 
         remaining = self.buildPreferenceSchedule(ballots)
-        classic = self.runIrv(remaining, len(ballots[0]))
+        ncand = len(self.candidateVotes(remaining))
+        classic = self.runIrv(remaining, ncand)
 
         # Keep the winner from the classic IRV
         winners = {classic[0]}
 
-        # Find all candidates that can beat classic IRV winner; this may be a subset
+        # Find all candidates that can beat classic IRV winner; this may be a superset
         # of schwartz/smith, but it's all that matters
-        ncand = len(ballots[0])
         winnersPrime = set()
         for possibleWinner in range(ncand):
             if possibleWinner in winners:
