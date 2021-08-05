@@ -86,3 +86,31 @@ def oneStepWorker(model, nvot, ncand, ms, pickiness, pollingError, r1Media, r2Me
                 ))
         rows.extend(results)
     return rows
+
+class CsvBatches(CsvBatch):
+    def __init__(self, model, methodsAndStrats,
+            nvot, ncand, niter, r1Media=truth, r2Media=truth, seed=None,
+            pickiness=0.4, pollingError=0.3):
+        """Just like CsvBatch, but you can replace an argument such as nvot with a list of values for that
+        argument to run a CsvBatch for every item of that list. The results appear self.rows.
+        """
+        possibleListArgs = [model, nvot, ncand, r1Media, r2Media, pickiness]
+        listArgs = [arg if isinstance(arg, list) else [arg] for arg in possibleListArgs]
+        argsList = listProduct(listArgs) #each entry is a list of arguments to be passed to one call of CsvBatch
+        self.rows = []
+        for a in argsList:
+            self.rows.extend(CsvBatch(a[0], methodsAndStrats, a[1], a[2], niter,
+                    r1Media=a[3], r2Media=a[4], seed=seed, pickiness=a[5], pollingError=pollingError).rows)
+
+def listProduct(lists, index=0):
+    """A Cartesian product for lists
+    >>> listProduct([[1,2],[3,4]])
+    [[1, 3], [2, 3], [1, 4], [2, 4]]
+    """
+    if len(lists) < 2:
+        return [[i] for i in lists[0]]
+    returnList = []
+    for other in listProduct(lists[1:]):
+        for item in lists[0]:
+            returnList.append([item] + other)
+    return returnList
