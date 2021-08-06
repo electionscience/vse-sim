@@ -11,6 +11,156 @@ from voterModels import *
 from dataClasses import *
 from debugDump import *
 
+def threeRoundResults(method, voters, backgroundStrat, foregrounds=[], bgArgs = {},
+                      r1Media=(lambda x:x), r2Media=(lambda x:x),
+                      pickiness=0.3, pollingError=0.2):
+    """
+    Performs three elections: a single approval voting contest in which everyone
+    votes honestly to give an intentionally crude estimate of electability
+    (which is filtered by r1Media),
+    then an election using no information beyond the first round of "polling" in which all voters
+    use backgroundStrat, and a third round which may use the results of both the prior rounds.
+    The third round is repeated for each choice of foreground.
+    A foreground is a (foregroundStrat, targetSelectionFunction, foregroundSelectionFunction, fgArgs) tuple
+    where targetSelectionFunction receives the input of (electabilities, media(round1Results)) and
+    returns (candToHelp, candToHurt).
+    foregroundSelectionFunction receives the input of
+    (voter, candToHelp, candToHurt, electabilities, r2Media(round1Results)) and returns a positive float
+    representing the voter's eagerness to be strategic if the voter will be part of the strategic foreground
+    and 0 if the voter will just use backgroundStrat.
+    foregroundSelectionFunction and fgArgs are optional in each tuple.
+    bgArgs and fgArgs are both dictionaries containing additional keyword arguments for strategies.
+    """
+    if isinstance(backgroundStrat, str):
+        backgroundStrat = getattr(method, backgroundStrat)
+    if isinstance(foregrounds, tuple):
+        foregrounds = [foregrounds]
+    for i, f in enumerate(foregrounds):
+        #if foregroundSelectionFunction isn't provided, use default
+        if len(f) == 2:
+            foregrounds[i] = (f[0], f[1], wantToHelp, {})
+        elif len(f) == 3:
+            if isinstance(f[2], dict):
+                foregrounds[i] = (f[0], f[1], wantToHelp, f[2])
+            else:
+                foregrounds[i] = (f[0], f[1], f[2], {})
+
+    r0Results = Approval.results([useStrat(voter, Approval.zeroInfoBallot, pickiness=pickiness)
+    for voter in voters])
+    r0Winner = method.winner(r0Results)
+    electabilities = tuple(r1Media(r0Results))
+    backgroundBallots = [useStrat(voter, backgroundStrat, electabilities=electabilities, **bgArgs)
+    for voter in voters]
+    r1Results = method.results(backgroundBallots)
+    r1Winner = method.winner(r1Results)
+    totalUtils = voters.socUtils
+    winProbs = pollsToProbs(r0Results, pollingError) #Add optional argument for precision of polls?
+    #The place of the first-place candidate is 1, etc.
+    r0Places = [sorted(r0Results, reverse=True).index(result) + 1 for result in r0Results]
+    r1Places = [sorted(r1Results, reverse=True).index(result) + 1 for result in r1Results]
+
+    constResults = dict(method=method.__name__, electorate=voters.id, backgroundStrat=backgroundStrat.__name__,
+    numVoters=len(voters), numCandidates=len(voters[0]), magicBestUtil=max(totalUtils),
+    magicWorstUtil=min(totalUtils), meanCandidateUtil=mean(totalUtils), bgArgs=bgArgs,
+    r0ExpectedUtil=sum(p*u for p, u in zip(winProbs,totalUtils)),#could use electabilities instead
+    r0WinnerUtil=totalUtils[r0Winner], r1WinProb=winProbs[r1Winner], r1WinnerUtil=totalUtils[r1Winner])
+
+    allResults = [makeResults(results=r0Results, totalUtil=totalUtils[r0Winner],
+            probOfWin=winProbs[r0Winner], **constResults),
+            makeResults(results=r1Results, totalUtil=totalUtils[r1Winner],
+            probOfWin=winProbs[r1Winner],
+            winnerPlaceInR0=r0Places[r1Winner], **constResults)]
+    allResults[0]['method'] = 'ApprovalPoll'
+    for foregroundStrat, targetSelect, foregroundSelect, fgArgs in foregrounds:
+        polls = tuple(r2Media(r1Results))
+        candToHelp, candToHurt = targetSelect(electabilities=electabilities, polls=polls, r0polls=electabilities)
+        pollOrder = [cand for cand, poll in sorted(enumerate(polls),key=lambda x: -x[1])]
+        foreground = [] #(voter, ballot, eagernessToStrategize) tuples
+        permbgBallots = []
+        for id, voter in enumerate(voters):
+            eagerness = foregroundSelect(voter, candToHelp=candToHelp, candToHurt=candToHurt,
+            electabilities=electabilities, polls=polls)
+            if eagerness > 0:
+                foreground.append((voter,
+                useStrat(voter, foregroundStrat, polls=polls, electabilities=electabilities,
+                candToHelp=candToHelp, candToHurt=candToHurt, **fgArgs),
+                eagerness))
+            else:
+                permbgBallots.append(backgroundBallots[id])
+        foreground.sort(key=lambda v:-v[2]) #from most to least eager to use strategy
+        fgSize = len(foreground)
+        fgBallots = [ballot for _, ballot, _ in foreground]
+        fgBaselineBallots = [useStrat(voter, backgroundStrat, electabilities=electabilities)
+                             for voter, _, _ in foreground]
+        ballots = fgBallots + permbgBallots
+        results = method.results(ballots)
+        winner = method.winner(results)
+        #foregroundBaseUtil = sum(voter[r1Winner] for voter, _, _ in foreground)/fgSize if fgSize else 0
+        #foregroundStratUtil = sum(voter[winner] for voter, _, _ in foreground)/fgSize if fgSize else 0
+        totalUtil = voters.socUtils[winner]
+        fgHelped = []
+        fgHarmed = []
+        winnersFound = [(r1Winner, 0)]
+        partialResults = constResults.copy()
+        if winner != r1Winner:
+            winnersFound.append((winner, fgSize - 1))
+        i = 1
+        deciderMargUtilDiffs = []
+        if fgSize: #If not I should be quitting earlier than this but easier to just fake it.
+            lastVoter = foreground[fgSize - 1][0]
+        else: #zero-sized foreground
+            lastVoter = [0.] * len(r1Results)
+        deciderUtilDiffs = [(lastVoter[winner] - lastVoter[r1Winner] , nan, fgSize)]
+        allUtilDiffs = [([voter[0][winner] - voter[0][r1Winner] for voter in foreground], fgSize)]
+        while i < len(winnersFound):
+            thisWinner = winnersFound[i][0]
+            threshold = method.stratThresholdSearch(
+            thisWinner, winnersFound[i][1], permbgBallots, fgBallots, fgBaselineBallots, winnersFound)
+            minfg = [voter for voter, _, _ in foreground][:threshold]
+            prevWinner = method.winner(method.results(
+            permbgBallots + fgBallots[:threshold-1] + fgBaselineBallots[threshold-1:]))
+            if thisWinner == winner:
+                prefix = "min"
+            elif r1Winner == prevWinner:
+                prefix = "t1"
+            else: prefix = "o"+str(i)
+            partialResults.update(makePartialResults(minfg, winner, r1Winner, prefix))
+            deciderUtils = foreground[threshold][0] #The deciding voter
+            if threshold == 0: #this shouldn't actually matter as we'll end up ignoring it anyway
+                            #, so having the wrong utilities would be OK. But let's get it right.
+                predeciderUtils = [0.] * len(r1Results)
+            else:
+                predeciderUtils = foreground[threshold - 1][0] #The one before the deciding voter
+            deciderUtilDiffs.append((predeciderUtils[thisWinner] - predeciderUtils[r1Winner],
+                                    deciderUtils[thisWinner] - deciderUtils[r1Winner],
+                                    threshold))
+            allUtilDiffs.append(([voter[0][thisWinner] - voter[0][r1Winner] for voter in foreground[:threshold+1]],
+                                    threshold))
+            deciderMargUtilDiffs.append((deciderUtils[thisWinner] - deciderUtils[prevWinner], threshold))
+            i += 1
+        partialResults['deciderMargUtilDiffs'] = sorted(deciderMargUtilDiffs, key=lambda x:x[1])
+
+        totalStratUtilDiff = 0
+        margStrategicRegret = 0
+        avgStrategicRegret = 0
+        deciderUtilDiffs = sorted(deciderUtilDiffs, key=lambda x:x[2])
+        allUtilDiffs = sorted(allUtilDiffs, key=lambda x:x[1])
+        for i in range(len(deciderUtilDiffs) - 1):
+            totalStratUtilDiff += ((deciderUtilDiffs[i][1] + deciderUtilDiffs[i+1][0]) / 2 * #Use average over endpoints to interpolate average over range
+                                    (deciderUtilDiffs[i+1][2] - deciderUtilDiffs[i][2]))
+            margStrategicRegret += sum(allUtilDiffs[i+1][0][allUtilDiffs[i][1]:allUtilDiffs[i+1][1]])
+            avgStrategicRegret += mean(allUtilDiffs[i+1][0]) * (allUtilDiffs[i+1][1] - allUtilDiffs[i][1])
+        partialResults['totalStratUtilDiff'] = totalStratUtilDiff
+        partialResults['margStrategicRegret'] = margStrategicRegret
+        partialResults['avgStrategicRegret'] = avgStrategicRegret
+
+        partialResults.update(makePartialResults([voter for voter, _, _ in foreground], winner, r1Winner, ""))
+        allResults.append(makeResults(results=results, fgStrat = foregroundStrat.__name__,
+        fgTargets=targetSelect.__name__, fgArgs=fgArgs,
+        winnerPlaceInR0=r0Places[winner], winnerPlaceInR1=r1Places[winner],
+        probOfWin=winProbs[winner], numWinnersFound=len(winnersFound), totalUtil=totalUtil, **partialResults))
+    return allResults
+
 class CsvBatch:
     #@timeit
     #@autoassign
@@ -76,7 +226,7 @@ def oneStepWorker(model, nvot, ncand, ms, pickiness, pollingError, r1Media, r2Me
     electorate = model(nvot, ncand)
     rows = []
     for method, bgStrat, fgs, bgArgs in ms:
-        results = method.threeRoundResults(electorate, bgStrat, fgs, bgArgs=bgArgs,
+        results = threeRoundResults(method, electorate, bgStrat, fgs, bgArgs=bgArgs,
                 r1Media=r1Media, r2Media=r2Media, pickiness = pickiness, pollingError = pollingError)
         for result in results:
             result.update(dict(
