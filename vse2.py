@@ -114,3 +114,7 @@ def listProduct(lists, index=0):
         for item in lists[0]:
             returnList.append([item] + other)
     return returnList
+
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()

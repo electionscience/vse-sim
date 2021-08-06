@@ -22,104 +22,6 @@ from version import version
 
 from stratFunctions import *
 
-class VseOneRun:
-    @autoassign
-    def __init__(self, result, tallyItems, strat):
-        pass
-
-class VseMethodRun:
-    @autoassign
-    def __init__(self, method, choosers, results):
-        pass
-
-
-####data holders for output
-from collections import defaultdict
-class SideTally(defaultdict):
-    """Used for keeping track of how many voters are being strategic, etc.
-
-    DO NOT use plain +; for this class, it is equivalent to +=, but less readable.
-
-    """
-    def __init__(self):
-        super().__init__(int)
-    #>>> tally = SideTally()
-    #>>> tally += {1:2,3:4}
-    #>>> tally
-    #{1: 2, 3: 4}
-    #>>> tally += {1:2,3:4,5:6}
-    #>>> tally
-    #{1: 4, 3: 8, 5: 6}
-    #"""
-    #def __add__(self, other):
-    #    for (key, val) in other.items():
-    #        try:
-    #            self[key] += val
-    #        except KeyError:
-    #            self[key] = val
-    #    return self
-
-    def initKeys(self, chooser):
-        try:
-            self.keyList = chooser.allTallyKeys()
-        except AttributeError:
-            try:
-                self.keyList = list(chooser)
-            except TypeError:
-                pass
-                #TODO: Why does this happen?
-                #debug("Chooser has no tally keys:", str(chooser))
-        self.initKeys = staticmethod(lambda x:x) #don't do it again
-
-    def serialize(self):
-        try:
-            return [self[key] for key in self.keyList]
-        except AttributeError:
-            return []
-
-    def fullSerialize(self):
-        try:
-            kl = self.keyList
-        except AttributeError:
-            return [self[key] for key in self.keys()]
-
-    def itemList(self):
-        try:
-            kl = self.keyList
-            return ([(k, self[k]) for k in kl] +
-                    [(k, self[k]) for k in self.keys() if k not in kl])
-        except AttributeError:
-            return list(self.items())
-
-class Tallies(list):
-    """Used (ONCE) as an enumerator, gives an inexhaustible flow of SideTally objects.
-    After that, use as list to see those objects.
-
-    >>> ts = Tallies()
-    >>> for i, j in zip(ts, [5,4,3]):
-    ...     i[j] += j
-    ...
-    >>> [t.serialize() for t in ts]
-    [[], [], [], []]
-    >>> [t.fullSerialize() for t in ts]
-    [[5], [4], [3], []]
-    >>> [t.initKeys([k]) for (t,k) in zip(ts,[6,4,3])]
-    [None, None, None]
-    >>> [t.serialize() for t in ts]
-    [[0], [4], [3], []]
-    """
-    def __iter__(self):
-        try:
-            self.used
-            return super().__iter__()
-        except:
-            self.used = True
-            return self
-
-    def __next__(self):
-        tally = SideTally()
-        self.append(tally)
-        return tally
 
 ##Election Methods
 class BaseMethod:
@@ -218,19 +120,12 @@ class BaseMethod:
                 minThreshold = midpoint + 1
         return maxThreshold
 
-    def resultsFor(self, voters, chooser, tally=None, **kwargs):
-        """create ballots and get results.
-
+    @classmethod
+    def resultsFor(cls, voters):
+        """Create (honest/naive) ballots and get results.
         Again, test on subclasses.
         """
-        if tally is None:
-            tally = SideTally()
-        tally.initKeys(chooser)
-        return dict(results=self.results([chooser(self.__class__, voter, tally)
-                                  for voter in voters],
-                              **kwargs),
-                chooser=chooser.__name__,
-                tally=tally)
+        return cls.results(list(cls.honBallot(v) for v in voters))
 
     def multiResults(self, voters, chooserFuns=(), media=(lambda x,t:x),
                 checkStrat = True):
