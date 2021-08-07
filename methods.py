@@ -112,6 +112,16 @@ class Plurality(RankedMethod):
     nRanks = 2
     compLevels = [3]
 
+    @classmethod
+    def results(cls, ballots, **kwargs):
+        """
+        >>> Plurality.results([[1,0]]*3+[[0,1]]*2)
+        [0.6, 0.4]
+        """
+        if type(ballots) is not list:
+            ballots = list(ballots)
+        return list(map(mean,zip(*ballots)))
+
     @staticmethod
     def oneVote(utils, forWhom):
         ballot = [0] * len(utils)
@@ -310,6 +320,10 @@ def makeScoreMethod(topRank=10, asClass=False):
 
         @classmethod
         def interpolatedBallot(cls, utils, lowThreshold, highThreshold):
+            """
+            >>> Score.interpolatedBallot([0,1,2,3,4,5], 1.5, 3.5)
+            [0, 0, 1.0, 4.0, 5, 5]
+            """
             ballot = []
             for util in utils:
                 if util < lowThreshold:
@@ -354,6 +368,10 @@ def makeScoreMethod(topRank=10, asClass=False):
         @classmethod
         def lowInfoIntermediateBallot(cls, utils, electabilities=None, polls=None,
         winProbs=None, pollingUncertainty=.15, midScoreWillingness=0.7, info='e', **kw):
+            """Uses significant, but not total, strategic exaggeration
+            >>> Score.lowInfoIntermediateBallot([0,1,2,3,4,5], [.6,.4,.4,.4,.4,.5])
+            [0.0, 3.0, 5, 5, 5, 5]
+            """
             if info == 'p':
                 electabilities = polls
             if not winProbs:
@@ -440,6 +458,13 @@ class Approval(makeScoreMethod(1,True)):
         """Returns a ballot based on utils and pickiness
         pickiness=0 corresponds to lowInfoBallot with equal polling for all candidates
         pickiness=1 corresponds to bullet voting
+
+        >>> Approval.zeroInfoBallot([1,2,3,10], pickiness=0)
+        [0, 0, 0, 1]
+        >>> Approval.zeroInfoBallot([1,2,3,-10], pickiness=0)
+        [1, 1, 1, 0]
+        >>> Approval.zeroInfoBallot([1,2,3,-10], pickiness=0.6)
+        [0, 1, 1, 0]
         """
         expectedUtility = sum(u for u in utils)/len(utils)
         best = max(utils)
@@ -449,6 +474,12 @@ class Approval(makeScoreMethod(1,True)):
 
     @classmethod
     def diehardBallot(cls, utils, intensity, candToHelp, candToHurt, **kw):
+        """
+        >>> Approval.diehardBallot([-10,1,2,3,4,10],0,4,2)
+        [0.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+        >>> Approval.diehardBallot([-10,1,2,3,4,10],1,4,2)
+        [0, 0, 0, 0, 1, 1]
+        """
         if intensity == 1:
             return super().diehardBallot(utils, 2, candToHelp, candToHurt, **kw)
         else:
@@ -456,12 +487,25 @@ class Approval(makeScoreMethod(1,True)):
 
     @classmethod
     def compBallot(cls, utils, intensity, candToHelp, candToHurt, **kw):
+        """
+        >>> Approval.compBallot([-10,1,2,3,4,20],1,4,2)
+        [0, 0, 0, 1, 1, 1]
+        >>> Approval.compBallot([-10,1,2,3,4,20],0,4,2)
+        [0.0, 0.0, 0.0, 0.0, 0.0, 1.0]
+        """
         if intensity == 1:
             return super().compBallot(utils, 2, candToHelp, candToHurt, **kw)
         else:
             return super().compBallot(utils, intensity, candToHelp, candToHurt, **kw)
 
-class ApprovalTop2(top2(Approval)): pass
+class ApprovalTop2(top2(Approval)):
+    """
+    >>> ApprovalTop2.lowInfoBallot([0,1,10],[.5,.5,.2])
+    ([0, 0, 1], [0, 1, 2])
+    >>> ApprovalTop2.lowInfoBallot([0,1,2,10],[.5,.5,.3,.2])
+    ([0, 0, 1, 1], [0, 1, 2, 3])
+    """
+    pass
     #@classmethod
     #def bulletBallot(cls, utils, **kw):
         #return super().bulletBallot(utils), cls.prefOrder(utils)
@@ -530,6 +574,16 @@ def makeSTARMethod(topRank=5):
         @classmethod
         def lowInfoBallot(cls, utils, electabilities=None, polls=None, winProbs=None,
         pollingUncertainty=.15, scoreImportance=0.17, info='e', **kw):
+            """
+            >>> STAR.lowInfoBallot([0,1,2,3,4,5],[.5,.5,.5,.5,.5,.5],scoreImportance=0.1)
+            [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]
+            >>> STAR.lowInfoBallot([0,1,2,3,4,5],[.5,.5,.5,.5,.5,.5],scoreImportance=0.2)
+            [0.0, 0.0, 1.0, 4.0, 5.0, 5.0]
+            >>> STAR.lowInfoBallot([0,1,2,3,4,5],[.5,.5,.5,.5,.5,.5],scoreImportance=3)
+            [0.0, 0.0, 0.0, 5.0, 5.0, 5.0]
+            >>> STAR.lowInfoBallot([0,1,2,3,4,5],[.6,.5,.5,.5,.5,.5],scoreImportance=0.2)
+            [0.0, 1.0, 2.0, 5.0, 5.0, 5.0]
+            """
             if info == 'p':
                 electabilities = polls
             if not winProbs:
@@ -576,6 +630,16 @@ def makeSTARMethod(topRank=5):
 
         @classmethod
         def compBallot(cls, utils, intensity, candToHelp, candToHurt, baseBallotFunc=None, **kw):
+            """Intensity determines the strategy used. 0 naive, 1 is honest, 2 semi-honest, 3 is favorite betrayal
+            >>> STAR.compBallot([0,1,2,3,4,5,6,7],0,5,3)
+            [0.0, 0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 5.0]
+            >>> STAR.compBallot([0,1,2,3,4,5,6,7],1,5,3)
+            [0, 0, 0, 0, 3.0, 4, 5.0, 5.0]
+            >>> STAR.compBallot([0,1,2,3,4,5,6,7],2,5,3)
+            [0, 0, 0, 0, 3.0, 5, 5, 5]
+            >>> STAR.compBallot([0,1,2,3,4,5,6,7],3,5,3)
+            [0, 0, 0, 0, 1, 5, 1, 1]
+            """
             if baseBallotFunc is None: baseBallotFunc = cls.honBallot
             baseBallot = baseBallotFunc(utils, candToHelp=candToHelp, candToHurt=candToHurt, **kw)
             helpUtil, hurtUtil = utils[candToHelp], utils[candToHurt]
@@ -601,6 +665,17 @@ def makeSTARMethod(topRank=5):
         @classmethod
         def diehardBallot(cls, utils, intensity, candToHelp, candToHurt, electabilities=None, polls=None,
         baseBallotFunc=None, info='p', **kw):
+            """Intensity determines the strategy used. 0 naive, 1 is honest, 2 semi-honest, 3 is pushover,
+            and 4 is bullet voting
+            >>> STAR.diehardBallot([0,1,2,3,4,5,6,7],1,5,3)
+            [0.0, 0.0, 1, 1, 3.0, 5, 5, 5]
+            >>> STAR.diehardBallot([0,1,2,3,4,5,6,7],2,5,3)
+            [0, 0, 0, 0, 3.0, 5, 5, 5]
+            >>> STAR.diehardBallot([0,1,2,3,4,5,6,7],3,5,3,polls=[.4,.6,.4,.6,.4,.5,.4,.6])
+            [4, 0, 4, 0, 4, 5, 5, 5]
+            >>> STAR.diehardBallot([0,1,2,3,4,5,6,7],4,5,3)
+            [0, 0, 0, 0, 0, 0, 0, 5]
+            """
             if info == 'e':
                 polls = electabilities
             if baseBallotFunc is None: baseBallotFunc = cls.honBallot
@@ -910,7 +985,15 @@ class Irv(Method):
     @classmethod
     def lowInfoBallot(cls, utils, electabilities, polls=None, pollingUncertainty=.15,
     winProbs=None, info='e', **kw):
-        """Electabilities should be interpreted as a metric for the ability to win in the final round.
+        """Ranks good electable candidates over great unelectable candidates
+        Electabilities should be interpreted as a metric for the ability to win in the final round.
+
+        >>> Irv.lowInfoBallot([0,1,2,3],[.4,.5,.5,.4])
+        [0, 1, 3, 2]
+        >>> Irv.lowInfoBallot([0,1,2,10],[.4,.5,.5,.4])
+        [0, 1, 2, 3]
+        >>> Irv.lowInfoBallot([0,1,2,10],[.6,.5,.4,.38])
+        [0, 3, 1, 2]
         """
         #if info == 'p': commented out because this can't handle IRV polls
             #electabilities = polls
@@ -928,6 +1011,10 @@ class Irv(Method):
 
     @classmethod
     def compBallot(cls, utils, intensity, candToHelp, candToHurt=None, **kw):
+        """Rank candToHelp first, then vote honestly
+        >>> Irv.compBallot([0,1,2,10],3,1,0)
+        [0, 3, 1, 2]
+        """
         ballot = cls.honBallot(utils)
         if intensity < 3: return ballot
         helpRank = ballot[candToHelp]
@@ -1257,6 +1344,8 @@ class Schulze(RankedMethod):
     @classmethod #copy-pasted from Irv. The alternatives seemed uglier.
     def compBallot(cls, utils, intensity, candToHelp, candToHurt=None, **kw):
         """Useless unless there's a cycle
+        >>> Schulze.compBallot([0,1,2,10],3,1,0)
+        [0, 3, 1, 2]
         """
         ballot = cls.honBallot(utils)
         if intensity < 3: return ballot
@@ -1269,7 +1358,10 @@ class Schulze(RankedMethod):
 
     @classmethod
     def diehardBallot(cls, utils, intensity, candToHurt, candToHelp=None, **kw):
-        """Buries candToHurt"""
+        """Buries candToHurt
+        >>> Schulze.diehardBallot([0,1,2,3,4],3,candToHelp=3,candToHurt=2)
+        [1, 2, 0, 3, 4]
+        """
         ballot = cls.honBallot(utils)
         if intensity < 3: return ballot
         hurtRank = ballot[candToHurt]
