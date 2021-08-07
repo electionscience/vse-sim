@@ -259,61 +259,21 @@ def selectVoter(voter):
         return 1 if v is voter else 0
     return selectV
 
-#The following function is my great shame
-def makeResults(method=None, backgroundStrat=None, fgStrat=None, numVoters=None, numCandidates=None,
-        magicBestUtil=None, magicWorstUtil=None, meanCandidateUtil=None, r0ExpectedUtil=None, r0WinnerUtil=None,
-        r1WinnerUtil=None, probOfWin=None, r1WinProb=None, winnerPlaceInR0=None, winnerPlaceInR1=None,
-        results=None, bgArgs=None, fgArgs=None, totalUtil=None, deciderUtilDiffs=None,
-        fgUtil=None, fgUtilDiff=None, fgSize=None, fgTargets=None,
-        fgNumHelped=None, fgHelpedUtil=None, fgHelpedUtilDiff=None,
-        fgNumHarmed=None, fgHarmedUtil=None, fgHarmedUtilDiff=None,
-        #minfg is the smallest foreground that can change the outcome to equal the outcome when the whole foreground is
-        #strategic, such that every member of this foreground is more eager to strategize than every voter outside it
-        minfgUtil=None, minfgUtilDiff=None, minfgSize=None,
-        minfgNumHelped=None, minfgHelpedUtil=None, minfgHelpedUtilDiff=None,
-        minfgNumHarmed=None, minfgHarmedUtil=None, minfgHarmedUtilDiff=None,
-        #t1fg is the smallest foreground that yield a different result than in r1 (pursuant to the eagerness limitation)
-        t1fgUtil=None, t1fgUtilDiff=None, t1fgSize=None,
-        t1fgNumHelped=None, t1fgHelpedUtil=None, t1fgHelpedUtilDiff=None,
-        t1fgNumHarmed=None, t1fgHarmedUtil=None, t1fgHarmedUtilDiff=None,
-        numWinnersFound=None, electorate=None,
-        o3fgUtil=None, o2fgUtil=None, o2fgUtilDiff=None,
-        o3fgUtilDiff=None, o2fgSize=None, o3fgSize=None, o2fgNumHelped=None,
-        o3fgNumHelped=None,
-        o2fgHelpedUtilDiff=None,o3fgHelpedUtilDiff=None,
-        o2fgNumHarmed=None,o3fgNumHarmed=None,
-        o2fgHarmedUtilDiff=None,o3fgHarmedUtilDiff=None,
-        o2fgHelpedUtil=None, o3fgHelpedUtil=None,
-        o2fgHarmedUtil=None,o3fgHarmedUtil=None,
-        totalStratUtilDiff=None, margStrategicRegret=None, avgStrategicRegret=None,
-        **kw
-        ):
-    return dict(electorate=electorate,
-            method=method, backgroundStrat=backgroundStrat, fgStrat=fgStrat, fgTargets=fgTargets, numVoters=numVoters,
-            numCandidates=numCandidates, magicBestUtil=magicBestUtil, magicWorstUtil=magicWorstUtil,
-            meanCandidateUtil=meanCandidateUtil, r0ExpectedUtil=r0ExpectedUtil, r0WinnerUtil=r0WinnerUtil,
-            r1WinnerUtil=r1WinnerUtil, probOfWin=probOfWin, r1WinProb=r1WinProb,
-            winnerPlaceInR0=winnerPlaceInR0, winnerPlaceInR1=winnerPlaceInR1, bgArgs=bgArgs, fgArgs=fgArgs,
-            results=results, totalUtil=totalUtil, deciderUtilDiffs=deciderUtilDiffs,
-            fgUtil=fgUtil, fgUtilDiff=fgUtilDiff, fgSize=fgSize,
-            fgNumHelped=fgNumHelped, fgHelpedUtil=fgHelpedUtil, fgHelpedUtilDiff=fgHelpedUtilDiff,
-            fgNumHarmed=fgNumHarmed, fgHarmedUtil=fgHarmedUtil, fgHarmedUtilDiff=fgHarmedUtilDiff,
-            minfgUtil=minfgUtil, minfgUtilDiff=minfgUtilDiff, minfgSize=minfgSize,
-            minfgNumHelped=minfgNumHelped, minfgHelpedUtil=minfgHelpedUtil, minfgHelpedUtilDiff=minfgHelpedUtilDiff,
-            minfgNumHarmed=minfgNumHarmed, minfgHarmedUtil=minfgHarmedUtil, minfgHarmedUtilDiff=minfgHarmedUtilDiff,
-            t1fgUtil=t1fgUtil, t1fgUtilDiff=t1fgUtilDiff, t1fgSize=t1fgSize,
-            t1fgNumHelped=t1fgNumHelped, t1fgHelpedUtil=t1fgHelpedUtil, t1fgHelpedUtilDiff=t1fgHelpedUtilDiff,
-            t1fgNumHarmed=t1fgNumHarmed, t1fgHarmedUtil=t1fgHarmedUtil, t1fgHarmedUtilDiff=t1fgHarmedUtilDiff,
-            numWinnersFound=numWinnersFound, o3fgUtil=o3fgUtil, o2fgUtil=o2fgUtil, o2fgUtilDiff=o2fgUtilDiff,
-            o3fgUtilDiff=o3fgUtilDiff, o2fgSize=o2fgSize, o3fgSize=o3fgSize, o2fgNumHelped=o2fgNumHelped,
-            o3fgNumHelped=o3fgNumHelped,
-            o2fgHelpedUtilDiff=o2fgHelpedUtilDiff,o3fgHelpedUtilDiff=o3fgHelpedUtilDiff,
-            o2fgNumHarmed=o2fgNumHarmed,o3fgNumHarmed=o3fgNumHarmed,
-            o2fgHarmedUtilDiff=o2fgHarmedUtilDiff,o3fgHarmedUtilDiff=o3fgHarmedUtilDiff,
-            o2fgHelpedUtil=o2fgHelpedUtil, o3fgHelpedUtil=o3fgHelpedUtil,
-            o2fgHarmedUtil=o2fgHarmedUtil,o3fgHarmedUtil=o3fgHarmedUtil,
-            totalStratUtilDiff=totalStratUtilDiff, margStrategicRegret=margStrategicRegret,
-            avgStrategicRegret=avgStrategicRegret,)
+resultColumns = ["method", "backgroundStrat", "fgStrat", "numVoters", "numCandidates",
+        "magicBestUtil", "magicWorstUtil", "meanCandidateUtil", "r0ExpectedUtil", "r0WinnerUtil",
+        "r1WinnerUtil", "probOfWin", "r1WinProb", "winnerPlaceInR0", "winnerPlaceInR1",
+        "results", "bgArgs", "fgArgs", "totalUtil", "deciderUtilDiffs", "fgTargets",
+        "totalStratUtilDiff", "margStrategicRegret", "avgStrategicRegret"]
+for prefix in ["", "min", "t1"]:
+    for columnName in ["fgUtil", "fgUtilDiff", "fgSize",
+            "fgNumHelped", "fgHelpedUtil", "fgHelpedUtilDiff",
+            "fgNumHarmed", "fgHarmedUtil", "fgHarmedUtilDiff"]:
+        resultColumns.append(prefix + columnName)
+
+def makeResults(**kw):
+    results = {c: kw.get(c, None) for c in resultColumns}
+    results.update(kw)
+    return results
 
 def makePartialResults(fgVoters, winner, r1Winner, prefix=""):
     fgHelped = []
