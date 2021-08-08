@@ -21,6 +21,10 @@ class Borda(Method):
 
     @classmethod
     def results(cls, ballots, **kwargs):
+        """
+        >>> Borda.results([[3,2,1,0]]*5+[[0,3,2,1]]*2)
+        [0.5357142857142857, 0.5714285714285714, 0.32142857142857145, 0.07142857142857142]
+        """
         if type(ballots) is not list:
             ballots = list(ballots)
         n = len(ballots[0])
@@ -920,7 +924,7 @@ class Irv(Method):
     compLevels = [3]
 
     @classmethod
-    def resort(self, ballots, loser, ncand, piles):
+    def oldResort(self, ballots, loser, ncand, piles):
         """No error checking; only works for exhaustive ratings."""
         #print("resort",ballots, loser, ncand)
         #print(piles)
@@ -939,16 +943,68 @@ class Irv(Method):
                         raise
 
     @classmethod
-    def results(self, ballots, **kwargs):
+    def resort(cls, ballotsToSort, candsLeft, piles):
+        for b in ballotsToSort:
+            vote, bestRank = None, 0
+            for c in candsLeft:
+                if b[c] > bestRank:
+                    vote, bestRank = c, b[c]
+            if vote is not None:
+                piles[vote].append(b)
+
+    @classmethod
+    def results(cls, ballots):
+        """
+        >>> Irv.resultsFor(DeterministicModel(3)(5,3))
+        [0.2, 0.4, 0.6]
+        >>> Irv.results([[0,1,2]])
+        [0.0, 0.0, 1.0]
+        >>> Irv.results([[0,1,2]]*4+[[0,2,1]]*4+[[0,0,0]]*2)
+        [0.0, 0.4, 0.4]
+        """
+        if type(ballots) is not list:
+            ballots = list(ballots)
+        ncand = len(ballots[0])
+        nbal = len(ballots)
+        piles = [[] for i in range(ncand)]
+        candsLeft = set(range(ncand))
+        ballotsToSort = ballots
+        eliminations = [] #(candidateIndex, defeatMargin) tuples
+        while len(candsLeft) > 1:
+            cls.resort(ballotsToSort, candsLeft, piles)
+            loser, loserVotes, defeatMargin = 0, float('inf'), float('inf')
+            for cand in candsLeft: #determine who gets eliminated
+                if len(piles[cand]) < loserVotes:
+                    loser = cand
+                    defeatMargin = loserVotes - len(piles[cand])
+                    loserVotes = len(piles[cand])
+                elif len(piles[cand]) - loserVotes < defeatMargin:
+                    defeatMargin = len(piles[cand]) - loserVotes
+            candsLeft.remove(loser)
+            ballotsToSort = piles[loser]
+            eliminations.append((loser, defeatMargin))
+
+        winner = candsLeft.pop()
+        voteCount = len(piles[winner])
+        results = [0]*ncand
+        results[winner] = voteCount/nbal
+        for loser, margin in reversed(eliminations):
+            voteCount = max(0, voteCount - margin)
+            results[loser] = voteCount/nbal
+        return results
+
+
+    @classmethod
+    def oldResults(self, ballots, **kwargs):
         """IRV results.
 
-        >>> Irv.resultsFor(DeterministicModel(3)(5,3))
+        >>> #Irv.resultsFor(DeterministicModel(3)(5,3))
         [0, 1, 2]
-        >>> Irv.results([[0,1,2]])[2]
+        >>> #Irv.results([[0,1,2]])[2]
         2
-        >>> Irv.results([[0,1,2],[2,1,0]])[1]
+        >>> #Irv.results([[0,1,2],[2,1,0]])[1]
         0
-        >>> Irv.results([[0,1,2]] * 4 + [[2,1,0]] * 3 + [[1,2,0]] * 2)
+        >>> #Irv.results([[0,1,2]] * 4 + [[2,1,0]] * 3 + [[1,2,0]] * 2)
         [2, 0, 1]
         """
         if type(ballots) is not list:
@@ -1200,7 +1256,7 @@ class V321(Mav):
 
         return rememberBallots(stratBallot)
 
-class Schulze(RankedMethod):
+class Condorcet(RankedMethod):
 
     diehardLevels = [3]
     compLevels = [3]
@@ -1371,7 +1427,40 @@ class Schulze(RankedMethod):
         ballot[candToHurt] = 0
         return ballot
 
-class Rp(Schulze):
+class Schulze(Condorcet):
+
+    @classmethod
+    def resolveCycle(cls, cmat, n):
+
+        beatStrength = [[0] * n] * n
+        numWins = [0] * n
+        for i in range(n):
+            for j in range(n):
+                if (i != j):
+                    if cmat[i][j] > cmat[j][i]:
+                        beatStrength[i][j] = cmat[i][j]
+                    else:
+                        beatStrength[i][j] = 0
+
+                for i in range(n):
+                    for j in range(n):
+                        if (i != j):
+                            for k in range(n):
+                                if (i != k and j != k):
+                                    beatStrength[j][k] = max ( beatStrength[j][k],
+                                        min ( beatStrength[j][i], beatStrength[i][k] ) )
+
+        for i in range(n):
+            for j in range(n):
+                if i != j:
+                    if beatStrength[i][j]>beatStrength[j][i]:
+                        numWins[i] += 1
+                    if beatStrength[i][j]==beatStrength[j][i] and i<j: #break ties deterministically
+                        numWins[i] += 1
+
+        return numWins
+
+class Rp(Condorcet):
     @classmethod
     def resolveCycle(cls, cmat, n):
         """Note: mutates cmat destructively.
@@ -1405,7 +1494,7 @@ class Rp(Schulze):
                     for i in range(n)]
         return numWins
 
-class Minimax(Schulze):
+class Minimax(Condorcet):
     """Smith Minimax margins"""
     @classmethod
     def resolveCycle(cls, cmat, n):
