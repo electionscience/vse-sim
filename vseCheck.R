@@ -35,7 +35,8 @@ library(scatterD3)
 # 
 # fvse = rbind(fvse,fread("wtf2.csv"))
 
-fvse = fread("bigdat5.csv")
+fvse = fread("bullets1.csv")
+numVoters = mean(fvse[,numVoters])
 vses = fvse[method != "ApprovalPoll",list(VSE=mean((r1WinnerUtil - meanCandidateUtil) / 
                       (magicBestUtil - meanCandidateUtil))),by=.(method,backgroundStrat)]
 dcast(vses, method ~ backgroundStrat)
@@ -47,9 +48,9 @@ fromhons = fvse[backgroundStrat=="honBallot" & fgStrat == "lowInfoBallot" & meth
        fgMatters=mean(fgUtilDiff != 0),
        VSEDiff=mean((totalUtil - r1WinnerUtil) / (magicBestUtil - meanCandidateUtil)),
        #margStrategicRegret=mean(margStrategicRegret),
-       avgStrategicRegret=mean((avgStrategicRegret) / (magicBestUtil - meanCandidateUtil) / 21),
-       fgHelpedUtilDiff=mean((fgHelpedUtilDiff) / (magicBestUtil - meanCandidateUtil) / 21),
-       fgHarmedUtilDiff=mean((fgHarmedUtilDiff) / (magicBestUtil - meanCandidateUtil) / 21)
+       avgStrategicRegret=mean((avgStrategicRegret) / (magicBestUtil - meanCandidateUtil) / numVoters),
+       fgHelpedUtilDiff=mean((fgHelpedUtilDiff) / (magicBestUtil - meanCandidateUtil) / numVoters),
+       fgHarmedUtilDiff=mean((fgHarmedUtilDiff) / (magicBestUtil - meanCandidateUtil) / numVoters)
      ),
      by=.(method,backgroundStrat, fgStrat, fgArgs)]
 fromhons
@@ -60,9 +61,9 @@ fromawares = fvse[((backgroundStrat=="lowInfoBallot"  & method != "Minimax") | (
        fgMatters=mean(fgUtilDiff != 0),
        VSEDiff=mean((totalUtil - r1WinnerUtil) / (magicBestUtil - meanCandidateUtil)),
        #margStrategicRegret=mean(margStrategicRegret),
-       avgStrategicRegret=mean(avgStrategicRegret / (magicBestUtil - meanCandidateUtil) / 21),
-       fgHelpedUtilDiff=mean(fgHelpedUtilDiff  / (magicBestUtil - meanCandidateUtil) / 21),
-       fgHarmedUtilDiff=mean(fgHarmedUtilDiff / (magicBestUtil - meanCandidateUtil) / 21)),
+       avgStrategicRegret=mean(avgStrategicRegret / (magicBestUtil - meanCandidateUtil) / numVoters),
+       fgHelpedUtilDiff=mean(fgHelpedUtilDiff  / (magicBestUtil - meanCandidateUtil) / numVoters),
+       fgHarmedUtilDiff=mean(fgHarmedUtilDiff / (magicBestUtil - meanCandidateUtil) / numVoters)),
      by=.(method,backgroundStrat, fgStrat, fgArgs, fgTargets)]
 fromawares
 
@@ -101,7 +102,7 @@ vses[!(method=="Minimax" & backgroundStrat=="lowInfoBallot"),] %>%
            ) %>%
     ggplot(
           aes(x = VSE, y = as.factor(method), color = backgroundStrat)) 
-  + scale_x_continuous(labels=scales::percent_format(accuracy = 1), limits=c(.68, 1.0))
+  + scale_x_continuous(labels=scales::percent_format(accuracy = 1))#, limits=c(.68, 1.0))
     + geom_point(size=3) #+ xlim(.65,1.00) 
   + theme_gdocs() 
     + theme(axis.title.y=element_blank()) + xlab("% Voter Satisfaction Efficiency (VSE)")
@@ -116,17 +117,17 @@ vses[!(method=="Minimax" & backgroundStrat=="lowInfoBallot"),] %>%
     mutate(method = method 
            %>% fct_reorder(avgStrategicRegret, .fun='mean') 
            %>% recode(`STAR`="STAR", 
-                      `PluralityTop2`="Plurality w/Runoff", 
+                      `PluralityTop2`="Plurality Top Two", 
                       `Minimax`="Smith/Minimax", 
                       `Irv`="IRV (RCV)", 
-                      `ApprovalTop2`="Approval w/Runoff", 
+                      `ApprovalTop2`="Approval Top Two", 
            ),
            #to=c("STAR", "Plurality/Runoff", "Plurality", "Smith/Minimax", irv="IRV (RCV)", "Approval/Runoff", "Approval")))
            #VSE = VSE * 100
     ) %>%
     ggplot(
       aes(x = avgStrategicRegret, y = as.factor(method))) 
-  + scale_x_continuous(labels=scales::percent_format(accuracy = 1), limits=c(-.01, .25))
+  + scale_x_continuous(labels=scales::percent_format(accuracy = 1), limits = c(-.0,.38))
   + geom_point(size=3) #+ xlim(.65,1.00) 
   + theme_gdocs() 
   + theme(axis.title.y=element_blank()) + xlab("% Average Strategic Regret (ASR) for not casting a viability-aware ballot")
@@ -158,7 +159,7 @@ vses[!(method=="Minimax" & backgroundStrat=="lowInfoBallot"),] %>%
   + theme_gdocs() 
   + theme(axis.title.y=element_blank()) + xlab("% Average Strategic Regret (ASR) for not using targeted strategy")
   + labs(color="Strategy level", shape="Strategy type") 
-  + scale_colour_colorblind(labels = c("Honest", "Semi-honest", "Dishonest"))
+  + scale_colour_colorblind(labels = c("Honest", "Semi-honest", "Dishonest", "Bullet"))
   + scale_shape(labels = c("Compromise", "Die-hard"))
   # + scale_y_discrete(breaks=c("STAR", "Plurality", "PluralityTop2", "Minimax", "Irv", "ApprovalTop2", "Approval"),
   #                     labels=c("STAR", "Plurality/Runoff", "Plurality", "Smith/Minimax", irv="IRV (RCV)", "Approval/Runoff", "Approval"))
