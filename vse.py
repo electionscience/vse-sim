@@ -123,7 +123,7 @@ def threeRoundResults(method, voters, backgroundStrat, foregrounds=[], bgArgs = 
                 prefix = "min"
             elif r1Winner == prevWinner:
                 prefix = "t1"
-            else: prefix = "o"+str(i)
+            else: prefix = "o"#+str(i)
             partialResults.update(makePartialResults(minfg, winner, r1Winner, prefix))
             deciderUtils = foreground[threshold][0] #The deciding voter
             if threshold == 0: #this shouldn't actually matter as we'll end up ignoring it anyway
@@ -138,7 +138,8 @@ def threeRoundResults(method, voters, backgroundStrat, foregrounds=[], bgArgs = 
                                     threshold))
             deciderMargUtilDiffs.append((deciderUtils[thisWinner] - deciderUtils[prevWinner], threshold))
             i += 1
-        partialResults['deciderMargUtilDiffs'] = sorted(deciderMargUtilDiffs, key=lambda x:x[1])
+        deciderMargUtilDiffs.sort(key=lambda x:x[1])
+        partialResults['deciderMargUtilDiffs'] = deciderMargUtilDiffs
 
         totalStratUtilDiff = 0
         margStrategicRegret = 0
@@ -158,7 +159,9 @@ def threeRoundResults(method, voters, backgroundStrat, foregrounds=[], bgArgs = 
         allResults.append(makeResults(results=results, fgStrat = foregroundStrat.__name__,
         fgTargets=targetSelect.__name__, fgArgs=fgArgs,
         winnerPlaceInR0=r0Places[winner], winnerPlaceInR1=r1Places[winner],
-        probOfWin=winProbs[winner], numWinnersFound=len(winnersFound), totalUtil=totalUtil, **partialResults))
+        probOfWin=winProbs[winner], numWinnersFound=len(winnersFound), totalUtil=totalUtil,
+        firstDeciderUtilDiff=deciderMargUtilDiffs[0][0] if deciderMargUtilDiffs else 0,
+        deciderUtilDiffSum=sum(uDiff for uDiff, _ in deciderMargUtilDiffs), **partialResults))
     return allResults
 
 class CsvBatch:
