@@ -1262,37 +1262,6 @@ class Condorcet(RankedMethod):
     compLevels = [3]
 
     @classmethod
-    def resolveCycle(cls, cmat, n):
-
-        beatStrength = [[0] * n] * n
-        numWins = [0] * n
-        for i in range(n):
-            for j in range(n):
-                if (i != j):
-                    if cmat[i][j] > cmat[j][i]:
-                        beatStrength[i][j] = cmat[i][j]
-                    else:
-                        beatStrength[i][j] = 0
-
-                for i in range(n):
-                    for j in range(n):
-                        if (i != j):
-                            for k in range(n):
-                                if (i != k and j != k):
-                                    beatStrength[j][k] = max ( beatStrength[j][k],
-                                        min ( beatStrength[j][i], beatStrength[i][k] ) )
-
-        for i in range(n):
-            for j in range(n):
-                if i != j:
-                    if beatStrength[i][j]>beatStrength[j][i]:
-                        numWins[i] += 1
-                    if beatStrength[i][j]==beatStrength[j][i] and i<j: #break ties deterministically
-                        numWins[i] += 1
-
-        return numWins
-
-    @classmethod
     def results(cls, ballots, isHonest=False, **kwargs):
         """Schulze results.
 
@@ -1513,7 +1482,7 @@ class Minimax(Condorcet):
                     extensionFound = True
         places = sorted([cand for cand in range(n) if cand not in smithSet],
                         key=lambda c: min(cmat[c]))\
-    + sorted([cand for cand in smithSet], key=lambda c: min(cmat[c]))
+                + sorted([cand for cand in smithSet], key=lambda c: min(cmat[c]))
         return [places.index(cand) for cand in range(n)]
 
 
