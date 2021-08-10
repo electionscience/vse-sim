@@ -77,6 +77,26 @@ class Method:
     diehardLevels = []
     compLevels = []
 
+    @classmethod
+    def defaultbgs(cls):
+        """Returns a list of the default backgrounds (see vse.threeRoundResults) for the voting method.
+        These can be individual functions (like cls.honBallot) or (strat, bgargs) tuples
+        (like (cls.lowInfoBallot, {'pollingUncertainty': 0.4}))
+        """
+        return [cls.honBallot, (cls.lowInfoBallot, {'pollingUncertainty': 0.4})]
+
+    @classmethod
+    def defaultfgs(cls):
+        """Returns a list of the default foregrounds (see vse.threeRoundResults) for the voting method.
+        """
+        return [(cls.diehardBallot, targs, {'intensity': lev})
+                for lev in cls.diehardLevels for targs in [select21, select31]]\
+                + [(cls.compBallot, targs, {'intensity': lev})
+                for lev in cls.compLevels for targs in [select21, select31]]\
+                + [(cls.stratBallot, targs) for targs in [select21, select31]]\
+                + [(cls.lowInfoBallot, selectRand, {'info': 'p'}),
+                (cls.lowInfoBallot, selectRand, {'info': 'e'})]
+
     @staticmethod
     def winner(results):
         """Simply find the winner once scores are already calculated. Override for

@@ -18,11 +18,14 @@ from dataClasses import *
 
 ###media
 
-def truth(standings, tally=None):
+def truth(standings, *args):
     return standings
 
+def noisyMedia(standings, marginOfError):
+    return [min(1, max(0, random.gauss(s,marginOfError/2))) for s in standings]
+
 def topNMediaFor(n):
-    def topNMedia(standings, tally=None):
+    def topNMedia(standings):
         return list(standings[:n]) + [min(standings)] * (len(standings) - n)
     return topNMedia
 
@@ -35,15 +38,12 @@ def orderOf(standings):
     return [i for i,val in sorted(list(enumerate(standings)), key=lambda x:x[1], reverse=True)]
 
 def fuzzyMediaFor(biaser = biaserAround(1)):
-    def fuzzyMedia(standings, tally=None):
-        if not tally:
-            tally=SideTally()
+    def fuzzyMedia(standings):
         if callable(biaser):
             bias = biaser(standings)
         else:
             bias = biaser
         result= [s + random.gauss(0,bias) for s in standings]
-        tally["changed"] += 0 if orderOf(result)[0:2] == orderOf(standings)[0:2] else 1
         return result
     return fuzzyMedia
 
@@ -57,9 +57,7 @@ def biasedMediaFor(biaser=biaserAround(1),numerator=1):
 
 
     """
-    def biasedMedia(standings, tally=None):
-        if not tally:
-            tally=SideTally()
+    def biasedMedia(standings):
         if callable(biaser):
             bias = biaser(standings)
         else:
@@ -67,7 +65,6 @@ def biasedMediaFor(biaser=biaserAround(1),numerator=1):
         result= (standings[0:2] +
                  [(standing - bias + numerator * (bias / max(i+2, 1)))
                         for i, standing in enumerate(standings[2:])])
-        tally["changed"] += 0 if orderOf(result)[0:2] == orderOf(standings)[0:2] else 1
         return result
     return biasedMedia
 
@@ -76,15 +73,11 @@ def skewedMediaFor(biaser):
 
     [0, -1/3, -2/3, -1]
     """
-    def skewedMedia(standings, tally=None):
-        if not tally:
-            tally=SideTally()
+    def skewedMedia(standings):
         if callable(biaser):
             bias = biaser(standings)
         else:
             bias = biaser
         result= [(standing - bias * i / (len(standings) - 1)) for i, standing in enumerate(standings)]
-
-        tally["changed"] += 0 if orderOf(result)[0:2] == orderOf(standings)[0:2] else 1
         return result
     return skewedMedia

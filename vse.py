@@ -12,8 +12,8 @@ from dataClasses import *
 from debugDump import *
 
 def threeRoundResults(method, voters, backgroundStrat, foregrounds=[], bgArgs = {},
-                      r1Media=(lambda x:x), r2Media=(lambda x:x),
-                      pickiness=0.3, pollingError=0.2):
+                      r1Media=noisyMedia, r2Media=noisyMedia,
+                      pickiness=0.3, pollingError=0.2, r2PollingError=None):
     """
     Performs three elections: a single approval voting contest in which everyone
     votes honestly to give an intentionally crude estimate of electability
@@ -30,6 +30,7 @@ def threeRoundResults(method, voters, backgroundStrat, foregrounds=[], bgArgs = 
     and 0 if the voter will just use backgroundStrat.
     foregroundSelectionFunction and fgArgs are optional in each tuple.
     bgArgs and fgArgs are both dictionaries containing additional keyword arguments for strategies.
+    pollingError and r2PollingError are the margins of error (2-sigma) for the polls.
     """
     if isinstance(backgroundStrat, str):
         backgroundStrat = getattr(method, backgroundStrat)
@@ -44,17 +45,19 @@ def threeRoundResults(method, voters, backgroundStrat, foregrounds=[], bgArgs = 
                 foregrounds[i] = (f[0], f[1], wantToHelp, f[2])
             else:
                 foregrounds[i] = (f[0], f[1], f[2], {})
+    if r2PollingError is None:
+        r2PollingError = pollingError
 
     r0Results = Approval.results([useStrat(voter, Approval.zeroInfoBallot, pickiness=pickiness)
     for voter in voters])
     r0Winner = method.winner(r0Results)
-    electabilities = tuple(r1Media(r0Results))
+    electabilities = tuple(r1Media(r0Results, pollingError))
     backgroundBallots = [useStrat(voter, backgroundStrat, electabilities=electabilities, **bgArgs)
     for voter in voters]
     r1Results = method.results(backgroundBallots)
     r1Winner = method.winner(r1Results)
     totalUtils = voters.socUtils
-    winProbs = pollsToProbs(r0Results, pollingError) #Add optional argument for precision of polls?
+    winProbs = pollsToProbs(r0Results, max(pollingError, 0.05))
     #The place of the first-place candidate is 1, etc.
     r0Places = [sorted(r0Results, reverse=True).index(result) + 1 for result in r0Results]
     r1Places = [sorted(r1Results, reverse=True).index(result) + 1 for result in r1Results]
@@ -72,7 +75,7 @@ def threeRoundResults(method, voters, backgroundStrat, foregrounds=[], bgArgs = 
             winnerPlaceInR0=r0Places[r1Winner], **constResults)]
     allResults[0]['method'] = 'ApprovalPoll'
     for foregroundStrat, targetSelect, foregroundSelect, fgArgs in foregrounds:
-        polls = tuple(r2Media(r1Results))
+        polls = tuple(r2Media(r1Results, pollingError))
         candToHelp, candToHurt = targetSelect(electabilities=electabilities, polls=polls, r0polls=electabilities)
         pollOrder = [cand for cand, poll in sorted(enumerate(polls),key=lambda x: -x[1])]
         foreground = [] #(voter, ballot, eagernessToStrategize) tuples
