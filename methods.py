@@ -1262,6 +1262,10 @@ class Condorcet(RankedMethod):
     compLevels = [3]
 
     @classmethod
+    def resolveCycle(cls, cmat, n):
+        raise NotImplementedError
+
+    @classmethod
     def results(cls, ballots, isHonest=False, **kwargs):
         """Schulze results.
 
@@ -1343,6 +1347,61 @@ class Condorcet(RankedMethod):
 
         return result
 
+    @classmethod
+    def newResults(cls, ballots, **kwargs):#Not yet implemented
+        cmat = cls.compMatrix(ballots)
+        smith = cls.smithSet(cmat)
+        numCands = len(ballots[0])
+        results = [0]*numCands
+        if len(smith) == 1:
+            winner = smith.pop()
+            results[winner] = .5 + min(marg for marg in cmat[winner] if marg != 0)/(2*len(ballots))
+            for i in range(numCands):
+                if i == winner: continue
+                results[i] = .5 + cmat[i][winner]/(2*len(ballots))
+            return results
+        else:
+            ordinalResults = cls.resolveCycle([row.copy() for row in cmat], numCands)
+            return [.4 + r/(10*numCands) for r in ordinalResults] #hideous hack
+
+
+    @staticmethod
+    def compMatrix(ballots):
+        """
+        >>> Condorcet.compMatrix([[0,2,1]]*5)
+        [[0, -5, -5], [5, 0, 5], [5, -5, 0]]
+        >>> Condorcet.compMatrix([[0,2,1]]*5+[[2,1,0]]*4+[[1,0,2]]*3)
+        [[0, 2, -4], [-2, 0, 6], [4, -6, 0]]
+        """
+        n = len(ballots[0])
+        cmat = [[0 for i in range(n)] for j in range(n)]
+        for i in range(n):
+            for j in range(n):
+                if i != j:
+                    cmat[i][j] = sum(sign(ballot[i] - ballot[j]) for ballot in ballots)
+        return cmat
+
+    @staticmethod
+    def smithSet(cmat):
+        """Returns the Smith set for a given comparison matrix.
+
+        >>> Condorcet.smithSet([[0,-4,-3],[4,0,1],[3,-1,0]])
+        {1}
+        >>> Condorcet.smithSet([[0,-4,-3,-5],[4,0,1,-1],[3,-1,0,2],[5,1,-2,0]])
+        {1, 2, 3}
+        >>> Condorcet.smithSet([[0,0,-3,-5],[0,0,1,-1],[3,-1,0,2],[5,1,-2,0]])
+        {0, 1, 2, 3}
+        """
+        winCount = [sum(1 if matchup > 0 else 0 for matchup in row) for row in cmat]
+        s = set(candID for candID, wins in enumerate(winCount) if wins == max(winCount))
+        extensionFound = True
+        while extensionFound:
+            extensionFound = False
+            for cand, matchups in enumerate(cmat):
+                if cand not in s and any(matchups[i] >= 0 for i in s):
+                    s.add(cand)
+                    extensionFound = True
+        return s
 
     @classmethod
     def fillStratBallot(cls, voter, polls, places, n, stratGap, ballot,
@@ -1467,23 +1526,38 @@ class Minimax(Condorcet):
     """Smith Minimax margins"""
     @classmethod
     def resolveCycle(cls, cmat, n):
+        """ Unnecessary for Minimax; this method is never called.
         """
-        >>> Minimax.results([[2,1,0]]*9 + [[1,0,2]]*8 + [[0,2,1]]*7,isHonest=True)
-        [2, 0, 1]
-        """
-        winCount = [sum(1 if matchup > 0 else 0 for matchup in row) for row in cmat]
-        smithSet = set(candID for candID, wins in enumerate(winCount) if wins == max(winCount))
-        extensionFound = True
-        while extensionFound:
-            extensionFound = False
-            for cand, matchups in enumerate(cmat):
-                if cand not in smithSet and any(matchups[i] > 0 for i in smithSet):
-                    smithSet.add(cand)
-                    extensionFound = True
-        places = sorted([cand for cand in range(n) if cand not in smithSet],
+        smith = cls.smithSet(cmat)
+        places = sorted([cand for cand in range(n) if cand not in smith],
                         key=lambda c: min(cmat[c]))\
-                + sorted([cand for cand in smithSet], key=lambda c: min(cmat[c]))
+                + sorted([cand for cand in smith], key=lambda c: min(cmat[c]))
         return [places.index(cand) for cand in range(n)]
+
+    @classmethod
+    def results(cls, ballots, **kw):
+        """
+        >>> Minimax.results([[2,1,0]]*5+[[1,2,0]]*4+[[0,1,2]]*2)
+        [0.45454545454545453, 0.5454545454545454, 0.18181818181818182]
+        >>> Minimax.results([[2,1,0]]*6 + [[1,0,2]]*5 + [[0,2,1]]*4)
+        [0.4, 0.26666666666666666, 0.33333333333333337]
+        >>> Minimax.results([[2,1,0]]+[[1,2,0]])
+        [0.5, 0.5, 0.0]
+        """
+        numCands = len(ballots[0])
+        cmat = cls.compMatrix(ballots)
+        smith = cls.smithSet(cmat)
+        if len(smith) == 1:
+            results = [0]*numCands
+            winner = smith.pop()
+            results[winner] = .5 + min(marg for marg in cmat[winner] if marg != 0)/(2*len(ballots))
+            for i in range(numCands):
+                if i == winner: continue
+                results[i] = .5 + cmat[i][winner]/(2*len(ballots))
+            return results
+        else:
+            return [0.5 + min(cmat[cand][i] for i in smith if cand != i)/(2*len(ballots))
+                    for cand in range(numCands)]
 
 
 class IRNR(RankedMethod):
