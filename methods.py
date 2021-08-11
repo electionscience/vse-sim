@@ -206,6 +206,7 @@ def top2(noRunoffMethod):
     class Top2Version(noRunoffMethod):
         """Ballots are (r1Ballot, r2Preferences) tuples
         """
+
         @classmethod
         def results(cls, ballots):
             r1Ballots, r2Preferences = zip(*ballots)
@@ -248,20 +249,30 @@ def top2(noRunoffMethod):
             cls.prefOrder(utils))
 
         @classmethod
+        def stratBallot(cls, voter, *args, **kws):
+            return (super().stratBallot(voter, *args, **kws),
+            cls.prefOrder(voter))
+
+        @classmethod
         def abstain(cls, utils, **kw):
             return [0]*len(utils), [0]*len(utils)
     Top2Version.__name__ = noRunoffMethod.__name__ + "Top2"
     return Top2Version
 
 class PluralityTop2(top2(Plurality)):
-    """top2(Plurality) can yield ridiculous results when used by the entire electorate
+    """top2(Plurality).lowInfoBallot can yield ridiculous results when used by the entire electorate
     since it's based on causal decision theory. This class fixes that.
 
+    >>> PluralityTop2.results([([0, 0, 1], [0, 1, 2])]*3+[([1, 0, 0], [2, 1, 0])]*2)
+    [0.4, 0.0, 0.6]
+    >>> PluralityTop2.results([([0, 0, 1], [0, 1, 2])]*5+[([1, 0, 0], [2, 1, 0])]*4+[([0, 1, 0], [1, 2, 0])]*2)
+    [0.46454545454545454, 0.18181818181818182, 0.45454545454545453]
     >>> PluralityTop2.honBallot((0,1,5,2,3))
     ([0, 0, 1, 0, 0], [0, 1, 4, 2, 3])
-
     >>> PluralityTop2.compBallot((0,1,10), 3, candToHelp=1, candToHurt=0)
     ([0, 1, 0], [0, 1, 2])
+    >>> PluralityTop2.stratBallot([0,1,2,3],[.51,.5,.49,.4])
+    ([0, 1, 0, 0], [0, 1, 2, 3])
     """
     @classmethod
     def lowInfoBallot(cls, utils, electabilities=None, **kw):
@@ -1454,6 +1465,19 @@ class Condorcet(RankedMethod):
                 ballot[cand] += 1
         ballot[candToHurt] = 0
         return ballot
+
+    @classmethod
+    def defaultbgs(cls):
+        return [cls.honBallot]
+
+    @classmethod
+    def defaultfgs(cls):
+        """
+        >>> len(Minimax.defaultfgs())
+        12
+        """
+        return super().defaultfgs()\
+        + [(Borda.lowInfoBallot, targs) for targs in [select21, select31]]
 
 class Schulze(Condorcet):
 

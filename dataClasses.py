@@ -95,7 +95,9 @@ class Method:
                 for lev in cls.compLevels for targs in [select21, select31]]\
                 + [(cls.stratBallot, targs) for targs in [select21, select31]]\
                 + [(cls.lowInfoBallot, selectRand, {'info': 'p'}),
-                (cls.lowInfoBallot, selectRand, {'info': 'e'})]
+                (cls.lowInfoBallot, selectRand, {'info': 'e'}),
+                (cls.stratBallot, selectRand, {'info': 'p'}),
+                (cls.stratBallot, selectRand, {'info': 'e'})]
 
     @staticmethod
     def winner(results):

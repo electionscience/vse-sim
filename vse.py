@@ -90,6 +90,8 @@ def threeRoundResults(method, voters, backgroundStrat, foregrounds=[], bgArgs = 
                 eagerness))
             else:
                 permbgBallots.append(backgroundBallots[id])
+
+        #Everything below this just analyzes the result of the final round of voting
         foreground.sort(key=lambda v:-v[2]) #from most to least eager to use strategy
         fgSize = len(foreground)
         fgBallots = [ballot for _, ballot, _ in foreground]
@@ -171,8 +173,8 @@ class CsvBatch:
     #@timeit
     #@autoassign
     def __init__(self, model, methodsAndStrats,
-            nvot, ncand, niter, r1Media=truth, r2Media=truth, seed=None,
-            pickiness=0.4, pollingError=0.3):
+            nvot, ncand, niter, r1Media=noisyMedia, r2Media=noisyMedia, seed=None,
+            pickiness=0.4, pollingError=0.2):
         """methodsAndStrats is a list of (votingMethod, backgroundStrat, foregrounds, bgArgs).
         A voting method my be given in place of such a tuple, in which case backgroundSrat, foregrounds, and bgArgs
         will be determined automatically.
@@ -189,13 +191,19 @@ class CsvBatch:
         ms = []
         for m in methodsAndStrats:
             if isinstance(m, type) and issubclass(m, Method):
-                fgs = []
-                for targetFunc in [select21, select31, selectRand, select012]:
-                    fgs.extend([(m.diehardBallot, targetFunc, {'intensity':i}) for i in m.diehardLevels]
-                    + [(m.compBallot, targetFunc, {'intensity':i}) for i in m.compLevels])
-                    fgs.append((m.lowInfoBallot, targetFunc, {'info':'e'}))
-                for bg in [m.honBallot, m.lowInfoBallot]:
-                    ms.append((m, bg, fgs, {'pollingUncertainty':0.4}))
+                fgs = m.defaultfgs()
+                for bg in m.defaultbgs():
+                    if isinstance(bg, tuple):
+                        ms.append((m, bg[0], fgs, bg[1]))
+                    else:
+                        ms.append((m, bg, fgs, {}))
+                #fgs = []
+                #for targetFunc in [select21, select31, selectRand, select012]:
+                    #fgs.extend([(m.diehardBallot, targetFunc, {'intensity':i}) for i in m.diehardLevels]
+                    #+ [(m.compBallot, targetFunc, {'intensity':i}) for i in m.compLevels])
+                    #fgs.append((m.lowInfoBallot, targetFunc, {'info':'e'}))
+                #for bg in [m.honBallot, m.lowInfoBallot]:
+                    #ms.append((m, bg, fgs, {'pollingUncertainty':0.4}))
             else:
                 ms.append(m)
         args = (model, nvot, ncand, ms, pickiness, pollingError, r1Media, r2Media)
@@ -245,18 +253,18 @@ def oneStepWorker(model, nvot, ncand, ms, pickiness, pollingError, r1Media, r2Me
 
 class CsvBatches(CsvBatch):
     def __init__(self, model, methodsAndStrats,
-            nvot, ncand, niter, r1Media=truth, r2Media=truth, seed=None,
-            pickiness=0.4, pollingError=0.3):
+            nvot, ncand, niter, r1Media=noisyMedia, r2Media=noisyMedia, seed=None,
+            pickiness=0.4, pollingError=0.2):
         """Just like CsvBatch, but you can replace an argument such as nvot with a list of values for that
-        argument to run a CsvBatch for every item of that list. The results appear self.rows.
+        argument to run a CsvBatch for every item of that list. The results appear in self.rows.
         """
-        possibleListArgs = [model, nvot, ncand, r1Media, r2Media, pickiness]
+        possibleListArgs = [model, nvot, ncand, r1Media, r2Media, pickiness, pollingError]
         listArgs = [arg if isinstance(arg, list) else [arg] for arg in possibleListArgs]
         argsList = listProduct(listArgs) #each entry is a list of arguments to be passed to one call of CsvBatch
         self.rows = []
         for a in argsList:
             self.rows.extend(CsvBatch(a[0], methodsAndStrats, a[1], a[2], niter,
-                    r1Media=a[3], r2Media=a[4], seed=seed, pickiness=a[5], pollingError=pollingError).rows)
+                    r1Media=a[3], r2Media=a[4], seed=seed, pickiness=a[5], pollingError=a[6]).rows)
 
 def listProduct(lists, index=0):
     """A Cartesian product for lists
