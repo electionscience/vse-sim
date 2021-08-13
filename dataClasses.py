@@ -228,6 +228,24 @@ def rememberBallots(fun):
     getAndRemember.allTallyKeys = lambda:[]
     return getAndRemember
 
+def hybridStrat(voter, stratTuples, **kwForAll):
+    """Randomly chooses a strategy and uses it.
+    stratTuples is a list of (strategy, probability, kwargs) tuples
+    (where kwargs is optional).
+    Example:
+    b = hybridStrat(Voter([0,9,10]),
+            [(Approval.honBallot, 0.4), (Approval.diehardBallot, 0.6, {'intensity': 3})],
+            electabilities=[.5,.5,.3], candToHelp=2, candToHurt=1)
+    """
+    cumProb, i = 0, -1
+    r = random.Random(voter.id).random()
+    while cumProb < r:
+        i += 1
+        cumProb += stratTuples[i][1]
+    kwForMethod = {} if len(stratTuples[i]) == 2 else stratTuples[i][2]
+    return stratTuples[i][0](voter, **kwForAll, **kwForMethod)
+
+
 @functools.lru_cache(maxsize=10000)
 def useStrat(voter, strategy, **kw):
     """Returns the ballot cast by voter using strategy.

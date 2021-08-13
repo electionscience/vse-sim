@@ -18,7 +18,12 @@ class Voter(tuple):
 
 
     """
-
+    @cached_property
+    def id(self):
+        """Get a repeatable uuid
+        """
+        return uuid4()
+        
     @classmethod
     def rand(cls, ncand):
         """Create a random voter with an independent standard normal
