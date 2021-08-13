@@ -72,11 +72,11 @@ class Borda(Method):
         return ballot
 
     @classmethod
-    def lowInfoBallot(cls, utils, electabilities, polls=None, winProbs=None,
+    def vaBallot(cls, utils, electabilities, polls=None, winProbs=None,
     pollingUncertainty=.3, info='e', **kw):
         """Uses a mix of compromising and burial.
 
-        >>> Borda.lowInfoBallot((0,1,2,3), [.2, .4, .4, .2])
+        >>> Borda.vaBallot((0,1,2,3), [.2, .4, .4, .2])
         [1, 0, 3, 2]
         """
         if info == 'p':
@@ -146,13 +146,13 @@ class Plurality(RankedMethod):
         return ballot
 
     @classmethod
-    def lowInfoBallot(cls, utils, electabilities=None, polls=None, pollingUncertainty=.15,
+    def vaBallot(cls, utils, electabilities=None, polls=None, pollingUncertainty=.15,
     winProbs=None, info='e', **kw):
         """Uses compromising without a specific target
 
-        >>> Plurality.lowInfoBallot((0,1,2), [.3, .3, .2])
+        >>> Plurality.vaBallot((0,1,2), [.3, .3, .2])
         [0, 1, 0]
-        >>> Plurality.lowInfoBallot((0,1,10), [.3, .3, .2])
+        >>> Plurality.vaBallot((0,1,10), [.3, .3, .2])
         [0, 0, 1]
         """
         if info == 'p':
@@ -228,13 +228,13 @@ def top2(noRunoffMethod):
             return super().honBallot(utils, **kw), cls.prefOrder(utils)
 
         @classmethod
-        def lowInfoBallot(cls, utils, electabilities=None, polls=None, winProbs=None,
+        def vaBallot(cls, utils, electabilities=None, polls=None, winProbs=None,
         pollingUncertainty=.15, info='e', **kw):
             if info == 'p':
                 electabilities = polls
             if not winProbs:
                 winProbs = adaptiveTieFor2(electabilities, pollingUncertainty)
-            return (super().lowInfoBallot(utils, winProbs=winProbs,
+            return (super().vaBallot(utils, winProbs=winProbs,
             pollingUncertainty=pollingUncertainty),
             cls.prefOrder(utils))
 
@@ -260,7 +260,7 @@ def top2(noRunoffMethod):
     return Top2Version
 
 class PluralityTop2(top2(Plurality)):
-    """top2(Plurality).lowInfoBallot can yield ridiculous results when used by the entire electorate
+    """top2(Plurality).vaBallot can yield ridiculous results when used by the entire electorate
     since it's based on causal decision theory. This class fixes that.
 
     >>> PluralityTop2.results([([0, 0, 1], [0, 1, 2])]*3+[([1, 0, 0], [2, 1, 0])]*2)
@@ -275,16 +275,16 @@ class PluralityTop2(top2(Plurality)):
     ([0, 1, 0, 0], [0, 1, 2, 3])
     """
     @classmethod
-    def lowInfoBallot(cls, utils, electabilities=None, **kw):
+    def vaBallot(cls, utils, electabilities=None, **kw):
         """
-        >>> PluralityTop2.lowInfoBallot((0,1,2), [.3, .3, .2])
+        >>> PluralityTop2.vaBallot((0,1,2), [.3, .3, .2])
         ([0, 0, 1], [0, 1, 2])
-        >>> PluralityTop2.lowInfoBallot((0,1,2,3), [.3, .3, .2, .1])
+        >>> PluralityTop2.vaBallot((0,1,2,3), [.3, .3, .2, .1])
         ([0, 0, 1, 0], [0, 1, 2, 3])
         """
         if electabilities and utils.index(max(utils)) == electabilities.index(max(electabilities)):
             return cls.honBallot(utils)
-        else: return super().lowInfoBallot(utils, electabilities=electabilities, **kw)
+        else: return super().vaBallot(utils, electabilities=electabilities, **kw)
 
 def makeScoreMethod(topRank=10, asClass=False):
     class Score0to(Method):
@@ -371,7 +371,7 @@ def makeScoreMethod(topRank=10, asClass=False):
             return [floor((cls.topRank + .99) * (util-bot) / scale) for util in utils]
 
         @classmethod
-        def lowInfoBallot(cls, utils, electabilities=None, polls=None, winProbs=None,
+        def vaBallot(cls, utils, electabilities=None, polls=None, winProbs=None,
         pollingUncertainty=.15, info='e', **kw):
             if info == 'p':
                 electabilities = polls
@@ -381,10 +381,10 @@ def makeScoreMethod(topRank=10, asClass=False):
             return [cls.topRank if u > expectedUtility else 0 for u in utils]
 
         @classmethod
-        def lowInfoIntermediateBallot(cls, utils, electabilities=None, polls=None,
+        def vaIntermediateBallot(cls, utils, electabilities=None, polls=None,
         winProbs=None, pollingUncertainty=.15, midScoreWillingness=0.7, info='e', **kw):
             """Uses significant, but not total, strategic exaggeration
-            >>> Score.lowInfoIntermediateBallot([0,1,2,3,4,5], [.6,.4,.4,.4,.4,.5])
+            >>> Score.vaIntermediateBallot([0,1,2,3,4,5], [.6,.4,.4,.4,.4,.5])
             [0.0, 3.0, 5, 5, 5, 5]
             """
             if info == 'p':
@@ -456,11 +456,11 @@ class Score(makeScoreMethod(5, True)):
     """
     >>> Score.honBallot((0,1,2,3,4,5,6,7,8,9,10,11))
     [0.0, 0.0, 1.0, 1.0, 2.0, 2.0, 3.0, 3.0, 4.0, 4.0, 5.0, 5.0]
-    >>> Score.lowInfoBallot((0,1,2,3),[.4,.4,.4,.4])
+    >>> Score.vaBallot((0,1,2,3),[.4,.4,.4,.4])
     [0, 0, 5, 5]
-    >>> Score.lowInfoBallot((0,1,2,3),[.4,.4,.4,.6])
+    >>> Score.vaBallot((0,1,2,3),[.4,.4,.4,.6])
     [0, 0, 0, 5]
-    >>> Score.lowInfoBallot((0,1,2,3),[.6,.4,.4,.4])
+    >>> Score.vaBallot((0,1,2,3),[.6,.4,.4,.4])
     [0, 5, 5, 5]
     """
     pass
@@ -471,7 +471,7 @@ class Approval(makeScoreMethod(1,True)):
     @classmethod
     def zeroInfoBallot(cls, utils, electabilities=None, polls=None, pickiness=0, **kw):
         """Returns a ballot based on utils and pickiness
-        pickiness=0 corresponds to lowInfoBallot with equal polling for all candidates
+        pickiness=0 corresponds to vaBallot with equal polling for all candidates
         pickiness=1 corresponds to bullet voting
 
         >>> Approval.zeroInfoBallot([1,2,3,10], pickiness=0)
@@ -515,9 +515,9 @@ class Approval(makeScoreMethod(1,True)):
 
 class ApprovalTop2(top2(Approval)):
     """
-    >>> ApprovalTop2.lowInfoBallot([0,1,10],[.5,.5,.2])
+    >>> ApprovalTop2.vaBallot([0,1,10],[.5,.5,.2])
     ([0, 0, 1], [0, 1, 2])
-    >>> ApprovalTop2.lowInfoBallot([0,1,2,10],[.5,.5,.3,.2])
+    >>> ApprovalTop2.vaBallot([0,1,2,10],[.5,.5,.3,.2])
     ([0, 0, 1, 1], [0, 1, 2, 3])
     """
     pass
@@ -587,16 +587,16 @@ def makeSTARMethod(topRank=5):
             return baseResults
 
         @classmethod
-        def lowInfoBallot(cls, utils, electabilities=None, polls=None, winProbs=None,
+        def vaBallot(cls, utils, electabilities=None, polls=None, winProbs=None,
         pollingUncertainty=.15, scoreImportance=0.17, info='e', **kw):
             """
-            >>> STAR.lowInfoBallot([0,1,2,3,4,5],[.5,.5,.5,.5,.5,.5],scoreImportance=0.1)
+            >>> STAR.vaBallot([0,1,2,3,4,5],[.5,.5,.5,.5,.5,.5],scoreImportance=0.1)
             [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]
-            >>> STAR.lowInfoBallot([0,1,2,3,4,5],[.5,.5,.5,.5,.5,.5],scoreImportance=0.2)
+            >>> STAR.vaBallot([0,1,2,3,4,5],[.5,.5,.5,.5,.5,.5],scoreImportance=0.2)
             [0.0, 0.0, 1.0, 4.0, 5.0, 5.0]
-            >>> STAR.lowInfoBallot([0,1,2,3,4,5],[.5,.5,.5,.5,.5,.5],scoreImportance=3)
+            >>> STAR.vaBallot([0,1,2,3,4,5],[.5,.5,.5,.5,.5,.5],scoreImportance=3)
             [0.0, 0.0, 0.0, 5.0, 5.0, 5.0]
-            >>> STAR.lowInfoBallot([0,1,2,3,4,5],[.6,.5,.5,.5,.5,.5],scoreImportance=0.2)
+            >>> STAR.vaBallot([0,1,2,3,4,5],[.6,.5,.5,.5,.5,.5],scoreImportance=0.2)
             [0.0, 1.0, 2.0, 5.0, 5.0, 5.0]
             """
             if info == 'p':
@@ -1050,16 +1050,16 @@ class Irv(Method):
         return ballot
 
     @classmethod
-    def lowInfoBallot(cls, utils, electabilities, polls=None, pollingUncertainty=.15,
+    def vaBallot(cls, utils, electabilities, polls=None, pollingUncertainty=.15,
     winProbs=None, info='e', **kw):
         """Ranks good electable candidates over great unelectable candidates
         Electabilities should be interpreted as a metric for the ability to win in the final round.
 
-        >>> Irv.lowInfoBallot([0,1,2,3],[.4,.5,.5,.4])
+        >>> Irv.vaBallot([0,1,2,3],[.4,.5,.5,.4])
         [0, 1, 3, 2]
-        >>> Irv.lowInfoBallot([0,1,2,10],[.4,.5,.5,.4])
+        >>> Irv.vaBallot([0,1,2,10],[.4,.5,.5,.4])
         [0, 1, 2, 3]
-        >>> Irv.lowInfoBallot([0,1,2,10],[.6,.5,.4,.38])
+        >>> Irv.vaBallot([0,1,2,10],[.6,.5,.4,.38])
         [0, 3, 1, 2]
         """
         #if info == 'p': commented out because this can't handle IRV polls
@@ -1448,7 +1448,7 @@ class Condorcet(RankedMethod):
         12
         """
         return super().defaultfgs()\
-        + [(Borda.lowInfoBallot, targs) for targs in [select21, select31]]
+        + [(Borda.vaBallot, targs) for targs in [select21, select31]]
 
 class Schulze(Condorcet):
 

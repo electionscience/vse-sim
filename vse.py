@@ -201,8 +201,8 @@ class CsvBatch:
                 #for targetFunc in [select21, select31, selectRand, select012]:
                     #fgs.extend([(m.diehardBallot, targetFunc, {'intensity':i}) for i in m.diehardLevels]
                     #+ [(m.compBallot, targetFunc, {'intensity':i}) for i in m.compLevels])
-                    #fgs.append((m.lowInfoBallot, targetFunc, {'info':'e'}))
-                #for bg in [m.honBallot, m.lowInfoBallot]:
+                    #fgs.append((m.vaBallot, targetFunc, {'info':'e'}))
+                #for bg in [m.honBallot, m.vaBallot]:
                     #ms.append((m, bg, fgs, {'pollingUncertainty':0.4}))
             else:
                 ms.append(m)

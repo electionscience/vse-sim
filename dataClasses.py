@@ -53,8 +53,9 @@ class Method:
         raise NotImplementedError("{} needs honBallot".format(cls))
 
     @classmethod
-    def lowInfoBallot(cls, utils, electabilities, **kw):
-        """Takes utilities and information on each candidate's electability
+    def vaBallot(cls, utils, electabilities, **kw):
+        """Viability-aware strategy.
+        Takes utilities and information on each candidate's electability
         and returns a strategically optimal ballot based on that information
         """
         return cls.honBallot(utils)
@@ -81,9 +82,9 @@ class Method:
     def defaultbgs(cls):
         """Returns a list of the default backgrounds (see vse.threeRoundResults) for the voting method.
         These can be individual functions (like cls.honBallot) or (strat, bgargs) tuples
-        (like (cls.lowInfoBallot, {'pollingUncertainty': 0.4}))
+        (like (cls.vaBallot, {'pollingUncertainty': 0.4}))
         """
-        return [cls.honBallot, (cls.lowInfoBallot, {'pollingUncertainty': 0.4})]
+        return [cls.honBallot, (cls.vaBallot, {'pollingUncertainty': 0.4})]
 
     @classmethod
     def defaultfgs(cls):
@@ -94,8 +95,8 @@ class Method:
                 + [(cls.compBallot, targs, {'intensity': lev})
                 for lev in cls.compLevels for targs in [select21, select31]]\
                 + [(cls.stratBallot, targs) for targs in [select21, select31]]\
-                + [(cls.lowInfoBallot, selectRand, {'info': 'p'}),
-                (cls.lowInfoBallot, selectRand, {'info': 'e'}),
+                + [(cls.vaBallot, selectRand, {'info': 'p'}),
+                (cls.vaBallot, selectRand, {'info': 'e'}),
                 (cls.stratBallot, selectRand, {'info': 'p'}),
                 (cls.stratBallot, selectRand, {'info': 'e'})]
 
