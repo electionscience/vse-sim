@@ -1277,89 +1277,13 @@ class Condorcet(RankedMethod):
         raise NotImplementedError
 
     @classmethod
-    def results(cls, ballots, isHonest=False, **kwargs):
-        """Schulze results.
-
-        >>> Schulze.results([[2,1,0]]*9 + [[1,0,2]]*8 + [[0,2,1]]*7,isHonest=True)
-        [0, 2, 1]
-        >>> Schulze.extraEvents
-        {'scenario': 'cycle'}
-        >>> Schulze.results([[0,1,2]],isHonest=True)[2]
-        2
-        >>> Schulze.extraEvents
-        {'scenario': 'easy'}
-        >>> Schulze.results([[0,1,2],[2,1,0]],isHonest=True)[1]
-        1
-        >>> Schulze.extraEvents
-        {'scenario': 'easy'}
-        >>> Schulze.results([[0,1,2]] * 4 + [[2,1,0]] * 3 + [[1,2,0]] * 2,isHonest=True)
-        [1, 2, 0]
-        >>> Schulze.extraEvents
-        {'scenario': 'chicken'}
-        >>> Schulze.results([[0,1,2]] * 4 + [[2,1,0]] * 2 + [[1,2,0]] * 3,isHonest=True)
-        [1, 2, 0]
-        >>> Schulze.extraEvents
-        {'scenario': 'squeeze'}
-        >>> Schulze.results([[3,2,1,0]] * 5 + [[2,3,1,0]] * 2 + [[0,1,0,3]] * 6 + [[0,0,3,0]] * 3,isHonest=True)
-        [2, 3, 1, 0]
-        >>> Schulze.extraEvents
-        {'scenario': 'other'}
-        >>> Schulze.results([[3,0,0,0]] * 5 + [[2,3,0,0]] * 2 + [[0,0,0,3]] * 6 + [[0,0,3,0]] * 3,isHonest=True)
-        [3, 0, 1, 2]
-        >>> Schulze.extraEvents
-        {'scenario': 'spoiler'}
+    def results(cls, ballots, **kwargs):
         """
-        n = len(ballots[0])
-        cmat = [[0 for i in range(n)] for j in range(n)]
-        numWins = [0] * n
-        for i in range(n):
-            for j in range(n):
-                if i != j:
-                    cmat[i][j] = sum(sign(ballot[i] - ballot[j]) for ballot in ballots)
-                    if cmat[i][j]>0:
-                        numWins[i] += 1
-                    elif cmat[i][j]==0 and i<j:
-                        numWins[i] += 1
-        condOrder = sorted(enumerate(numWins),key=lambda x:-x[1])
-        if condOrder[0][1] == n-1:
-            cycle = 0
-            result = numWins
-        else: #cycle
-            cycle = 1
-            result = cls.resolveCycle(cmat, n)
-            order = None
-
-        if isHonest:
-            cls.extraEvents = dict()
-            #check scenarios
-            plurTally = [0] * n
-            plur3Tally = [0] * 3
-            cond3 = [c for c,v in condOrder[:3]]
-            if condOrder==None:
-                condOrder = sorted(enumerate(result),key=lambda x:-x[1])
-            for b in ballots:
-                b3 = [b[c] for c in cond3]
-                plurTally[b.index(max(b))] += 1
-                plur3Tally[b3.index(max(b3))] += 1
-            plurOrder = sorted(enumerate(plurTally),key=lambda x:-x[1])
-            plur3Order = sorted(enumerate(plur3Tally),key=lambda x:-x[1])
-            if cycle:
-                cls.extraEvents["scenario"] = "cycle"
-            elif plurOrder[0][0] == condOrder[0][0]:
-                cls.extraEvents["scenario"] = "easy"
-            elif plur3Order[0][0] == condOrder[0][0]:
-                cls.extraEvents["scenario"] = "spoiler"
-            elif plur3Order[2][0] == condOrder[0][0]:
-                cls.extraEvents["scenario"] = "squeeze"
-            elif plur3Order[0][0] == condOrder[2][0]:
-                cls.extraEvents["scenario"] = "chicken"
-            else:
-                cls.extraEvents["scenario"] = "other"
-
-        return result
-
-    @classmethod
-    def newResults(cls, ballots, **kwargs):#Not yet implemented
+        >>> Condorcet.results([[0,1,2]]*3+[[2,1,0]]*2)
+        [0.4, 0.4, 0.6]
+        >>> Condorcet.results([[0,1,2]]*3+[[2,1,0]]*4+[[1,2,0]]*2)
+        [0.4444444444444444, 0.5555555555555556, 0.33333333333333337]
+        """
         cmat = cls.compMatrix(ballots)
         smith = cls.smithSet(cmat)
         numCands = len(ballots[0])
@@ -1413,6 +1337,53 @@ class Condorcet(RankedMethod):
                     s.add(cand)
                     extensionFound = True
         return s
+
+    @classmethod
+    def scenarioType(cls, electorate):
+        """Returns the type of scenario presented by the given electorate.
+
+        >>> Condorcet.scenarioType([[2,1,0]]*9 + [[1,0,2]]*8 + [[0,2,1]]*7)
+        'cycle'
+        >>> Condorcet.scenarioType([[0,1,2]]*2 + [[2,1,0]])
+        'easy'
+        >>> Condorcet.scenarioType([[0,1,2],[2,1,0]])
+        'easy'
+        >>> Condorcet.scenarioType([[0,1,2]] * 4 + [[2,1,0]] * 3 + [[1,2,0]] * 2)
+        'chicken'
+        >>> Condorcet.scenarioType([[0,1,2]] * 4 + [[2,1,0]] * 2 + [[1,2,0]] * 3)
+        'squeeze'
+        >>> Condorcet.scenarioType([[3,2,1,0]] * 5 + [[2,3,1,0]] * 2 + [[0,1,0,3]] * 6 + [[0,0,3,0]] * 3)
+        'other'
+        >>> Condorcet.scenarioType([[3,0,0,0]] * 5 + [[2,3,0,0]] * 2 + [[0,0,0,3]] * 6 + [[0,0,3,0]] * 3)
+        'spoiler'
+        """
+        ballots = [cls.honBallot(voter) for voter in electorate]
+        n = len(electorate[0])
+        cmat = cls.compMatrix(ballots)
+        numWins = [sum(1 for j, matchup in enumerate(row) if matchup > 0 or (matchup == 0 and i < j))
+                for i, row in enumerate(cmat)]
+        condOrder = sorted(enumerate(numWins),key=lambda x:-x[1])
+        if condOrder[0][1] < n-1:
+            return "cycle"
+        plurTally = [0] * n
+        plur3Tally = [0] * 3
+        cond3 = [c for c,v in condOrder[:3]]
+        for b in ballots:
+            b3 = [b[c] for c in cond3]
+            plurTally[b.index(max(b))] += 1
+            plur3Tally[b3.index(max(b3))] += 1
+        plurOrder = sorted(enumerate(plurTally),key=lambda x:-x[1])
+        plur3Order = sorted(enumerate(plur3Tally),key=lambda x:-x[1])
+        if plurOrder[0][0] == condOrder[0][0]:
+            return "easy"
+        elif plur3Order[0][0] == condOrder[0][0]:
+            return "spoiler"
+        elif plur3Order[2][0] == condOrder[0][0]:
+            return "squeeze"
+        elif plur3Order[0][0] == condOrder[2][0]:
+            return "chicken"
+        else:
+            return "other"
 
     @classmethod
     def fillStratBallot(cls, voter, polls, places, n, stratGap, ballot,
@@ -1518,7 +1489,7 @@ class Rp(Condorcet):
         """Note: mutates cmat destructively.
 
         >>> Rp.resultsFor(DeterministicModel(3)(5,3))
-        [1, 2, 0]
+        [0.43333333333333335, 0.4666666666666667, 0.4]
         """
         matches = [(i, j, cmat[i][j]) for i in range(n) for j in range(i,n) if i != j]
         rps = sorted(matches,key=lambda x:-abs(x[2]))

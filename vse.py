@@ -249,6 +249,9 @@ def oneStepWorker(model, nvot, ncand, ms, pickiness, pollingError, r1Media, r2Me
                     pollingError = pollingError,
                 ))
         rows.extend(results)
+    scenario = Condorcet.scenarioType(electorate)
+    for row in rows:
+        row["scenarioType"] = scenario
     return rows
 
 class CsvBatches(CsvBatch):
