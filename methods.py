@@ -520,10 +520,22 @@ class ApprovalTop2(top2(Approval)):
     >>> ApprovalTop2.vaBallot([0,1,2,10],[.5,.5,.3,.2])
     ([0, 0, 1, 1], [0, 1, 2, 3])
     """
-    pass
-    #@classmethod
-    #def bulletBallot(cls, utils, **kw):
-        #return super().bulletBallot(utils), cls.prefOrder(utils)
+    @classmethod
+    def bulletBallot(cls, utils, **kw):
+        return super().bulletBallot(utils), cls.prefOrder(utils)
+
+    @classmethod
+    def diehardBallot(cls, utils, intensity, candToHelp, candToHurt, **kw):
+        """
+        >>> ApprovalTop2.diehardBallot([0, 8, 9, 10], 4, 2, 1)
+        ([0, 0, 0, 1], [0, 1, 2, 3])
+        >>> ApprovalTop2.diehardBallot([0, 8, 9, 10], 1, 2, 1)
+        ([0, 0, 1, 1], [0, 1, 2, 3])
+        """
+        if intensity == 4:
+            return cls.bulletBallot(utils)
+        else:
+            return super().diehardBallot(utils, intensity, candToHelp, candToHurt, **kw)
 
 def BulletyApprovalWith(bullets=0.5, asClass=False):
     class BulletyApproval(Score(1,True)):
