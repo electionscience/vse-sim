@@ -42,7 +42,7 @@ vses = fvse[method != "ApprovalPoll",list(VSE=mean((r1WinnerUtil - meanCandidate
 dcast(vses, method ~ backgroundStrat)
 vses
 
-fromhons = fvse[backgroundStrat=="honBallot" & fgStrat == "lowInfoBallot" & method != "Minimax",
+fromhons = fvse[backgroundStrat=="honBallot" & fgStrat == "vaBallot" & method != "Minimax",
      list(
        vse=mean((r1WinnerUtil - meanCandidateUtil) / (magicBestUtil - meanCandidateUtil)),
        fgMatters=mean(fgUtilDiff != 0),
@@ -57,7 +57,7 @@ fromhons = fvse[backgroundStrat=="honBallot" & fgStrat == "lowInfoBallot" & meth
      by=.(method,backgroundStrat, fgStrat, fgArgs, fgTargets)]
 fromhons
 
-fromawares = fvse[((backgroundStrat=="lowInfoBallot"  & method != "Minimax") | (backgroundStrat=="honBallot" &method == "Minimax")), #& !fgStrat %in% c("", "lowInfoBallot"),
+fromawares = fvse[((backgroundStrat=="vaBallot"  & method != "Minimax") | (backgroundStrat=="honBallot" &method == "Minimax")), #& !fgStrat %in% c("", "vaBallot"),
      list(
        vse=mean((r1WinnerUtil - meanCandidateUtil) / (magicBestUtil - meanCandidateUtil)),
        fgMatters=mean(fgUtilDiff != 0),
@@ -92,7 +92,7 @@ library(scales)
 
 #vse as dots
 (
-vses[!(method=="Minimax" & backgroundStrat=="lowInfoBallot"),] %>% 
+vses[!(method=="Minimax" & backgroundStrat=="vaBallot"),] %>% 
     mutate(method = method 
                     %>% fct_reorder(VSE, .fun='mean') 
                     %>% recode(`STAR`="STAR", 

@@ -31,7 +31,7 @@ class Method:
         return self.__class__.__name__
 
     @classmethod
-    def results(self, ballots, **kwargs):
+    def results(cls, ballots, **kwargs):
         """Combines ballots into results. Override for comparative
         methods.
 
@@ -43,7 +43,7 @@ class Method:
         """
         if type(ballots) is not list:
             ballots = list(ballots)
-        return list(map(self.candScore,zip(*ballots)))
+        return list(map(cls.candScore,zip(*ballots)))
 
     @classmethod
     #@rememberBallot

@@ -773,6 +773,7 @@ class Mav(Method):
     specificCuts = None
     specificPercentiles = [25,50,75,90]
 
+    @classmethod
     def candScore(self, scores):
         """For now, only works correctly for odd nvot
 
@@ -822,6 +823,57 @@ class Mav(Method):
         cuts = [min(cut, max(voter) - 0.001) for cut in cuts]
         return [toVote(cuts, util) for util in voter]
 
+    @classmethod
+    def vaBallot(cls, utils, electabilities=None, polls=None, winProbs=None,
+            pollingUncertainty=.15, info='e', **kw):
+        """Acts like the VA approval strat in deciding whether to give a candidate
+        ANY support, but those that are supported are scored in accordance with their utilities
+
+        >>> Mav.vaBallot([0,1,2,3],[.4,.4,.4,.4])
+        [0, 0, 1.0, 4.0]
+        >>> Mav.vaBallot([0,1,2,3],[.6,.4,.4,.4])
+        [0, 1.0, 3.0, 4.0]
+        >>> Mav.vaBallot([0,1,2,3],[.4,.4,.4,.5])
+        [0, 0, 0, 4.0]
+        """
+        if info == 'p':
+            electabilities = polls
+        if not winProbs:
+            winProbs = pollsToProbs(electabilities, pollingUncertainty)
+        expectedUtility = sum(u*p for u, p in zip(utils, winProbs))
+        scale = max(utils)-expectedUtility
+        return [0 if expectedUtility > util else
+                floor((4 + .99) * (util-expectedUtility) / scale) for util in utils]
+
+    @classmethod
+    def stratBallot(cls, voter, polls, electabilities=None, info='p', **kw):
+        if info == 'e':
+            polls = electabilities
+        places = sorted(enumerate(polls),key=lambda x:-x[1])
+        ((frontId,frontResult), (targId, targResult)) = places[0:2]
+        frontUtils = [voter[frontId], voter[targId]] #utils of frontrunners
+        stratGap = frontUtils[1] - frontUtils[0]
+        if stratGap == 0:
+            return [(4 if (util >= frontUtils[0]) else 0)
+                                 for util in voter]
+
+        if stratGap < 0:
+            return cls.honBallot(voter)
+        else:
+            #runner-up is preferred; be strategic in iss run
+            #sort cuts high to low
+            frontUtils = (frontUtils[1], frontUtils[0])
+            top = max(voter)
+            #print("lll312")
+            #print(self.baseCuts, front)
+            cutoffs = [(  (min(frontUtils[0], cls.baseCuts[i]))
+                             if (i < floor(targResult)) else
+                        ( (frontUtils[1])
+                             if (i < floor(frontResult) + 1) else
+                          min(top, cls.baseCuts[i])
+                          ))
+                       for i in range(len(cls.baseCuts))]
+            return [toVote(cutoffs, util) for util in voter]
 
     def stratBallotFor(self, polls):
         """Returns a function which takes utilities and returns a dict(
@@ -1065,7 +1117,7 @@ class Irv(Method):
     def vaBallot(cls, utils, electabilities, polls=None, pollingUncertainty=.15,
     winProbs=None, info='e', **kw):
         """Ranks good electable candidates over great unelectable candidates
-        Electabilities should be interpreted as a metric for the ability to win in the final round.
+        Electabilities are interpreted as a metric for the ability to win in the final round.
 
         >>> Irv.vaBallot([0,1,2,3],[.4,.5,.5,.4])
         [0, 1, 3, 2]
