@@ -1337,7 +1337,7 @@ class Condorcet(RankedMethod):
     compLevels = [3]
 
     @classmethod
-    def resolveCycle(cls, cmat, n):
+    def resolveCycle(cls, cmat, n, ballots):
         raise NotImplementedError
 
     @classmethod
@@ -1360,7 +1360,7 @@ class Condorcet(RankedMethod):
                 results[i] = .5 + cmat[i][winner]/(2*len(ballots))
             return results
         else:
-            ordinalResults = cls.resolveCycle([row.copy() for row in cmat], numCands)
+            ordinalResults = cls.resolveCycle([row.copy() for row in cmat], numCands, ballots)
             return [.4 + r/(10*numCands) for r in ordinalResults] #hideous hack
 
 
@@ -1517,7 +1517,7 @@ class Condorcet(RankedMethod):
 class Schulze(Condorcet):
 
     @classmethod
-    def resolveCycle(cls, cmat, n):
+    def resolveCycle(cls, cmat, n, ballots):
 
         beatStrength = [[0] * n] * n
         numWins = [0] * n
@@ -1549,7 +1549,7 @@ class Schulze(Condorcet):
 
 class Rp(Condorcet):
     @classmethod
-    def resolveCycle(cls, cmat, n):
+    def resolveCycle(cls, cmat, n, ballots):
         """Note: mutates cmat destructively.
 
         >>> Rp.resultsFor(DeterministicModel(3)(5,3))
@@ -1584,7 +1584,7 @@ class Rp(Condorcet):
 class Minimax(Condorcet):
     """Smith Minimax margins"""
     @classmethod
-    def resolveCycle(cls, cmat, n):
+    def resolveCycle(cls, cmat, n, ballots):
         """ Unnecessary for Minimax; this method is never called.
         """
         smith = cls.smithSet(cmat)
@@ -1622,7 +1622,7 @@ class Raynaud(Condorcet):
     """Raynaud margins
     """
     @classmethod
-    def resolveCycle(cls, cmat, n):
+    def resolveCycle(cls, cmat, n, *args):
         """
         >>> Raynaud.resolveCycle([[0, 2, -4], [-2, 0, 6], [4, -6, 0]],3)
         [2, 1, 0]
@@ -1646,6 +1646,27 @@ class Raynaud(Condorcet):
         results[candsLeft.pop()] = n - 1
         return results
 
+class SmithIRV(Condorcet):
+    """Determines the Smith set, then elect the IRV winner from among it.
+    """
+    @classmethod
+    def resolveCycle(cls, cmat, n, ballots):
+        """
+        >>> SmithIRV.results([[2,1,0]]*6 + [[1,0,2]]*5 + [[0,2,1]]*4)
+        [0.43333333333333335, 0.4, 0.4666666666666667]
+        >>> SmithIRV.results([[3,2,0,1]]*6 + [[2,1,0,3]]*5 + [[0,3,1,2]]*4)
+        [0.45, 0.42500000000000004, 0.4, 0.47500000000000003]
+        """
+        smithList = sorted(list(cls.smithSet(cmat)))
+        shortenedBallots = [[b[i] for i in smithList] for b in ballots]
+        irvResults = Irv.results(shortenedBallots)
+        irvTuples = sorted(zip(smithList, irvResults), key=lambda x: x[1])
+        otherResults = sorted([(c, min(cmat[c])) for c in range(n) if c not in smithList], key=lambda x: x[1])
+        resultTuples = otherResults + irvTuples #worst to best
+        ordinalResults = [0]*n
+        for i in range(n):
+            ordinalResults[resultTuples[i][0]] = i
+        return ordinalResults
 
 
 class IRNR(RankedMethod):
