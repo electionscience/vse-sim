@@ -1618,6 +1618,35 @@ class Minimax(Condorcet):
             return [0.5 + min(cmat[cand][i] for i in smith if cand != i)/(2*len(ballots))
                     for cand in range(numCands)]
 
+class Raynaud(Condorcet):
+    """Raynaud margins
+    """
+    @classmethod
+    def resolveCycle(cls, cmat, n):
+        """
+        >>> Raynaud.resolveCycle([[0, 2, -4], [-2, 0, 6], [4, -6, 0]],3)
+        [2, 1, 0]
+        >>> Raynaud.results([[2,1,0]]*6 + [[1,0,2]]*5 + [[0,2,1]]*4)
+        [0.43333333333333335, 0.4, 0.4666666666666667]
+        """
+        candsLeft = set(range(n))
+        results = [0]*n
+        numEliminated = 0
+        while len(candsLeft) > 1:
+            worstMargin = 1
+            loser = None
+            for cand in candsLeft:
+                candWorstMargin = min(cmat[cand][c] for c in candsLeft if c != cand)
+                if candWorstMargin < worstMargin:
+                    loser = cand
+                    worstMargin = candWorstMargin
+            results[loser] = numEliminated
+            candsLeft.remove(loser)
+            numEliminated += 1
+        results[candsLeft.pop()] = n - 1
+        return results
+
+
 
 class IRNR(RankedMethod):
     stratMax = 10
