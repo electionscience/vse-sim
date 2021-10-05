@@ -35,14 +35,14 @@ library(scatterD3)
 # 
 # fvse = rbind(fvse,fread("wtf2.csv"))
 
-fvse = fread("dstrat1.csv")
+fvse = fread("manymethods1.csv")
 numVoters = mean(fvse[,numVoters])
 vses = fvse[method != "ApprovalPoll",list(VSE=mean((r1WinnerUtil - meanCandidateUtil) / 
                       (magicBestUtil - meanCandidateUtil))),by=.(method,backgroundStrat)]
 dcast(vses, method ~ backgroundStrat)
 vses
 
-fromhons = fvse[backgroundStrat=="honBallot" & fgStrat == "vaBallot" & method != "Minimax",
+fromhons = fvse[backgroundStrat=="honBallot",
      list(
        vse=mean((r1WinnerUtil - meanCandidateUtil) / (magicBestUtil - meanCandidateUtil)),
        fgMatters=mean(fgUtilDiff != 0),

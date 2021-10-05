@@ -675,18 +675,18 @@ def makeSTARMethod(topRank=5):
             if intensity == 1:
                 for i, u in enumerate(utils):
                     if u >= helpUtil:
-                        baseBallot[i] = max(4, baseBallot[i])
+                        baseBallot[i] = max(cls.topRank - 1, baseBallot[i])
                     elif u <= hurtUtil:
                         baseBallot[i] = 0
             if intensity == 2:
                 for i, u in enumerate(utils):
                     if u >= helpUtil:
-                        baseBallot[i] = 5
+                        baseBallot[i] = cls.topRank
                     elif u <= hurtUtil:
                         baseBallot[i] = 0
             if intensity >= 3:
                 baseBallot = [1 if u > hurtUtil else 0 for u in utils]
-                baseBallot[candToHelp] = 5
+                baseBallot[candToHelp] = cls.topRank
             return baseBallot
 
         @classmethod
@@ -715,25 +715,116 @@ def makeSTARMethod(topRank=5):
                     if u <= hurtUtil:
                         baseBallot[i] = min(1, baseBallot[i])
                     elif u >= helpUtil:
-                        baseBallot[i] = 5
+                        baseBallot[i] = cls.topRank
             if intensity == 2:
                 for i, u in enumerate(utils):
                     if u <= hurtUtil:
                         baseBallot[i] = 0
                     elif u >= helpUtil:
-                        baseBallot[i] = 5
+                        baseBallot[i] = cls.topRank
             if intensity == 3:
                 for i, u in enumerate(utils):
                     if u >= helpUtil:
-                        baseBallot[i] = 5
+                        baseBallot[i] = cls.topRank
                     elif polls[i] < polls[candToHelp]:
-                        baseBallot[i] = 4
+                        baseBallot[i] = cls.topRank - 1
                     else:
                         baseBallot[i] = 0
                     baseBallot[candToHurt] = 0
             if intensity == 4:
                 return cls.bulletBallot(utils)
             return baseBallot
+
+        @classmethod
+        def always510Ballot(cls, utils, **kw):
+            """Gives the first choice candidate a 5, second choice a 1, and last choice a 0.
+            Only really intended for three-candidate elections.
+            >>> STAR.always510Ballot([9,5,10])
+            [1, 0, 5]
+            """
+            return [cls.topRank if u == max(utils) else 0 if u == min(utils) else 1 for u in utils]
+
+        @classmethod
+        def never23Ballot(cls, utils, **kw):
+            """Gives the first choice a 5, last a 0, and everyone else 1 or 4
+            >>> STAR.never23Ballot([0,2,3,5])
+            [0, 1, 4, 5]
+            """
+            high, low = max(utils), min(utils)
+            ballot = []
+            for u in utils:
+                if u == high:
+                    ballot.append(cls.topRank)
+                elif u == low:
+                    ballot.append(0)
+                elif high - u < u - low:
+                    ballot.append(cls.topRank - 1)
+                else:
+                    ballot.append(1)
+            return ballot
+
+        @classmethod
+        def utilGapBallot(cls, utils, **kw):
+            """With six or fewer candidates, gives each candidate a different score.
+            With five or fewer candidates, there is only one gap between scores
+            and it occurs where there is the greatest gap in utilities.
+            With seven or more candidates, the canddiates with the most similar
+            utilities are given the same scores.
+            Does not work well when some utilities are equal.
+            >>> STAR.utilGapBallot([0,6,5,7])
+            [0, 4, 3, 5]
+            >>> STAR.utilGapBallot([0,6,5,2])
+            [0, 5, 4, 1]
+            >>> STAR.utilGapBallot([0,1,2])
+            [0, 1, 5]
+            >>> STAR.utilGapBallot([0,1,2,3,4,10,11,13])
+            [0, 0, 1, 1, 2, 3, 4, 5]
+            """
+            sortedUtils = sorted(enumerate(utils), key=lambda x: x[1])
+            high, low = max(utils), min(utils)
+            n = len(utils)
+            ballot = [0]*n
+            if n <= cls.topRank + 1:
+                maxGap = 0
+                gapLoc = None
+                for i in range(n-1):
+                    if sortedUtils[i + 1][1] - sortedUtils[i][1] >= maxGap:
+                        maxGap = sortedUtils[i + 1][1] - sortedUtils[i][1]
+                        gapLoc = (sortedUtils[i + 1][1] + sortedUtils[i][1])/2
+                for rank, (cand, util) in enumerate(sortedUtils):
+                    if util < gapLoc:
+                        ballot[cand] = rank
+                    else:
+                        ballot[cand] = rank + cls.topRank + 1 - n
+            else:
+                utilRanges = [[u,u] for u in sorted(utils)]
+                #use a greedy algorithm to put most similar utilities together
+                while len(utilRanges) > cls.topRank + 1:
+                    minSpread = float('inf')
+                    minLoc = None
+                    for i in range(len(utilRanges) - 1):
+                        spread = utilRanges[i+1][1] - utilRanges[i][0]
+                        if spread < minSpread:
+                            minSpread = spread
+                            minLoc = i
+                    utilRanges[minLoc][1] = utilRanges[minLoc+1][1]
+                    del utilRanges[minLoc+1]
+                score = 0
+                for cand, util in sortedUtils:
+                    if util > utilRanges[score][1]:
+                        score += 1
+                    ballot[cand] = score
+            return ballot
+
+        @classmethod
+        def defaultbgs(cls):
+            return super().defaultbgs() + [cls.utilGapBallot]
+
+        @classmethod
+        def defaultfgs(cls):
+            return super().defaultfgs()\
+            + [(cls.utilGapBallot, targs) for targs in [selectRand, select21]]
+
 
     if topRank==5:
         STAR0to.__name__ = "STAR"

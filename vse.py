@@ -176,9 +176,9 @@ class CsvBatch:
             nvot, ncand, niter, r1Media=noisyMedia, r2Media=noisyMedia, seed=None,
             pickiness=0.4, pollingError=0.2):
         """methodsAndStrats is a list of (votingMethod, backgroundStrat, foregrounds, bgArgs).
-        A voting method my be given in place of such a tuple, in which case backgroundSrat, foregrounds, and bgArgs
+        A voting method may be given in place of such a tuple, in which case backgroundSrat, foregrounds, and bgArgs
         will be determined automatically.
-        foregrounds are (targetSelectionFunction, foregroundStrat, foregroundSelectionFunction, fgArgs) tuples.
+        foregrounds are (foregroundStrat, targetSelectionFunction, foregroundSelectionFunction, fgArgs) tuples.
         foregroundSelectionFunction is optional.
         nvot and ncand gives the number of voters and candidates in each election, and niter is how many
         electorates will be generated and have all the methods and strategies run on them.
@@ -233,7 +233,7 @@ class CsvBatch:
 
 def oneStepWorker(model, nvot, ncand, ms, pickiness, pollingError, r1Media, r2Media, baseSeed=None, i = 0):
 
-    if i>0 and i%10 == 0: print('Iteration:', i)
+    if i>0 and i%50 == 0: print('Iteration:', i)
     if baseSeed is not None:
         random.seed(baseSeed + i)
 
