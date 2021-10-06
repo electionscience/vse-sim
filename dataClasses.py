@@ -61,6 +61,15 @@ class Method:
         return cls.honBallot(utils)
 
     @classmethod
+    def bulletBallot(cls, utils, **kw):
+        """Bullet votes for the voter's favorite candidate
+        """
+        best = utils.index(max(utils))
+        ballot = [0]*len(utils)
+        ballot[best] = getattr(cls, "topRank", 1)
+        return ballot
+
+    @classmethod
     def abstain(cls, utils, **kw):
         return [0]*len(utils)
 

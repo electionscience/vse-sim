@@ -817,13 +817,36 @@ def makeSTARMethod(topRank=5):
             return ballot
 
         @classmethod
-        def defaultbgs(cls):
-            return super().defaultbgs() + [cls.utilGapBallot]
+        def top6Ballot(cls, utils, electabilities=None, polls=None, info='e', **kw):
+            """Gives each of the six most viable candidates a different score
+            and other candidates the score of the frontrunner their utility is the closest to.
+            >>> STAR.top6Ballot([0,1,2,3,4,5,6,7,8,9,20], [.3,.4,.35,.41,.42,.43,.2,.3,.415,.41,.1])
+            [0, 0, 0, 1, 2, 3, 3, 4, 4, 5, 5]
+            """
+            if len(utils) <= cls.topRank:
+                return cls.utilGapBallot(utils)
+            if info == 'e':
+                polls = electabilities
+            frontrunnerIDs = sorted(enumerate(polls), key = lambda x: -x[1])[:cls.topRank+1]
+            frontUtils = sorted(utils[i] for i, _ in frontrunnerIDs)
+            ballot = []
+            for u in utils:
+                if u >= frontUtils[cls.topRank]:
+                    ballot.append(cls.topRank)
+                else:
+                    i = 0
+                    while u > frontUtils[i+1]:
+                        i += 1
+                    if u - frontUtils[i] <= frontUtils[i+1] - u:
+                        ballot.append(i)
+                    else:
+                        ballot.append(i+1)
+            return ballot
 
         @classmethod
         def defaultfgs(cls):
             return super().defaultfgs()\
-            + [(cls.utilGapBallot, targs) for targs in [selectRand, select21]]
+            + [(cls.top6Ballot, targs) for targs in [selectRand, select21]]
 
 
     if topRank==5:
