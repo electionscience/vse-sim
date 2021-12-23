@@ -229,11 +229,11 @@ def top2(noRunoffMethod):
 
         @classmethod
         def vaBallot(cls, utils, electabilities=None, polls=None, winProbs=None,
-        pollingUncertainty=.15, info='e', **kw):
+        pollingUncertainty=.15, info='e', probFunc=adaptiveTieFor2, **kw):
             if info == 'p':
                 electabilities = polls
             if not winProbs:
-                winProbs = adaptiveTieFor2(electabilities, pollingUncertainty)
+                winProbs = probFunc(electabilities, pollingUncertainty)
             return (super().vaBallot(utils, winProbs=winProbs,
             pollingUncertainty=pollingUncertainty),
             cls.prefOrder(utils))
@@ -600,7 +600,7 @@ def makeSTARMethod(topRank=5):
 
         @classmethod
         def vaBallot(cls, utils, electabilities=None, polls=None, winProbs=None,
-        pollingUncertainty=.15, scoreImportance=0.17, info='e', **kw):
+        pollingUncertainty=.15, scoreImportance=0.17, info='e', probFunc=adaptiveTieFor2, **kw):
             """
             >>> STAR.vaBallot([0,1,2,3,4,5],[.5,.5,.5,.5,.5,.5],scoreImportance=0.1)
             [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]
@@ -619,10 +619,10 @@ def makeSTARMethod(topRank=5):
             runoffCoefficients = [[(u1 - u2)*p1*p2
                                    for u2, p2 in zip(utils, winProbs)]
                                   for u1, p1 in zip(utils, winProbs)]
-            eRunnerUpUtil = sum(u*p for u, p in zip(utils, adaptiveTieFor2(electabilities)))
+            eRunnerUpUtil = sum(u*p for u, p in zip(utils, probFunc(electabilities)))
             #scoreCoefficients[i] is how vauable it is for i to have a high score
             scoreCoefficients = [scoreImportance*(u-eRunnerUpUtil)*p
-                                 for u, p in zip(utils, adaptiveTieFor2(electabilities))]
+                                 for u, p in zip(utils, probFunc(electabilities))]
 
             #create a tentative ballot
             numCands = len(utils)
@@ -1760,8 +1760,38 @@ class Raynaud(Condorcet):
         results[candsLeft.pop()] = n - 1
         return results
 
+class RankedRobin(Condorcet):
+    """Elects the candidate whose aggratate pairwise margin against other candidates
+    who have greatest number of pairwise wins is the greatest
+    """
+    @classmethod
+    def results(cls, ballots, **kw):
+        """
+        >>> RankedRobin.results([[2,1,0]]*3+[[0,2,1]]*4+[[1,0,2]]*5)
+        [0.4583333333333333, 0.4583333333333333, 0.5833333333333334]
+        >>> RankedRobin.results([[3,2,0,1]]*30 + [[0,3,2,1]]*30 + [[2,0,3,1]]*30 + [[0,1,2,3]]*10)
+        [0.45, 0.5, 0.55, 0.4]
+        >>> RankedRobin.results([[3,2,0,1]]*30 + [[1,3,2,0]]*30 + [[2,0,3,1]]*30 + [[0,1,2,3]]*10)
+        [0.45, 0.5, 0.55, 0.09999999999999998]
+        """
+        numCands = len(ballots[0])
+        cmat = cls.compMatrix(ballots)
+        matchupWins = [sum(1 for marg in row if marg > 0) for row in cmat]
+        mostWins = max(matchupWins)
+        finalists = [i for i in range(numCands) if matchupWins[i] == mostWins]
+        rest = [i for i in range(numCands) if i not in finalists]
+        results = [0]*numCands
+        if len(finalists) == 1:
+            results[finalists[0]] = 0.5 + min(marg for marg in cmat[finalists[0]] if marg != 0)/(2*len(ballots))
+        else:
+            for f in finalists:
+                results[f] = 0.5 + sum(marg for i, marg in enumerate(cmat[f]) if i in finalists)/(2*len(ballots)*(len(finalists)-1))
+        for cand in rest:
+            results[cand] = 0.5 + min(cmat[cand][f] for f in finalists)/(2*len(ballots))
+        return results
+
 class SmithIRV(Condorcet):
-    """Determines the Smith set, then elect the IRV winner from among it.
+    """Determines the Smith set, then elects the IRV winner from among it.
     """
     @classmethod
     def resolveCycle(cls, cmat, n, ballots):
@@ -1782,12 +1812,59 @@ class SmithIRV(Condorcet):
             ordinalResults[resultTuples[i][0]] = i
         return ordinalResults
 
+def smithVersion(baseMethod):
+    """Returns the voting method Smith//baseMethod
+    """
+    class SmithMethod(baseMethod):
+        @classmethod
+        def results(cls, ballots, **kw):
+            numCands = len(ballots[0])
+            cmat = Condorcet.compMatrix(ballots)
+            smithSet = Condorcet.smithSet(cmat)
+            if len(smithSet) == 1:
+                return Condorcet.results(ballots)
+            if len(smithSet) == numCands:
+                return super().results(ballots)
+
+            smithList = sorted(list(smithSet))
+            shortenedBallots = [[b[i] for i in smithList] for b in ballots]
+            baseResults = super().results(shortenedBallots) #results using the base method for candidates in the smith set
+            baseTuples = sorted(zip(smithList, baseResults), key=lambda x: x[1])
+            otherResults = sorted([(c, 0.5 + min(cmat[c][s] for s in smithSet)/(2*len(ballots)))
+                                    for c in range(numCands) if c not in smithList],
+                                    key=lambda x: x[1])
+            minSmith = min(baseResults) #the result of the weakest candidate in the Smith set
+            maxOther = max(result for cand, result in otherResults)
+            minOther = min(result for cand, result in otherResults)
+            if maxOther >= minSmith:
+                scaleFactor = (minSmith-0.01)/(minSmith-0.01 - min(minOther + minSmith-0.01 - maxOther, 0))
+                otherResults = [(c, minSmith-0.01 - scaleFactor*(maxOther - r)) for c, r in otherResults]
+            resultTuples = otherResults + baseTuples #worst to best
+            finalResults = [0]*numCands
+            for cand, result in resultTuples:
+                finalResults[cand] = result
+            return finalResults
+    return SmithMethod
+
+class SmithScore(smithVersion(Score)):
+    """Smith//Score
+    >>> SmithScore.results([[2,1,0]]*10 + [[1,0,5]]*5)
+    [0.6666666666666666, 0.0, 0.33333333333333337]
+    >>> SmithScore.results([[5,4,0]]*6 + [[1,0,5]]*5 + [[0,5,1]]*4)
+    [0.4666666666666667, 0.5866666666666667, 0.38666666666666666]
+    >>> SmithScore.results([[5,4,0,1]]*5 + [[4,0,5,1]]*5 + [[0,5,4,3]]*5)
+    [0.6, 0.6, 0.6, 0.33333333333333337]
+    """
+    compLevels = []
+    diehardLevels = []
 
 class IRNR(RankedMethod):
     stratMax = 10
 
     stratTargetFor = Method.stratTarget3 # strategize in favor of third place, because second place is pointless (can't change pairwise)
-    def results(self, ballots, **kwargs):
+
+    @classmethod
+    def results(cls, ballots, **kwargs):
         enabled = [True] * len(ballots[0])
         numEnabled = sum(enabled)
         results = [None] * len(enabled)
@@ -1837,6 +1914,56 @@ class IRNR(RankedMethod):
         cls.fillPrefOrder(voter, ballot,
             whichCands=[c for (c, r) in places[2:]],
             nSlots = 1, lowSlot=1, remainderScore=0)
+
+class ITRV(Method):
+    """Iterated Threshold Reapproval Voting
+    """
+    @classmethod
+    def results(cls, ballots, **kw):
+        """
+        >>> ITRV.results([[5,2,1,-10]]*5 + [[1,5,3,-10]]*6 + [[1,-2,10,0]]*4)
+        [0.6, 0.4, 0.3333333333333333, -0.4]
+        >>> ITRV.results([[5,2,1,-10]]*5 + [[1,2,5,-10]]*6 + [[1,5,0,4]]*2)
+        [0.5384615384615384, 0.23076923076923078, 0.46153846153846156, -0.46153846153846156]
+        >>> ITRV.results([[5,4,1,-10]]*5 + [[1,4,5,-10]]*6 + [[1,5,0,4]]*2)
+        [0.38461538461538464, 0.5384615384615384, 0.46153846153846156, -0.3076923076923077]
+        """
+        n = len(ballots[0])
+        candsLeft = n
+        remainingCands = list(range(n))
+        rounds = []
+        while candsLeft > 1:
+            approvals = [0 if i in remainingCands else -1 for i in range(n)]
+            for i, b in enumerate(ballots):
+                threshold = sum(b[c]/candsLeft for c in remainingCands)
+                for cand in remainingCands:
+                    if b[cand] > threshold:
+                        approvals[cand] += 1
+            elim = approvals.index(min(approvals[c] for c in remainingCands))
+            remainingCands.remove(elim)
+            rounds.append((elim, list(remainingCands), approvals))
+            candsLeft -= 1
+        results = [0]*len(ballots[0])
+        lastTotal = approvals[remainingCands[0]]
+        results[remainingCands[0]] = lastTotal/len(ballots)
+        for loser, survivors, roundResults in reversed(rounds):
+            newTotal = lastTotal - min(roundResults[c] - roundResults[loser] for c in survivors)
+            lastTotal = newTotal
+            results[loser] = newTotal/len(ballots)
+        return results
+
+    @classmethod
+    def honBallot(cls, utils, **kw):
+        """Takes utilities and returns an honest ballot
+        """
+        return utils
+
+class SmithITRV(smithVersion(ITRV)):
+    """
+    >>> SmithITRV.results([[5,2,1,-10]]*5 + [[1,5,3,-10]]*6 + [[1,-2,10,0]]*4)
+    [0.6, 0.4, 0.3333333333333333, 0.0]
+    """
+    pass
 
 if __name__ == "__main__":
     import doctest
