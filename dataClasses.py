@@ -46,6 +46,12 @@ class Method:
         return list(map(cls.candScore,zip(*ballots)))
 
     @classmethod
+    def winnerSet(cls, ballots, numWinners=1):
+        """Returns a list with all the winning candidates. Override for multi-winner methods.
+        """
+        return [cls.winner(cls.results(ballots))]
+
+    @classmethod
     #@rememberBallot
     def honBallot(cls, utils, **kw):
         """Takes utilities and returns an honest ballot

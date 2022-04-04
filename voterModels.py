@@ -23,7 +23,7 @@ class Voter(tuple):
         """Get a repeatable uuid
         """
         return uuid4()
-        
+
     @classmethod
     def rand(cls, ncand):
         """Create a random voter with an independent standard normal
@@ -69,6 +69,13 @@ class Voter(tuple):
         return self.copyWithUtils(  ((self[i] / sqrt(1 + w2 ** 2)) +
                                     (w2 * v2[i] / sqrt(1 + w2 ** 2)))
                                  for i in range(len(self)))
+
+    def addUtils(self, utils):
+        """Create a new voter with the given utils added to this voter's utils
+            >>> Voter([1,2,3]).addUtils([5,1,0])
+            (6, 3, 3)
+        """
+        return self.copyWithUtils(myUtil+utils[i] for i, myUtil in enumerate(self))
 
     def copyWithUtils(self, utils):
         """create a new voter with attrs as self and given utils.
@@ -250,6 +257,12 @@ class DimVoter(PersonalityVoter):
 
     @classmethod
     def fromDims(cls, v, e, caring = None):
+        """
+        v: a voter's coordinates in "policyspace"
+        e: an electorate with the attributes e.cands(a list of candidates with their positions in "policyspace"
+        and e.dimWeights (a list of numbers indicating how important each dimension is)
+        Returns a voter whose utility for each candidate is minus the voter's distance from them in policyspace
+        """
         if caring==None:
             caring = [1] * len(v)
             totCaring = e.totWeight
