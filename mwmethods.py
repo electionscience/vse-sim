@@ -132,3 +132,49 @@ class SequentialMonroe(AllocatedScore):
         else:
             scores = [sum(ballot[c]*weight for ballot, weight in zip(ballots, weights)) if c in bestCands else -1 for c in range(ncand)]
             return scores.index(max(scores))
+
+class weightedBallot(list):
+    def __init__(self, *args, **kw):
+        self.weight = kw.get('weight', 1)
+        super().__init__(*args)
+
+class STV(Irv):
+    """Weighted inclusive Gregory method (I think) with the Droop quota
+    >>> STV.winnerSet([[0,1,2,3,4,5,6]]*40+[[6,5,4,3,2,1,0]]*10, 4)
+    [6, 5, 4, 0]
+    >>> STV.winnerSet([[3,2,1,0]]*10+[[0,2,1,3]]*10+[[0,2,3,1]]*12, 2)
+    [2, 3]
+    """
+    @classmethod
+    def winnerSet(cls, ballots, numWinners):
+        quota = int(len(ballots)/(numWinners+1) + 1)
+        winners = []
+        nCands = len(ballots[0])
+        candsLeft = set(range(nCands))
+        wBallots = [weightedBallot(b) for b in ballots]
+        ballotsToSort = wBallots
+        piles = [[] for i in range(nCands)]
+        while len(winners) + len(candsLeft) > numWinners:
+            cls.resort(ballotsToSort, candsLeft, piles)
+            newWinners = [c for c in candsLeft if sum(b.weight for b in piles[c]) >= quota]
+            if newWinners:
+                ballotsToSort = []
+                winners.extend(newWinners)
+                for w in newWinners:
+                    totalVotes = sum(b.weight for b in piles[w])
+                    reweight = (totalVotes-quota)/totalVotes
+                    for b in piles[w]:
+                        b.weight *= reweight
+                    candsLeft.remove(w)
+                    ballotsToSort.extend(piles[w])
+            else:
+                loser, loserVotes = None, float('inf')
+                for cand in candsLeft: #determine who gets eliminated
+                    if sum(b.weight for b in piles[cand]) < loserVotes:
+                        loser = cand
+                        loserVotes = sum(b.weight for b in piles[cand])
+                candsLeft.remove(loser)
+                ballotsToSort = piles[loser]
+        for c in candsLeft:
+            winners.append(c)
+        return winners

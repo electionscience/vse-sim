@@ -110,7 +110,7 @@ class CID:
         self.mNames = [m[0].__name__ + ':' + m[1].__name__ + str(m[2]) for m in ms]
         self.rows = []
         args = (model, nvot, ncand, ms, nwinners, utilChange, numBuckets, sorter, pollingMethod, pollingError, media)
-        with multiprocessing.Pool(processes=1) as pool:
+        with multiprocessing.Pool(processes=7) as pool:
             results = pool.starmap(simOneElectorate, [args + (seed, i) for i in range(niter)])
             for result in results:
                 self.rows.extend(result)
@@ -128,7 +128,8 @@ class CID:
                 else:
                     loserIncents[name][i] += row['incentives'][i]
                 allIncents[name][i] += row['incentives'][i]
-        return allIncents, loserIncents, winnerIncents
+        incentFracts = {name: [i/sum(incents) for i in incents] for name, incents in allIncents.items()}
+        return incentFracts, allIncents, loserIncents, winnerIncents
 
 def simOneElectorate(model, nvot, ncand, ms, nwinners, utilChange, numBuckets, sorter,
                     pollingMethod, pollingError, media, baseSeed=None, i = 0):
