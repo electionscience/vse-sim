@@ -469,10 +469,11 @@ class Approval(makeScoreMethod(1,True)):
     diehardLevels = [1, 4]
     compLevels = [1]
     @classmethod
-    def zeroInfoBallot(cls, utils, electabilities=None, polls=None, pickiness=0, **kw):
+    def zeroInfoBallot(cls, utils, electabilities=None, polls=None, pickiness=0.4, **kw):
         """Returns a ballot based on utils and pickiness
         pickiness=0 corresponds to vaBallot with equal polling for all candidates
         pickiness=1 corresponds to bullet voting
+        pickiness=0.4 seems about optimal under KSModel
 
         >>> Approval.zeroInfoBallot([1,2,3,10], pickiness=0)
         [0, 0, 0, 1]
@@ -520,6 +521,10 @@ class ApprovalTop2(top2(Approval)):
     >>> ApprovalTop2.vaBallot([0,1,2,10],[.5,.5,.3,.2])
     ([0, 0, 1, 1], [0, 1, 2, 3])
     """
+    @classmethod
+    def zeroInfoBallot(cls, utils, **kw):
+        return super().zeroInfoBallot(utils, **kw), cls.prefOrder(utils)
+
     @classmethod
     def bulletBallot(cls, utils, **kw):
         return super().bulletBallot(utils), cls.prefOrder(utils)
@@ -1102,7 +1107,7 @@ class Mj(Mav):
         else:
             return base - 0.5 + (mid-lo) / nvot
 
-class Irv(Method):
+class IRV(Method):
     """
     IRV.
 
@@ -1298,6 +1303,8 @@ class Irv(Method):
                 i -= 1
         #assert list(range(n)) == sorted(ballot)
         assert i == -1
+
+Irv = IRV
 
 class V321(Mav):
     baseCuts = [-.1,.8]

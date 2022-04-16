@@ -4,6 +4,9 @@ import time
 import csv
 import os
 import multiprocessing
+import re
+import matplotlib.pyplot as plt
+from numpy.core.fromnumeric import mean, std
 
 from mydecorators import *
 from methods import *
@@ -31,9 +34,20 @@ class candAffinity:
         myUtil = voter[candIndex]
         return sum((sign(myUtil - u) + 1)*s for u, s in zip(voter, self.candSupport))/2
 
-def influentialBlocs(voters, method, numWinners=1, utilChange=0.1, numBuckets=5, sorter=candAffinity,
+class utilDeviation:
+    def __init__(self, voters): pass
+    def score(self, voter, candIndex):
+        return voter[candIndex] - mean(voter)
+
+class normalizedUtilDeviation:
+    def __init__(self, voters): pass
+    def score(self, voter, candIndex):
+        return (voter[candIndex] - mean(voter))/std(voter)
+
+
+def influentialBlocs(voters, method, numWinners=1, utilChange=0.1, numBuckets=5, sorter=utilDeviation,
                     strat=None, stratArgs = {}, pollingMethod=Approval, pollingStrat=Approval.zeroInfoBallot,
-                    pollingStratArgs={'pickiness':0.3}, media=noisyMedia, pollingError=0.2):
+                    pollingStratArgs={'pickiness':0.7}, media=noisyMedia, pollingError=0.2):
     """
     Uses voters as the base electorate to determine whether candidates have an incentive to appeal
     to various voting blocs, where the voting blocs are determined by ranking voters according to sorter
@@ -56,7 +70,7 @@ def influentialBlocs(voters, method, numWinners=1, utilChange=0.1, numBuckets=5,
             pollingMethod = method
             pollingStrat = method.honBallot
         pollBallots = [pollingStrat(v, numWinners=numWinners, **pollingStratArgs) for v in voters]
-        polls = media(method.results(pollBallots), pollingError) #method.results can't depend on numWinners; this may need to be changed
+        polls = media(pollingMethod.results(pollBallots), pollingError) #method.results can't depend on numWinners; this may need to be changed
         baseBallots = [strat(v,  polls=polls, electabilities=polls, numWinners=numWinners, **stratArgs) for v in voters]
     if isinstance(sorter, type):
         sorter = sorter(voters)
@@ -87,7 +101,7 @@ def influentialBlocs(voters, method, numWinners=1, utilChange=0.1, numBuckets=5,
 class CID:
     @autoassign
     def __init__(self, model, methodsAndStrats, nvot, ncand, niter, nwinners=1,
-            numBuckets=5, sorter=candAffinity, utilChange=0.1,
+            numBuckets=24, sorter=utilDeviation, utilChange=0.1,
             media=noisyMedia, pollingMethod=Approval, pollingError=0.2, seed=None, ):
         """methodsAndStrats is a list of (votingMethod, strat, stratArgs); stratArgs is optional.
         A voting method may be given in place of such a tuple, in which case honBallot will be used.
@@ -115,7 +129,7 @@ class CID:
             for result in results:
                 self.rows.extend(result)
 
-    def histograms(self):
+    def summarize(self):
         nb = len(self.rows[0]['incentives']) #number of buckets
         winnerIncents = {name:[0]*nb for name in self.mNames}
         loserIncents = {name:[0]*nb for name in self.mNames}
@@ -128,8 +142,48 @@ class CID:
                 else:
                     loserIncents[name][i] += row['incentives'][i]
                 allIncents[name][i] += row['incentives'][i]
-        incentFracts = {name: [i/sum(incents) for i in incents] for name, incents in allIncents.items()}
+        incentFracts = {name: [i*self.numBuckets/sum(incents) for i in incents] for name, incents in allIncents.items()}
         return incentFracts, allIncents, loserIncents, winnerIncents
+
+    def chart(self, methodOnly=True):
+        fig, ax = plt.subplots()
+        incentFracts = self.summarize()[0]
+        if methodOnly:
+            incentFracts = {re.match(".*(?=:)", name).group(0): data for name, data in incentFracts.items()}
+        for name, data in incentFracts.items():
+            ax.plot([i/self.numBuckets for i in range(1, self.numBuckets+1)], data, label=name)
+        #ax.set_xlim(1, self.numBuckets)
+        ax.set_xlabel("Voter's support for candidate")
+        ax.set_ylabel("Candidate's incentive to appeal to voter")
+        ax.grid(True)
+        ax.legend()
+        plt.show()
+
+    def saveFile(self, baseName="cidResults", newFile=True):
+        """Prints the aggregated simulation results in an accessible format.
+        """
+        i = 1
+        if newFile:
+            while os.path.isfile(baseName + str(i) + ".csv"):
+                i += 1
+
+        universalInfo = {'nVoters': self.nvot, 'nCands': self.ncand, 'iterations': self.niter,
+                    'winners': self.nwinners, 'model': str(self.model), 'sorter': self.sorter.__name__,
+                    'numBuckets': self.numBuckets, 'utilChange': self.utilChange,
+                    'pollingMethod': self.pollingMethod.__name__, 'pollingError': self.pollingError}
+        fields = ['name', 'baseResult'] + list(range(self.numBuckets)) + list(universalInfo.keys())
+        resultTypeIndices = {'all': 1, 'loss': 2, 'win': 3}
+
+        myFile = open(baseName + (str(i) if newFile else "") + ".csv", "w")
+        dw = csv.DictWriter(myFile, fields, restval="data missing")
+        dw.writeheader()
+        for outcome, index in resultTypeIndices.items():
+            for name, results in self.summarize()[index].items():
+                row = {'name': name, 'baseResult': outcome}
+                row.update({i: result for i, result in enumerate(results)})
+                row.update(universalInfo)
+                dw.writerow(row)
+        myFile.close()
 
 def simOneElectorate(model, nvot, ncand, ms, nwinners, utilChange, numBuckets, sorter,
                     pollingMethod, pollingError, media, baseSeed=None, i = 0):
@@ -146,3 +200,24 @@ def simOneElectorate(model, nvot, ncand, ms, nwinners, utilChange, numBuckets, s
             results.append(dict(incentives=candIncentives, isWinner=i in baseWinners,
                 method=method.__name__, strat=strat.__name__, stratArgs=stratArgs, voterModel=str(model)))
     return results
+
+def showChart(fileName, norm=1, methodOnly=True, forResult='all'):
+    with open(fileName) as file:
+        reader = csv.DictReader(file)
+        fig, ax = plt.subplots()
+        for row in reader:
+            if row['baseResult'] != forResult: continue
+            buckets = int(row['numBuckets'])
+            rawData = [float(row[str(i)]) for i in range(buckets)]
+            if norm == 1:
+                normFactor = sum(rawData)/buckets
+            elif norm == 'max':
+                normFactor = max(rawData)
+            data = [d/normFactor for d in rawData]
+            name = re.match(".*(?=:)", row['name']).group(0) if methodOnly else row['name']
+            ax.plot([(i+.5)/buckets for i in range(buckets)], data, label=name)
+        ax.set_xlabel("Voter's support for candidate")
+        ax.set_ylabel("Candidate's incentive to appeal to voter")
+        ax.grid(True)
+        ax.legend()
+        plt.show()

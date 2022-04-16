@@ -18,10 +18,11 @@ def makeBlock(method):
     BlockVoting.__name__ = "Block" + method.__name__
     return BlockVoting
 
-class BlockApproval(makeBlock(Approval)): pass
-class PBF(makeBlock(Irv)): pass
+class BlockApproval(makeBlock(Approval)): pass #What's used in Fargo
+class PBV(makeBlock(Irv)): pass #Preferential BLock Voting, used in Utah
 class BlockSTAR(makeBlock(STAR)): pass
 class BlockMinimax(makeBlock(Minimax)): pass
+class SNTV(makeBlock(Plurality)): pass #not typically viewed as block voting, but this implements it
 
 class RRV(Score):
     @classmethod
