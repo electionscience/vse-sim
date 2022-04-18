@@ -371,6 +371,28 @@ def makeScoreMethod(topRank=10, asClass=False):
             return [floor((cls.topRank + .99) * (util-bot) / scale) for util in utils]
 
         @classmethod
+        def zeroInfoBallot(cls, utils, exponent=1, bottomSD=1, **kw):
+            """
+            Casts an honest ballot without the use of any polling data.
+            Less influenced by exceptionally bad candidates than honBallot when bottomSD is low.
+            When exponent > 1, spreads out the top scores more than the bottom ones.
+            >>> Score.zeroInfoBallot([0,1.1,2], 2)
+            [0.0, 1.0, 5.0]
+            >>> Score.zeroInfoBallot([0,1.1,2], .5)
+            [0.0, 4.0, 5.0]
+            >>> Score.zeroInfoBallot([0,1,2,3,4,5,6], 2)
+            [0.0, 0.0, 0.0, 0.0, 2.0, 3.0, 5.0]
+            >>> Score.zeroInfoBallot([-10,1,2,3,4,5,6], 2,2)
+            [0.0, 2.0, 3.0, 3.0, 4.0, 5.0, 5.0]
+            >>> Score.zeroInfoBallot([-10,1,2,3,4,5,6], 2,1)
+            [0.0, 1.0, 1.0, 2.0, 3.0, 4.0, 5.0]
+            """
+            expectedUtility = sum(utils)/len(utils)
+            effectiveWorst = max(min(utils), expectedUtility - bottomSD*std(utils))
+            adjustedUtils = [max(u - effectiveWorst, 0)**exponent for u in utils]
+            return cls.interpolatedBallot(adjustedUtils, 0, max(adjustedUtils))
+
+        @classmethod
         def vaBallot(cls, utils, electabilities=None, polls=None, winProbs=None,
         pollingUncertainty=.15, info='e', **kw):
             if info == 'p':
