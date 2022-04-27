@@ -52,7 +52,6 @@ class Method:
         return [cls.winner(cls.results(ballots))]
 
     @classmethod
-    #@rememberBallot
     def honBallot(cls, utils, **kw):
         """Takes utilities and returns an honest ballot
         """
@@ -78,6 +77,21 @@ class Method:
     @classmethod
     def abstain(cls, utils, **kw):
         return [0]*len(utils)
+
+    @classmethod
+    def realisticBullets(cls, utils, electabilities, baseBullets=0.3, slope=0.35, otherStrat=None, **kw):
+        """
+        Randomly bullet votes with bullet voting being more likely when one's favorite is further ahead in the polls
+        """
+        favorite = utils.index(max(utils))
+        margin = electabilities[favorite] - max(electabilities[:favorite] + electabilities[favorite+1:])
+        r = random.Random(utils.id).random()
+        if r < baseBullets + slope*margin:
+            return cls.bulletBallot(utils)
+        else:
+            if otherStrat is None:
+                otherStrat = cls.honBallot
+            return otherStrat(utils, electabilities=electabilities)
 
     @classmethod
     def diehardBallot(cls, utils, intensity, candToHelp, candToHurt, electabilities=None, polls=None):
