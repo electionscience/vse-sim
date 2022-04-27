@@ -35,19 +35,59 @@ class candAffinity:
         return sum((sign(myUtil - u) + 1)*s for u, s in zip(voter, self.candSupport))/2
 
 class utilDeviation:
-    def __init__(self, voters): pass
+    def __init__(self, voters, **kw): pass
     def score(self, voter, candIndex):
         return voter[candIndex] - mean(voter)
 
 class normalizedUtilDeviation:
-    def __init__(self, voters): pass
+    def __init__(self, voters, **kw): pass
     def score(self, voter, candIndex):
         return (voter[candIndex] - mean(voter))/std(voter)
 
+class weightedUtilDev:
+    """
+    Like normalizedUtilDeviation, but weights the means and standard
+    >>> chdh = [Voter(us) for us in [[10,9,1,0]]*10+[[9,10,1,0]]*9+[[0,1,10,2]]*15+[[0,1,2,20]]]
+    >>> wcd = weightedUtilDev(chdh)
+    >>> wcd.score(chdh[0], 0)
+    0.23824257425742565
+    >>> wcd.score(chdh[0], 1)
+    0.18409653465346526
+    >>> wcd.score(chdh[0], 2)
+    -0.24907178217821788
+    >>> wcd.score(chdh[0], 3)
+    -0.30321782178217827
+    >>> wcd.score(chdh[-1], 0)
+    -0.15965671872583886
+    >>> wcd.score(chdh[-1], 1)
+    -0.06494510592237515
+    >>> wcd.score(chdh[-1], 2)
+    0.02976650688108858
+    >>> wcd.score(chdh[-1], 3)
+    1.7345755373434355
+    >>> ch = [Voter(us) for us in [[10,9,1]]*10+[[9,10,1]]*9+[[0,1,10]]*15]
+    >>> wc = weightedUtilDev(ch)
+    >>> wc.score(ch[0],0)
+    0.23448275862068957
+    >>> wc.score(ch[0],2)
+    -0.2637931034482759
+    """
+    def __init__(self, voters, strat=Plurality.honBallot, method=Plurality, stratArgs={}):
+        unnormalizedSupport = method.results(strat(v, **stratArgs) for v in voters)
+        normFactor = sum(unnormalizedSupport)
+        self.candSupport = [s/normFactor for s in unnormalizedSupport]
+        self.scores = {}
+        for voter in voters:
+            wmean = sum(util*self.candSupport[i] for i, util in enumerate(voter))
+            wstd = sum(s*(u-wmean)**2 for s, u in zip(self.candSupport, voter))
+            self.scores[voter.id] = [(util - wmean)/wstd for util in voter]
 
-def influentialBlocs(voters, method, numWinners=1, utilChange=0.1, numBuckets=5, sorter=utilDeviation,
+    def score(self, voter, candIndex):
+        return self.scores[voter.id][candIndex]
+
+def influentialBlocs(voters, method, numWinners=1, utilChange=0.1, numBuckets=5, sorter=normalizedUtilDeviation,
                     strat=None, stratArgs = {}, pollingMethod=Approval, pollingStrat=Approval.zeroInfoBallot,
-                    pollingStratArgs={'pickiness':0.7}, media=noisyMedia, pollingError=0.2):
+                    pollingStratArgs={'pickiness':0.7}, media=noisyMedia, pollingError=0.2, sorterArgs={}):
     """
     Uses voters as the base electorate to determine whether candidates have an incentive to appeal
     to various voting blocs, where the voting blocs are determined by ranking voters according to sorter
@@ -101,7 +141,7 @@ def influentialBlocs(voters, method, numWinners=1, utilChange=0.1, numBuckets=5,
 class CID:
     @autoassign
     def __init__(self, model, methodsAndStrats, nvot, ncand, niter, nwinners=1,
-            numBuckets=24, sorter=utilDeviation, utilChange=0.1,
+            numBuckets=24, sorter=normalizedUtilDeviation, utilChange=0.1,
             media=noisyMedia, pollingMethod=Approval, pollingError=0.2, seed=None, ):
         """methodsAndStrats is a list of (votingMethod, strat, stratArgs); stratArgs is optional.
         A voting method may be given in place of such a tuple, in which case honBallot will be used.

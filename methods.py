@@ -371,7 +371,7 @@ def makeScoreMethod(topRank=10, asClass=False):
             return [floor((cls.topRank + .99) * (util-bot) / scale) for util in utils]
 
         @classmethod
-        def zeroInfoBallot(cls, utils, exponent=1, bottomSD=1, **kw):
+        def zeroInfoBallot(cls, utils, exponent=1.4, bottomSD=0.8, **kw):
             """
             Casts an honest ballot without the use of any polling data.
             Less influenced by exceptionally bad candidates than honBallot when bottomSD is low.
