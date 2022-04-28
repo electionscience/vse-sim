@@ -593,6 +593,53 @@ def BulletyApprovalWith(bullets=0.5, asClass=False):
         return BulletyApproval
     return BulletyApproval()
 
+def oldCoefficients(utils, electabilities, pollingUncertainty=0.15, scoreImportance=0.17, probFunc=adaptiveTieFor2):
+    """Don't use"""
+    winProbs = pollsToProbs(electabilities, pollingUncertainty)
+    runoffCoefficients = [[(u1 - u2)*p1*p2
+                           for u2, p2 in zip(utils, winProbs)]
+                          for u1, p1 in zip(utils, winProbs)]
+    eRunnerUpUtil = sum(u*p for u, p in zip(utils, probFunc(electabilities)))
+    #scoreCoefficients[i] is how vauable it is for i to have a high score
+    scoreCoefficients = [(u-eRunnerUpUtil)*p*scoreImportance
+                         for u, p in zip(utils, probFunc(electabilities))]
+    return scoreCoefficients, runoffCoefficients
+
+def getCoefficients(utils, electabilities, pollingUncertainty=0.15, scoreImportance=0.2):
+    """Don't use"""
+    nCands = len(utils)
+    winProbs = pollsToProbs(electabilities, pollingUncertainty)
+    scoreC = [0]*nCands
+    runoffC = [[(u1 - u2)*p1*p2
+                for u2, p2 in zip(utils, winProbs)]
+               for u1, p1 in zip(utils, winProbs)]
+    for winner in range(nCands):
+        runnerUpProbs = list(pollsToProbs(electabilities[:winner] + electabilities[winner+1:], pollingUncertainty))
+        runnerUpProbs = runnerUpProbs[:winner] + [0] + runnerUpProbs[winner:]
+        for runnerUp in range(nCands):
+            if winner == runnerUp: continue
+            orderProb = winProbs[winner] * runnerUpProbs[runnerUp]
+            #minF, maxF = min(winner, runnerUp), max(winner, runnerUp)
+            #thirdProbs = pollsToProbs(
+                    #electabilities[:minF] + electabilities[minF+1:maxF] + electabilities[maxF+1:], pollingUncertainty)
+            for third in range(nCands):
+                if third == winner or third == runnerUp:
+                    continue
+                upsetProb = pollsToProbs([electabilities[winner], (electabilities[runnerUp] + electabilities[third])/2], pollingUncertainty)[1]
+                scoreC[third] += orderProb*runnerUpProbs[third]*upsetProb*(utils[third] - utils[runnerUp])*scoreImportance
+    return scoreC, runoffC
+
+def simpleCoefficients(utils, electabilities, pollingUncertainty=0.15, scoreImportance=0.2):
+    """Gives the score and runoff coefficients for STAR's vaBallot."""
+    nCands = len(utils)
+    winProbs = pollsToProbs(electabilities, pollingUncertainty)
+    scoreC = [sum((u1 - u2)*p1*p2*(1-p1-p2)*scoreImportance #approximates the probability that 1 and 2 will tie for the second runoff slot and the win in the runoff
+                  for u2, p2 in zip(utils, winProbs))
+               for u1, p1 in zip(utils, winProbs)]
+    runoffC = [[(u1 - u2)*p1*p2
+                for u2, p2 in zip(utils, winProbs)]
+               for u1, p1 in zip(utils, winProbs)]
+    return scoreC, runoffC
 
 def makeSTARMethod(topRank=5):
     "STAR Voting"
@@ -627,7 +674,7 @@ def makeSTARMethod(topRank=5):
 
         @classmethod
         def vaBallot(cls, utils, electabilities=None, polls=None, winProbs=None,
-        pollingUncertainty=.15, scoreImportance=0.17, info='e', probFunc=adaptiveTieFor2, **kw):
+        pollingUncertainty=.15, scoreImportance=0.17, info='e', coeffFunc=simpleCoefficients, **kw):
             """
             >>> STAR.vaBallot([0,1,2,3,4,5],[.5,.5,.5,.5,.5,.5],scoreImportance=0.1)
             [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]
@@ -643,13 +690,8 @@ def makeSTARMethod(topRank=5):
             if not winProbs:
                 winProbs = pollsToProbs(electabilities, pollingUncertainty)
             #runoffCoefficients[i][j] is how valuable it is to score i over j
-            runoffCoefficients = [[(u1 - u2)*p1*p2
-                                   for u2, p2 in zip(utils, winProbs)]
-                                  for u1, p1 in zip(utils, winProbs)]
-            eRunnerUpUtil = sum(u*p for u, p in zip(utils, probFunc(electabilities)))
             #scoreCoefficients[i] is how vauable it is for i to have a high score
-            scoreCoefficients = [scoreImportance*(u-eRunnerUpUtil)*p
-                                 for u, p in zip(utils, probFunc(electabilities))]
+            scoreCoefficients, runoffCoefficients = coeffFunc(utils, electabilities, pollingUncertainty, scoreImportance)
 
             #create a tentative ballot
             numCands = len(utils)

@@ -35,7 +35,7 @@ library(scatterD3)
 # 
 # fvse = rbind(fvse,fread("wtf2.csv"))
 
-fvse = fread("manymethods1.csv")
+fvse = fread("starvse31.csv")
 numVoters = mean(fvse[,numVoters])
 vses = fvse[method != "ApprovalPoll",list(VSE=mean((r1WinnerUtil - meanCandidateUtil) / 
                       (magicBestUtil - meanCandidateUtil))),by=.(method,backgroundStrat)]
@@ -70,6 +70,21 @@ fromawares = fvse[((backgroundStrat=="vaBallot"  & method != "Minimax") | (backg
        fgHarmedUtilDiff=mean(fgHarmedUtilDiff / (magicBestUtil - meanCandidateUtil) / numVoters)),
      by=.(method,backgroundStrat, fgStrat, fgArgs, fgTargets)]
 fromawares
+
+fromall = fvse[method !="ApprovalPoll",
+                list(
+                  vse=mean((r1WinnerUtil - meanCandidateUtil) / (magicBestUtil - meanCandidateUtil)),
+                  fgMatters=mean(fgUtilDiff != 0),
+                  VSEDiff=mean((totalUtil - r1WinnerUtil) / (magicBestUtil - meanCandidateUtil)),
+                  #margStrategicRegret=mean(margStrategicRegret),
+                  firstDeciderUtilDiff=mean(firstDeciderUtilDiff),
+                  deciderUtilDiffSum=mean(deciderUtilDiffSum),
+                  avgStrategicRegret=mean((avgStrategicRegret) / (magicBestUtil - meanCandidateUtil) / numVoters),
+                  fgHelpedUtilDiff=mean((fgHelpedUtilDiff) / (magicBestUtil - meanCandidateUtil) / numVoters),
+                  fgHarmedUtilDiff=mean((fgHarmedUtilDiff) / (magicBestUtil - meanCandidateUtil) / numVoters)
+                ),
+                by=.(method,backgroundStrat, bgArgs, fgStrat, fgArgs, fgTargets)]
+fromall
 
 besttargets = function(grouped) {
   grouped[,target:=fgTargets[order(-avgStrategicRegret)[1]], by=.(method,backgroundStrat, fgStrat, fgArgs)]
