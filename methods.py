@@ -629,7 +629,7 @@ def getCoefficients(utils, electabilities, pollingUncertainty=0.15, scoreImporta
                 scoreC[third] += orderProb*runnerUpProbs[third]*upsetProb*(utils[third] - utils[runnerUp])*scoreImportance
     return scoreC, runoffC
 
-def simpleCoefficients(utils, electabilities, pollingUncertainty=0.15, scoreImportance=0.2):
+def simpleCoefficients(utils, electabilities, pollingUncertainty=0.3, scoreImportance=0.3):
     """Gives the score and runoff coefficients for STAR's vaBallot."""
     nCands = len(utils)
     winProbs = pollsToProbs(electabilities, pollingUncertainty)
@@ -674,7 +674,7 @@ def makeSTARMethod(topRank=5):
 
         @classmethod
         def vaBallot(cls, utils, electabilities=None, polls=None, winProbs=None,
-        pollingUncertainty=.15, scoreImportance=0.17, info='e', coeffFunc=simpleCoefficients, **kw):
+        pollingUncertainty=.3, scoreImportance=0.3, info='e', coeffFunc=simpleCoefficients, **kw):
             """
             >>> STAR.vaBallot([0,1,2,3,4,5],[.5,.5,.5,.5,.5,.5],scoreImportance=0.1)
             [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]
@@ -687,8 +687,8 @@ def makeSTARMethod(topRank=5):
             """
             if info == 'p':
                 electabilities = polls
-            if not winProbs:
-                winProbs = pollsToProbs(electabilities, pollingUncertainty)
+            #if not winProbs:
+                #winProbs = pollsToProbs(electabilities, pollingUncertainty)
             #runoffCoefficients[i][j] is how valuable it is to score i over j
             #scoreCoefficients[i] is how vauable it is for i to have a high score
             scoreCoefficients, runoffCoefficients = coeffFunc(utils, electabilities, pollingUncertainty, scoreImportance)
