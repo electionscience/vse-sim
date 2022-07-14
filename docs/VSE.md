@@ -12,7 +12,7 @@ Voter Satisfaction Efficiency (VSE) is a way of measuring the outcome quality a 
 
 VSE is expressed as a percentage. A voting method which could read voters minds and always pick the candidate that would lead to the highest average happiness would have a VSE of 100%. A method which picked a candidate completely at random would have a VSE of 0%. In theory, VSEs down to negative 100% would be possible if a voting method did worse than a random pick, but in practice, most real-world voting methods — even horrible ones such as plurality voting — can at least beat that mark.
 
-> Previously, a similar idea as VSE was known as “Bayesian Regret” or BR. They are related by the following formula: VSE(method)=1-[BR(method) / BR(Random Ballot)]
+> Previously, a similar idea as VSE was known as “Bayesian Regret” or BR. They are related by the following formula: VSE(method)=1-[BR(method) / BR(Random Winner)]
 
 # What are the philosophical underpinnings of VSE?
 
