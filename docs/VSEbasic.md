@@ -1,5 +1,6 @@
 ---
 title: Voter Satisfaction Efficiency (VSE) summary
+layout: default
 ---
 
 Voter Satisfaction Efficiency, or VSE, is a measure of the quality of a election method. A VSE of 100% would mean an impossibly perfect method; 0% or lower would mean that the society would be better off picking a winner at random.
@@ -8,7 +9,7 @@ To calculate VSE, you simulate thousands of elections, using voters who cluster 
 
 I've run VSE simulations for a number of methods. Here's a chart with only the best and most well-known methods:
 
-[![VSE](../5vse.png)](http://rpubs.com/Jameson-Quinn/VSE5key)
+[![VSE](./5vse.png)](http://rpubs.com/Jameson-Quinn/VSE5key)
 
 * *Plurality voting*, also known as choose-one plurality or first past the post: This is the most common election method in the English-speaking world. It's also in most situations the *worst* out of all the methods I've tested, with a VSE of only around *75%*. It often gets "spoiled" results, where a weaker candidate wins due to vote-splitting; it encourages strategy; and it leads to uncompetitive politics, dominated by big parties (and their big donors) who get their votes as much through fear as through hope.
 
@@ -34,4 +35,4 @@ Other assumptions about *approval voting*:
 
 * The issue is that in approval voting, it's not entirely clear what constitutes an "honest vote"; how many candidates should a voter approve? This has led some people to criticize the method, suggesting that it leads to too many "bullet votes" for just one candidate. However, when I tested the method with realistic clusters of voters and issues, I found that including up to 70% of bullet voters actually improved the outcome by a tiny amount, making it slightly more robust against strategy (whether or not the strategic voters bullet voted). Thus, I find this criticism to be without merit.
 
-If you want to see a figure which includes all of the above methods, see [here](../VSE).
+If you want to see a figure which includes all of the above methods, see [here](./).
