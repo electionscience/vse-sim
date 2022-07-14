@@ -261,7 +261,22 @@ def BulletyApprovalWith(bullets=0.5, asClass=False):
 
 
 def Srv(topRank=10):
-    "Score Runoff Voting"
+    """Score Runoff Voting
+        >>> Srv().resultsFor(DeterministicModel(3)(5,3),Irv().honBallot)["results"]
+        [0.8, 1.2, 1.21]
+        >>> Srv().results([[0,1,2]])[2]
+        2.0
+        >>> Srv().results([[0,1,2],[2,1,0]])[1]
+        1.0
+        >>> Srv().results([[0,1,2]] * 4 + [[2,1,0]] * 3 + [[1,2,0]] * 2)
+        [0.8888888888888888, 1.2222222222222223, 0.8888888888888888]
+        >>> Srv().results([[2,1,0]] * 100 + [[1,0,2]] + [[0,2,1]] * 100)
+        [1.502537313432836, 1.492537313432836, 0.5074626865671642]
+        >>> Srv().results([[1,2,0]] * 8 + [[2,0,1]] * 6 + [[0,1,2]] * 5)
+        [1.0526315789473684, 1.105263157894737, 0.8421052631578947]
+        >>> Srv().results([[0,4,3,1,2]] * 5 + [[1,4,3,2,1]] * 4 + [[2,3,4,0,1]] * 6)
+        [1.0666666666666667, 3.6, 3.4, 0.8666666666666667, 1.3333333333333333]
+    """
 
     score0to = Score(topRank,True)
 
@@ -270,17 +285,7 @@ def Srv(topRank=10):
         stratTargetFor = Method.stratTarget3
 
         def results(self, ballots, **kwargs):
-            """Srv results.
-
-            >>> Srv().resultsFor(DeterministicModel(3)(5,3),Irv().honBallot)["results"]
-            [0, 1, 2]
-            >>> Srv().results([[0,1,2]])[2]
-            2
-            >>> Srv().results([[0,1,2],[2,1,0]])[1]
-            0
-            >>> Srv().results([[0,1,2]] * 4 + [[2,1,0]] * 3 + [[1,2,0]] * 2)
-            [2, 0, 1]
-            """
+            """Srv results."""
             baseResults = super(Srv0to, self).results(ballots, **kwargs)
             (runnerUp,top) = sorted(range(len(baseResults)), key=lambda i: baseResults[i])[-2:]
             upset = sum(sign(ballot[runnerUp] - ballot[top]) for ballot in ballots)
@@ -493,23 +498,76 @@ class Irv(Method):
 
     stratTargetFor = Method.stratTarget3
 
-    def resort(self, ballots, loser, ncand, piles):
-        """No error checking; only works for exhaustive ratings."""
-        #print("resort",ballots, loser, ncand)
-        #print(piles)
-        for ballot in ballots:
-            if loser < 0:
-                nextrank = ncand - 1
+    def buildPreferenceSchedule(self, ballots):
+        """Gets a dictionary of the form {ranking as tuple, vote count}"""
+
+        prefs = {}
+        for b in ballots:
+            key = tuple(b)
+            if key in prefs:
+                prefs[key] += 1
             else:
-                nextrank = ballot[loser] - 1
-            while 1:
-                try:
-                    piles[ballot.index(nextrank)].append(ballot)
-                    break
-                except AttributeError:
-                    nextrank -= 1
-                    if nextrank < 0:
-                        raise
+                prefs[key] = 1
+        return prefs
+
+    def eliminateCandidate(self, inputPrefs, toEliminate):
+        """Gets a dictionary of the form {ranking as tuple, vote count} with toEliminate removed"""
+
+        if not isinstance(toEliminate, CandidateWithCount):
+            return inputPrefs
+
+        prefs = {}
+        for ranking, votes in inputPrefs.items():
+            newranking = []
+            for candidate in ranking:
+                if candidate != toEliminate.candidate:
+                    newranking.append(candidate)
+            if (len(newranking) == 0):
+                continue
+            newkey = tuple(newranking)
+            if newkey in prefs:
+                prefs[newkey] += votes
+            else:
+                prefs[newkey] = votes
+        return prefs
+
+    def candidateVotes(self, prefSchedule):
+        """Gets a list of CandidateWithCount, from highest to lowest"""
+        candidates = {}
+        for ranking, votes in prefSchedule.items():
+            candidate = ranking[0]
+            if candidate in candidates:
+                candidates[candidate].votes += votes
+            else:
+                candidates[candidate] = CandidateWithCount(candidate, votes)
+
+        # Simply for VSE which requires ranking of non-winners; in real election we don't really
+        # care
+        alternates = []
+        trackedalt = set()
+        for ranking, votes in prefSchedule.items():
+            for alternate in ranking[1:]:
+                if (alternate not in candidates) and alternate not in trackedalt:
+                    alternates.append(CandidateWithCount(alternate, 0))
+                    trackedalt.add(alternate)
+
+        return sorted(candidates.values(), key=lambda c: (c.votes, c.candidate), reverse = True) + alternates
+
+    def getLeast(self, voteRanking, keep = {}):
+        for candidate in reversed(voteRanking):
+            if not candidate.candidate in keep:
+                return candidate
+        pass
+
+    def runIrv(self, remaining, ncand):
+        """IRV results."""
+        results = [-1] * ncand
+        for i in range(ncand):
+            votes = self.candidateVotes(remaining)
+            toEliminate = self.getLeast(votes)
+            results[ncand - i - 1] = toEliminate.candidate
+            remaining = self.eliminateCandidate(remaining, toEliminate)
+        return results
 
     def results(self, ballots, **kwargs):
         """IRV results.
@@ -525,20 +583,7 @@ class Irv(Method):
         """
         if type(ballots) is not list:
             ballots = list(ballots)
-        ncand = len(ballots[0])
-        results = [-1] * ncand
-        piles = [[] for i in range(ncand)]
-        loserpile = ballots
-        loser = -1
-        for i in range(ncand):
-            self.resort(loserpile, loser, ncand, piles)
-            negscores = ["x" if isnum(pile) else -len(pile)
-                         for pile in piles]
-            loser = self.winner(negscores)
-            results[loser] = i
-            loserpile, piles[loser] = piles[loser], -1
-        return results
-
+        return self.runIrv(self.buildPreferenceSchedule(ballots), len(ballots[0]))
 
     @staticmethod #cls is provided explicitly, not through binding
     @rememberBallot
@@ -585,6 +630,101 @@ class Irv(Method):
                 i -= 1
         #assert list(range(n)) == sorted(ballot)
         assert i == -1
+        
+class IrvPrime(Irv):
+    """
+    IRV Prime.
+    
+    See https://electowiki.org/wiki/IRV_Prime
+    """
+
+    stratTargetFor = Method.stratTarget3
+
+    def results(self, ballots, **kwargs):
+        """IRV Prime results.
+
+        >>> IrvPrime().results([[0,1,2]])[2]
+        2
+        >>> IrvPrime().results([[0,1,2],[2,1,0]])[1]
+        0
+        >>> IrvPrime().results([[0,1,2]] * 4 + [[2,1,0]] * 3 + [[1,2,0]] * 2)
+        [1, 2, 0]
+        >>> IrvPrime().results([[2,1,0]] * 100 + [[1,0,2]] + [[0,2,1]] * 100)
+        [1, 0, 2]
+        >>> # Favorite betrayal example from http://rangevoting.org/IncentToExagg.html
+        >>> IrvPrime().results([[1,2,0]] * 8 + [[2,0,1]] * 6 + [[0,1,2]] * 5)
+        [0, 1, 2]
+        >>> IrvPrime().results([[0,4,3,1,2]] * 5 + [[1,4,3,2,1]] * 4 + [[2,3,4,0,1]] * 6)
+        [4, 2, 3, 0, 1]
+        >>> # Elections 3-5 from http://votingmatters.org.uk/ISSUE6/P4.HTM
+        >>> IrvPrime().results([[0,1,2,3,4,5]] * 12 + [[2,0,1,3,4,5]] * 11 + [[1,2,0,3,4,5]] * 10 +
+        ...     [[3,4,5]] * 27)
+        [1, 2, 3, 0, 4, 5]
+        >>> IrvPrime().results([[0,1]] * 11 + [[1]] * 7 + [[2]] * 12)
+        [1, 2, 0]
+        >>> IrvPrime().results([[0,3,2,1]] * 5 + [[1,2,0,3]] * 5 + [[2,0,1,3]] * 8 +
+        ...    [[3,0,1,2]] * 4 + [[3,1,2,0]] * 8)
+        [0, 3, 2, 1]
+        >>> IrvPrime().results([[0,2,1,3]] * 6 + [[0,3,1,2]] * 3 + [[0,3,2,1]] * 3 +
+        ...     [[1,2,0,3]] * 4 + [[2,0,1,3]] * 4 + [[3,1,2,0]] * 5)
+        [2, 0, 3, 1]
+        >>> # Failure of later-no-harm
+        >>> IrvPrime().results([[0, 1, 2]] * 32 + [[0, 2, 1]] * 20 + [[1,2,0]] * 30 +
+        ...     [[1,0,2]] * 21 + [[2,0,1]] * 30 + [[2,1,0]] * 20)
+        [2, 0, 1]
+        >>> IrvPrime().results([[0, 1, 2]] * 32 + [[0, 2, 1]] * 20 + [[1,2,0]] * 30 +
+        ...     [[1,0,2]] * 21 + [[2,1,0]] * 30 + [[2,1,0]] * 20)
+        [1, 0, 2]
+        """
+
+        if type(ballots) is not list:
+            ballots = list(ballots)
+
+        remaining = self.buildPreferenceSchedule(ballots)
+        ncand = len(self.candidateVotes(remaining))
+        classic = self.runIrv(remaining, ncand)
+
+        # Keep the winner from the classic IRV
+        winners = {classic[0]}
+
+        # Find all candidates that can beat classic IRV winner; this may be a superset
+        # of schwartz/smith, but it's all that matters
+        winnersPrime = set()
+        for possibleWinner in range(ncand):
+            if possibleWinner in winners:
+                continue
+
+            numWins = 0
+            numLosses = 0
+            for ranking, votes in remaining.items():
+                possibleWinnerRanking = winnerRanking = len(ranking) + 1
+                for pos in range(len(ranking)):
+                    if ranking[pos] == possibleWinner:
+                        possibleWinnerRanking = pos
+                    # We can change this to a loop if there's > 1 winner
+                    elif ranking[pos] == next(iter(winners)):
+                        winnerRanking = pos
+                if possibleWinnerRanking < winnerRanking:
+                    numWins += votes
+                elif winnerRanking < possibleWinnerRanking:
+                    numLosses += votes
+            if numWins > numLosses:
+                winnersPrime.add(possibleWinner)
+
+        # Now re-run IRV preserving all winners + winners prime
+        keepers = winners.union(winnersPrime)
+        results = [-1] * ncand
+        for i in range(ncand):
+            votes = self.candidateVotes(remaining)
+            toEliminate = self.getLeast(votes, keepers)
+            if not isinstance(toEliminate, CandidateWithCount):
+                # Begin "step 4", i.e. continue elimination without preserving anyone
+                keepers = {}
+                toEliminate = self.getLeast(votes)
+            results[ncand - i - 1] = toEliminate.candidate
+            remaining = self.eliminateCandidate(remaining, toEliminate)
+
+        return results
 
 class V321(Mav):
     baseCuts = [-.1,.8]

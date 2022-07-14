@@ -348,3 +348,8 @@ def rememberBallots(fun):
     getAndRemember.__name__ = fun.__name__
     getAndRemember.allTallyKeys = lambda:[]
     return getAndRemember
+
+class CandidateWithCount:
+    def __init__(self, c = [], v = 0):
+        self.candidate = c
+        self.votes = v
