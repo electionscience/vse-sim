@@ -92,7 +92,7 @@ The strategy models include various mixes of the following possibilities:
 * Plurality voting. This is one of the worst voting methods, but also the most commonly-used, especially in English-speaking countries.
 * Majority Approval Voting (MAV): A median-based / Bucklin method.
 * Majority Judgment (MJ): Another median-based / quasi-Bucklin method.
-* IRV: A ranked method; used in a significant number of political jurisdictions. Also called “the alternative vote”, or (incorrectly) “Ranked Choice Voting (RCV)”.
+* IRV/RCV: Instant Runoff Voting / Ranked Choice Voting -  A ranked method; used in a significant number of political jurisdictions. Also called “the alternative vote”.
 * Schulze: a Condorcet method.
 * Rp (Ranked Pairs): a Condorcet method.
 * Approval voting: Voters approve as many candidates as they like, and the most-approved wins. In my graphs, this is split into two methods:
@@ -131,7 +131,7 @@ The types are:
 * “Condorcet cycle”: elections where there is an honest Condorcet cycle for first place. These are often the hardest elections to find a good winner for. This is about 2% of elections in the voter model I used.
 * “Easy”: Elections where the honest Condorcet winner is also the honest Plurality winner (and which don’t fit the above category). Any reasonable election method should have an easy time finding the “correct” winner in such elections. This is almost 50% of elections in the voter model I used.
 * “Spoiler”: Elections which don’t fit either of the above, but where the honest Condorcet winner would be the honest winner in a plurality runoff among the top 3 candidates by a Condorcet method. Most voting method other than plurality can usually do well in these scenarios. This is about 9% of elections in the voter model I used.
-* “Center squeeze”: Elections where the honest Condorcet winner would come 3rd in said runoff. These scenarios are a problem for IRV, but are not handled too badly by most other methods. This is about 9% of elections in the voter model I used.
+* “Center squeeze”: Elections where the honest Condorcet winner would come 3rd in said runoff. These scenarios are a problem for IRV/RCV, but are not handled too badly by most other methods. This is about 9% of elections in the voter model I used.
 * “Chicken dilemma”: Elections which are not “Center Squeeze”, but where the honest winner of said runoff would be 3rd place in Condorcet. In many methods these elections may be particularly problematic in real life, where voters’ strategy can react to their expectations of others’ strategy; but in simulated elections, this effect is moderated by the fact that voters are arbitrarily set to be strategic or not. This is about 7% of elections in the voter model I used.
 * “Other”: Elections which fit none of the categories above. This is about 25% of elections in the voter model I used.
 
