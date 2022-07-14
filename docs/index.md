@@ -47,7 +47,7 @@ VSE cannot measure:
 - The effects on campaign behavior.
 - Any desirable characteristics of a voting method that do not directly relate to outcome (who wins).
 
-# What are the various voter models that were used to get the VSE numbers below?
+## What are the various voter models that were used to get the VSE numbers below?
 
 There are three basic models. The first two are simple but unrealistic; the third is more complex but hopefully more realistic.
 
@@ -106,7 +106,7 @@ The strategy models include various mixes of the following possibilities:
   - Find 2 Finalists: the semifinalists with the fewest rejections.
   - Find 1 winner: the finalist who is rated above the other on more ballots.
 
-# OK, can I see some results?
+## OK, can I see some results?
 
 Click to go to interactive versions of the following graphs:
 
