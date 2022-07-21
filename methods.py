@@ -371,7 +371,7 @@ def makeScoreMethod(topRank=10, asClass=False):
             return [floor((cls.topRank + .99) * (util-bot) / scale) for util in utils]
 
         @classmethod
-        def zeroInfoBallot(cls, utils, exponent=1.4, bottomSD=0.8, **kw):
+        def zeroInfoBallot(cls, utils, exponent=2, bottomSD=float('inf'), **kw):
             """
             Casts an honest ballot without the use of any polling data.
             Less influenced by exceptionally bad candidates than honBallot when bottomSD is low.
@@ -391,6 +391,20 @@ def makeScoreMethod(topRank=10, asClass=False):
             effectiveWorst = max(min(utils), expectedUtility - bottomSD*std(utils))
             adjustedUtils = [max(u - effectiveWorst, 0)**exponent for u in utils]
             return cls.interpolatedBallot(adjustedUtils, 0, max(adjustedUtils))
+
+        @classmethod
+        def exaggeratedBallot(cls, utils, pickiness=0.4, **kw):
+            """Returns a ballot based on utils and pickiness
+            with all candidates receiving either 0 or the maximum score.
+            pickiness=0 corresponds to vaBallot with equal polling for all candidates
+            pickiness=1 corresponds to bullet voting
+            pickiness=0.4 seems about optimal under KSModel
+            """
+            expectedUtility = sum(u for u in utils)/len(utils)
+            best = max(utils)
+            normalizedUtils = [(u - expectedUtility)/(best - expectedUtility)
+                               for u in utils]
+            return [cls.topRank if u >= pickiness else 0 for u in normalizedUtils]
 
         @classmethod
         def vaBallot(cls, utils, electabilities=None, polls=None, winProbs=None,
@@ -543,6 +557,17 @@ class ApprovalTop2(top2(Approval)):
     >>> ApprovalTop2.vaBallot([0,1,2,10],[.5,.5,.3,.2])
     ([0, 0, 1, 1], [0, 1, 2, 3])
     """
+    @classmethod
+    def vaBallot2(cls, utils, electabilities=None, polls=None, winProbs=None,
+                    pollingUncertainty=.15, info='e', **kw):
+        if info == 'p':
+            electabilities = polls
+        if not winProbs:
+            winProbs = pollsToProbs(electabilities, pollingUncertainty)
+        return [1 if
+                sum((u1 - u2)*p1*p2*(1-p1-p2) for u2, p2 in zip(utils, winProbs)) > 0 else 0
+                for u1, p1 in zip(utils, winProbs)], cls.prefOrder(utils)
+
     @classmethod
     def zeroInfoBallot(cls, utils, **kw):
         return super().zeroInfoBallot(utils, **kw), cls.prefOrder(utils)

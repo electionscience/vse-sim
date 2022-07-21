@@ -87,7 +87,7 @@ class weightedUtilDev:
 
 def influentialBlocs(voters, method, numWinners=1, utilChange=0.1, numBuckets=5, sorter=normalizedUtilDeviation,
                     strat=None, stratArgs = {}, pollingMethod=Approval, pollingStrat=Approval.zeroInfoBallot,
-                    pollingStratArgs={'pickiness':0.7}, media=noisyMedia, pollingError=0.2, sorterArgs={}):
+                    pollingStratArgs={'pickiness':0.7}, pollAfterPert=False, media=noisyMedia, pollingError=0.2, sorterArgs={}):
     """
     Uses voters as the base electorate to determine whether candidates have an incentive to appeal
     to various voting blocs, where the voting blocs are determined by ranking voters according to sorter
@@ -101,6 +101,8 @@ def influentialBlocs(voters, method, numWinners=1, utilChange=0.1, numBuckets=5,
     >>> influentialBlocs([Voter([0,1,2])]*3+[Voter([0,2,1])]*3+[Voter([2,1,0])]*4, Plurality, utilChange = 1.5)
     ([[0, 0, 0, 1, 1], [1, 1, 1, 0, 0], [0, 0, 1, 0, 0]], [0], [0.4, 0.3, 0.3])
     """
+    numCands = len(voters[0])
+    numVoters = len(voters)
     if strat is None:
         strat = method.honBallot
         polls = None
@@ -109,27 +111,42 @@ def influentialBlocs(voters, method, numWinners=1, utilChange=0.1, numBuckets=5,
         if pollingMethod is None:
             pollingMethod = method
             pollingStrat = method.honBallot
-        pollBallots = [pollingStrat(v, numWinners=numWinners, **pollingStratArgs) for v in voters]
-        polls = media(pollingMethod.results(pollBallots), pollingError) #method.results can't depend on numWinners; this may need to be changed
+        basePollBallots = [pollingStrat(v, numWinners=numWinners, **pollingStratArgs) for v in voters]
+        pollErrors = [random.gauss(0, pollingError/2) for i in range(numCands)]
+        polls = [min(1, max(0, r + e)) for r, e in zip(pollingMethod.results(basePollBallots), pollErrors)]
+        #polls = media(pollingMethod.results(pollBallots), pollingError) #method.results can't depend on numWinners; this may need to be changed
         baseBallots = [strat(v,  polls=polls, electabilities=polls, numWinners=numWinners, **stratArgs) for v in voters]
     if isinstance(sorter, type):
         sorter = sorter(voters)
     baseWinners = method.winnerSet(baseBallots, numWinners)
     baseResults = method.results(baseBallots)
-    numCands = len(voters[0])
-    numVoters = len(voters)
     isIncentive = [[] for i in range(numCands)]
-    #isIncentive [c][b] is 1 if candidate c is incentivized to appeal to the bth bucket of voters, 0 otherwise
+    #isIncentive[c][b] is 1 if candidate c is incentivized to appeal to the bth bucket of voters, 0 otherwise
     for cand in range(numCands):
         utilShifts = [0]*numCands
         utilShifts[cand] = -utilChange if cand in baseWinners else utilChange
         sVoters, sBallots = zip(*sorted(zip(voters, baseBallots), key=lambda x: sorter.score(x[0], cand)))
         sortedVoters, sortedBallots = list(sVoters), list(sBallots)
         for b in range(numBuckets):
+            if pollAfterPert:
+                firstVoters = sortedVoters[:int(b*numVoters/numBuckets)]
+                lastVoters = sortedVoters[int((b+1)*numVoters/numBuckets):]
+                newPollBallots = [pollingStrat(v.addUtils(utilShifts), numWinners=numWinners, **pollingStratArgs)
+                                for v in sortedVoters[int(b*numVoters/numBuckets):int((b+1)*numVoters/numBuckets)]]
+                noiselessPolls = pollingMethod.results(
+                        [pollingStrat(v, numWinners=numWinners, **pollingStratArgs) for v in firstVoters]
+                        + newPollBallots
+                        + [pollingStrat(v, numWinners=numWinners, **pollingStratArgs) for v in lastVoters])
+                polls = [min(1, max(0, r + e)) for r, e in zip(noiselessPolls, pollErrors)]
             newBallots = [strat(v.addUtils(utilShifts), polls=polls, electabilities=polls, numWinners=numWinners, **stratArgs)
                         for v in sortedVoters[int(b*numVoters/numBuckets):int((b+1)*numVoters/numBuckets)]]
-            ballots = (sortedBallots[:int(b*numVoters/numBuckets)] + newBallots
-                        + sortedBallots[int((b+1)*numVoters/numBuckets):])
+            if pollAfterPert:
+                ballots = [strat(v, polls=polls, electabilities=polls, numWinners=numWinners, **stratArgs) for v in firstVoters]\
+                        + newBallots\
+                        + [strat(v, polls=polls, electabilities=polls, numWinners=numWinners, **stratArgs) for v in lastVoters]
+            else:
+                ballots = (sortedBallots[:int(b*numVoters/numBuckets)] + newBallots
+                            + sortedBallots[int((b+1)*numVoters/numBuckets):])
             newWinners = method.winnerSet(ballots, numWinners=numWinners)
             if (cand in baseWinners and cand not in newWinners)\
                 or (cand not in baseWinners and cand in newWinners):
@@ -142,7 +159,7 @@ class CID:
     @autoassign
     def __init__(self, model, methodsAndStrats, nvot, ncand, niter, nwinners=1,
             numBuckets=24, sorter=normalizedUtilDeviation, utilChange=0.1,
-            media=noisyMedia, pollingMethod=Approval, pollingError=0.2, seed=None, ):
+            media=noisyMedia,pollingMethod=Approval, pollingError=0.2,  pollAfterPert=False, seed=None, ):
         """methodsAndStrats is a list of (votingMethod, strat, stratArgs); stratArgs is optional.
         A voting method may be given in place of such a tuple, in which case honBallot will be used.
         nvot and ncand give the number of voters and candidates in each election, and niter is how many
@@ -163,7 +180,7 @@ class CID:
             else: ms.append(m)
         self.mNames = [m[0].__name__ + ':' + m[1].__name__ + str(m[2]) for m in ms]
         self.rows = []
-        args = (model, nvot, ncand, ms, nwinners, utilChange, numBuckets, sorter, pollingMethod, pollingError, media)
+        args = (model, nvot, ncand, ms, nwinners, utilChange, numBuckets, sorter, pollingMethod, pollingError, pollAfterPert)
         with multiprocessing.Pool(processes=7) as pool:
             results = pool.starmap(simOneElectorate, [args + (seed, i) for i in range(niter)])
             for result in results:
@@ -226,7 +243,7 @@ class CID:
         myFile.close()
 
 def simOneElectorate(model, nvot, ncand, ms, nwinners, utilChange, numBuckets, sorter,
-                    pollingMethod, pollingError, media, baseSeed=None, i = 0):
+                    pollingMethod, pollingError, pollAfterPert, baseSeed=None, i = 0):
     if i>0 and i%100 == 0: print('Iteration:', i)
     if baseSeed is not None:
         random.seed(baseSeed + i)
@@ -235,7 +252,7 @@ def simOneElectorate(model, nvot, ncand, ms, nwinners, utilChange, numBuckets, s
     results = []
     for method, strat, stratArgs in ms:
         allIncentives, baseWinners, baseResults = influentialBlocs(electorate, method, nwinners, utilChange, numBuckets,
-                sorter, strat, stratArgs, pollingMethod, media=media, pollingError=pollingError)
+                sorter, strat, stratArgs, pollingMethod, pollAfterPert=pollAfterPert, pollingError=pollingError)
         for i, candIncentives in enumerate(allIncentives):
             results.append(dict(incentives=candIncentives, isWinner=i in baseWinners,
                 method=method.__name__, strat=strat.__name__, stratArgs=stratArgs, voterModel=str(model)))

@@ -95,7 +95,7 @@ def threeRoundResults(method, voters, backgroundStrat, foregrounds=[], bgArgs = 
         foreground.sort(key=lambda v:-v[2]) #from most to least eager to use strategy
         fgSize = len(foreground)
         fgBallots = [ballot for _, ballot, _ in foreground]
-        fgBaselineBallots = [useStrat(voter, backgroundStrat, electabilities=electabilities)
+        fgBaselineBallots = [useStrat(voter, backgroundStrat, electabilities=electabilities, **bgArgs)
                              for voter, _, _ in foreground]
         ballots = fgBallots + permbgBallots
         results = method.results(ballots)
