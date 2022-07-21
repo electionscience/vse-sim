@@ -239,6 +239,10 @@ def top2(noRunoffMethod):
             cls.prefOrder(utils))
 
         @classmethod
+        def bulletBallot(cls, utils, **kw):
+            return super().bulletBallot(utils), cls.prefOrder(utils)
+
+        @classmethod
         def compBallot(cls, utils, intensity, candToHelp, candToHurt, **kw):
             return (super().compBallot(utils, intensity, candToHelp, candToHurt),
             cls.prefOrder(utils))
@@ -525,6 +529,10 @@ class Approval(makeScoreMethod(1,True)):
         return [1 if u >= pickiness else 0 for u in normalizedUtils]
 
     @classmethod
+    def honBallot(cls, utils, electabilities=None, polls=None):
+        return Approval.zeroInfoBallot(utils, pickiness=0.4)
+
+    @classmethod
     def diehardBallot(cls, utils, intensity, candToHelp, candToHurt, **kw):
         """
         >>> Approval.diehardBallot([-10,1,2,3,4,10],0,4,2)
@@ -571,10 +579,6 @@ class ApprovalTop2(top2(Approval)):
     @classmethod
     def zeroInfoBallot(cls, utils, **kw):
         return super().zeroInfoBallot(utils, **kw), cls.prefOrder(utils)
-
-    @classmethod
-    def bulletBallot(cls, utils, **kw):
-        return super().bulletBallot(utils), cls.prefOrder(utils)
 
     @classmethod
     def diehardBallot(cls, utils, intensity, candToHelp, candToHurt, **kw):

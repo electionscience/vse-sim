@@ -68,6 +68,8 @@ class SPAV(RRV):
 
 class AllocatedScore(STAR):
     """
+    NOT the same Allocated Score as is on Electowiki
+    This version doesn't care about ballot weights for who gets put in a quota
     >>> AllocatedScore.winnerSet([[5,4,2,0]]*10+[[4,5,0,0]]*10+[[0,1,2,5]]*9+[[5,0,0,0]],3)
     [1, 0, 3]
     >>> AllocatedScore.winnerSet([[5,4,2,0]]*10+[[4,5,0,0]]*10+[[0,0,2,5]]*9+[[5,0,0,0]],3)
@@ -341,4 +343,57 @@ class STV(Irv):
                 ballotsToSort = piles[loser]
         for c in candsLeft:
             winners.append(c)
+        return winners
+
+class MinimaxSTV(STV):
+    """
+    Uses STV to elect all but the last winner. Uses minimax (with eliminated candidates readded) in the final round.
+    Uses plain minimax(margins) instead of Smith//minimax due to laziness
+    >>> MinimaxSTV.winnerSet([[0,1,2,3]]*5+[[2,1,0,3]]*6+[[0,2,1,3]]*2,2)
+    [3, 1]
+    """
+    @classmethod
+    def winnerSet(cls, ballots, numWinners):
+        quota = int(len(ballots)/(numWinners+1) + 1)
+        winners = []
+        nCands = len(ballots[0])
+        candsLeft = set(range(nCands))
+        wBallots = [weightedBallot(b) for b in ballots]
+        ballotsToSort = wBallots
+        piles = [[] for i in range(nCands)]
+        while len(winners) < numWinners - 1 and len(winners) + len(candsLeft) > numWinners - 1:
+            cls.resort(ballotsToSort, candsLeft, piles)
+            newWinners = [c for c in candsLeft if sum(b.weight for b in piles[c]) >= quota][:max(0, numWinners-len(winners)-1)]
+            if newWinners:
+                ballotsToSort = []
+                winners.extend(newWinners)
+                for w in newWinners:
+                    totalVotes = sum(b.weight for b in piles[w])
+                    reweight = (totalVotes-quota)/totalVotes
+                    for b in piles[w]:
+                        b.weight *= reweight
+                    candsLeft.remove(w)
+                    ballotsToSort.extend(piles[w])
+            else:
+                loser, loserVotes = None, float('inf')
+                for cand in candsLeft: #determine who gets eliminated
+                    if sum(b.weight for b in piles[cand]) < loserVotes:
+                        loser = cand
+                        loserVotes = sum(b.weight for b in piles[cand])
+                candsLeft.remove(loser)
+                ballotsToSort = piles[loser]
+        if len(winners) < numWinners - 1:
+            for c in candsLeft:
+                winners.append(c)
+
+        #Minimax step
+        compMatrix = [[float('inf') if i in winners or j in winners
+                        else sum(b.weight*sign(b[i] - b[j]) for b in wBallots)
+                        for j in range(nCands)] for i in range(nCands)]
+        best = float('-inf')
+        for i, row in enumerate(compMatrix):
+            if i not in winners and min(row) > best:
+                best = min(row)
+                finalWinner = i
+        winners.append(finalWinner)
         return winners
