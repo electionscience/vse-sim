@@ -34,7 +34,7 @@ def simpleStratTest(voterModel, method, strats, nvot, ncand, numWinners=1,
     baseWinners = method.winnerSet(bgBallots, numWinners)
     polls = noisyMedia(method.results(bgBallots), pollingError)
     totalResults = []
-    for strat, stratArgs in strats:
+    for strat, stratArgs in strats + [(method.abstain, {})]:
         results = {stat: 0 for stat in stats}
         for i, voter in enumerate(electorate):
             newBallot = strat(voter, electabilities=electabilities, polls=polls, numWinners=numWinners, **stratArgs)
@@ -57,7 +57,5 @@ class StratTest:
         self.totals = [{stat: sum(oneDict[stat] for oneDict in methodResults) for stat in self.rows[0][0]} for methodResults in zip(*self.rows)]
         self.stds = [{stat: std([oneDict[stat] for oneDict in methodResults])*len(methodResults)**0.5 for stat in self.rows[0][0]} for methodResults in zip(*self.rows)]
         strats = kw['strats'] if 'strats' in kw else args[2]
-        for i, strat in enumerate(strats):
-            if hasattr(strat, '__name__') and strat.__name__ == 'abstain':
-                abstainTotals = self.totals[i]
-                self.scores = [{stat: -(total - abstainTotals[stat])/abstainTotals[stat] for stat, total in m.items()} for m in self.totals]
+        abstainTotals = self.totals[-1]
+        self.scores = [{stat: -(total - abstainTotals[stat])/abstainTotals[stat] for stat, total in m.items()} for m in self.totals[:-1]]

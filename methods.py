@@ -529,7 +529,7 @@ class Approval(makeScoreMethod(1,True)):
         return [1 if u >= pickiness else 0 for u in normalizedUtils]
 
     @classmethod
-    def honBallot(cls, utils, electabilities=None, polls=None):
+    def honBallot(cls, utils, **kw):
         return Approval.zeroInfoBallot(utils, pickiness=0.4)
 
     @classmethod
