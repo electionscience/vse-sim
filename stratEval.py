@@ -56,6 +56,27 @@ class StratTest:
             self.rows.extend(results)
         self.totals = [{stat: sum(oneDict[stat] for oneDict in methodResults) for stat in self.rows[0][0]} for methodResults in zip(*self.rows)]
         self.stds = [{stat: std([oneDict[stat] for oneDict in methodResults])*len(methodResults)**0.5 for stat in self.rows[0][0]} for methodResults in zip(*self.rows)]
-        strats = kw['strats'] if 'strats' in kw else args[2]
+        self.strats = kw['strats'] if 'strats' in kw else args[2]
         abstainTotals = self.totals[-1]
         self.scores = [{stat: -(total - abstainTotals[stat])/abstainTotals[stat] for stat, total in m.items()} for m in self.totals[:-1]]
+
+    def showScores(self):
+        params = []
+        stratNames = []
+        stratArgs = []
+        for s in self.strats:
+            if isinstance(s, tuple):
+                stratNames.append(s[0].__name__)
+                stratArgs.append(s[1])
+                for param in s[1]:
+                    if param not in params:
+                        params.append(param)
+            else:
+                stratNames.append(s.__name__)
+                stratArgs.append({})
+        multiNames = any(name != stratNames[0] for name in stratNames)
+        print(("Strategy\t" if multiNames else "")+"\t".join(params + [stat for stat in self.scores[0]]))
+        for i, row in enumerate(self.scores):
+            print((stratNames[i]+'\t' if multiNames else "")
+                    +"\t".join([str(stratArgs[i].get(p, "")) for p in params]
+                            + [f"{row[stat]:.4f}" for stat in self.scores[0]]))

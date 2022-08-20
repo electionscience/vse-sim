@@ -104,7 +104,7 @@ class AllocatedScore(STAR):
                 if ballot[winner] == score:
                     scoreSupport += ballot.weight
             totalSupport += scoreSupport
-        surplusFraction = (totalSupport-quota)/scoreSupport
+        surplusFraction = max(0, (totalSupport-quota)/scoreSupport)
         for ballot in ballots:
             if ballot[winner] > score:
                 ballot.weight = 0
@@ -117,10 +117,9 @@ class AllocatedScore(STAR):
         nCands = len(ballots[0])
         unelectedCands = list(range(nCands))
         wBallots = [weightedBallot(b) for b in ballots]
-        #weights = [1]*len(ballots)
         quota = cls.methodQuota(len(ballots), numWinners)
         while True:
-            winner = cls.pickWinner(wBallots, unelectedCands, quota)
+            winner = cls.pickWinner(wBallots, unelectedCands, quota, numWinners)
             unelectedCands.remove(winner)
             winners.append(winner)
             if(len(winners) == numWinners):
@@ -175,6 +174,80 @@ class AllocatedScore(STAR):
         adjustedUtils = [max(u - lowUtil, 0)**exponent for u in utils]
         return cls.interpolatedBallot(adjustedUtils, 0, (highUtil-lowUtil)**exponent)
 
+    @classmethod
+    def truncatedBallot(cls, utils, threshold=0, exp=1, **kw):
+        """
+        >>> AllocatedScore.truncatedBallot([0,1,2,3,4,5,6], threshold=0, exp=3)
+        [0, 0, 0, 0, 1.0, 3.0, 5.0]
+        """
+        baseBallot = Score.zeroInfoBallot(utils, exp)
+        meanUtil = sum(utils)/len(utils)
+        bestUtil = max(utils)
+        return [baseBallot[i] if (utils[i]-meanUtil)/(bestUtil-meanUtil)>threshold else 0
+                for i in range(len(utils))]
+
+    @classmethod
+    def truncatedBallot2(cls, utils, threshold=0, exp=1, **kw):
+        """
+        >>> AllocatedScore.truncatedBallot2([0,1,2,3,4,5,6], threshold=3, exp=2)
+        [0, 0, 0, 0, 0, 4.0, 5.0]
+        """
+        baseBallot = Score.zeroInfoBallot(utils, exp)
+        return [s if s >= threshold else 0 for s in baseBallot]
+
+class ASC(AllocatedScore):
+    """Allocated Score Classic, the version on Electowiki
+    >>> ASC.winnerSet([[5,4,0,5]]*10+[[4,3,5,0]]*5,3)
+    [0, 1, 3]
+    >>> AllocatedScore.winnerSet([[5,4,0,5]]*10+[[4,3,5,0]]*5,3)
+    [0, 1, 2]
+    """
+    @classmethod
+    def reweight(cls, ballots, winner, quota):
+        sortedBallots = sorted(ballots, key=lambda b: -b[winner]*b.weight)
+        totalSupport = 0
+        scoreSupport = 0
+        lastScore = -1
+        for b in sortedBallots:
+            bScore = b[winner]*b.weight
+            if bScore == 0 or (totalSupport > quota and bScore != lastScore):
+                break
+            totalSupport += b.weight
+            if bScore == lastScore:
+                scoreSupport += b.weight
+            else:
+                lastScore = bScore
+                scoreSupport = b.weight
+        surplusFraction = max(0,(totalSupport-quota)/scoreSupport) if scoreSupport > 0 else 0
+        for ballot in ballots:
+            if ballot[winner]*ballot.weight > lastScore:
+                ballot.weight = 0
+            elif ballot[winner]*ballot.weight == lastScore:
+                ballot.weight *= surplusFraction
+
+class ASCD(ASC):
+    methodQuota = staticmethod(droop)
+
+class ASCDFinalRunoff(ASCD):
+    """
+    >>> ASCDFinalRunoff.winnerSet([[5,0]]+[[0,1]]*3, 1)
+    [1]
+    >>> ASCDFinalRunoff.winnerSet([[5,2,0]]*5+[[4,5,0]]*5+[[0,1,5]]*6, 2)
+    [0, 2]
+    """
+    @classmethod
+    def pickWinner(cls, ballots, unelectedCands, quota, numWinners):
+        return ASFinalRunoff.pickWinner(ballots, unelectedCands, quota, numWinners)
+
+class ASCDR(ASCD):
+    """
+    Classic Allocated Score with the Droop quota and a runoff in every round
+    >>> ASCDR.winnerSet([[5,2,0]]*5+[[4,5,0]]*5+[[0,1,5]]*6, 2)
+    [1, 2]
+    """
+    @classmethod
+    def pickWinner(cls, ballots, unelectedCands, quota, numWinners):
+        return ASRunoffs.pickWinner(ballots, unelectedCands, quota, numWinners)
 
 class ASFinalRunoff(AllocatedScore):
     """
@@ -183,8 +256,8 @@ class ASFinalRunoff(AllocatedScore):
     [2, 1]
     """
     @classmethod
-    def pickWinner(cls, ballots, unelectedCands, quota):
-        if len(ballots[0]) - len(unelectedCands) < len(ballots)/quota - 1.01:
+    def pickWinner(cls, ballots, unelectedCands, quota, numWinners):
+        if len(ballots[0]) - len(unelectedCands) < numWinners - 1:
             return super().pickWinner(ballots, unelectedCands)
         candTotals = [0 if c in unelectedCands else -1 for c in range(len(ballots[0]))]
         for ballot in ballots:
@@ -198,7 +271,7 @@ class ASFinalRunoff(AllocatedScore):
 
 class ASRunoffs(AllocatedScore):
     @classmethod
-    def pickWinner(cls, ballots, unelectedCands, quota):
+    def pickWinner(cls, ballots, unelectedCands, quota, numWinners):
         candTotals = [sum(b[c]*b.weight for b in ballots) if c in unelectedCands else -1 for c in range(len(ballots[0]))]
         (runnerUp,top) = sorted(range(len(ballots[0])), key=lambda i: candTotals[i])[-2:]
         upset = sum(sign(ballot[runnerUp] - ballot[top])*ballot.weight for ballot in ballots)
@@ -222,7 +295,7 @@ class SequentialMonroe(AllocatedScore):
     [0, 2]
     """
     @classmethod
-    def pickWinner(cls, ballots, unelectedCands, quota):
+    def pickWinner(cls, ballots, unelectedCands, quota, numWinners):
         ncand = len(ballots[0])
         quotaStrengths = [0]*ncand
         supportersCounted = [0]*ncand
@@ -293,13 +366,13 @@ class S5H(SSS):
 
 class S5HRunoffs(S5H):
     @classmethod
-    def pickWinner(cls, ballots, unelectedCands, quota):
-        return ASRunoffs.pickWinner(ballots, unelectedCands, quota)
+    def pickWinner(cls, ballots, unelectedCands, quota, numWinners):
+        return ASRunoffs.pickWinner(ballots, unelectedCands, quota, numWinners)
 
 class SSSRunoffs(SSS):
     @classmethod
-    def pickWinner(cls, ballots, unelectedCands, quota):
-        return ASRunoffs.pickWinner(ballots, unelectedCands, quota)
+    def pickWinner(cls, ballots, unelectedCands, quota, numWinners):
+        return ASRunoffs.pickWinner(ballots, unelectedCands, quota, numWinners)
 
 class S5HRDroop(S5HRunoffs):
     methodQuota = staticmethod(droop)
