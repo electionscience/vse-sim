@@ -377,6 +377,54 @@ class SSSRunoffs(SSS):
 class S5HRDroop(S5HRunoffs):
     methodQuota = staticmethod(droop)
 
+class TEA(AllocatedScore):
+    """Threshold Equal Approvals"""
+    @classmethod
+    def winnerSet(cls, ballots, numWinners):
+        threshold = cls.topRank
+        numCands = len(ballots[0])
+        quota = cls.methodQuota(len(ballots), numWinners)
+        wBallots = [weightedBallot(b) for b in ballots]
+        unelectedCands = list(range(numCands))
+        winners = []
+        while threshold > 0 and len(winners) < numWinners:
+            approvalCounts = [sum(ballot.weight if ballot[i] >= threshold else 0 for ballot in wBallots)
+                                if i in unelectedCands else -1 for i in range(numCands)]
+            if any(c >= quota for c in approvalCounts):
+                costs = [2]*numCands
+                for cand in unelectedCands:
+                    if approvalCounts[cand] >= quota:
+                        sortedWeights = sorted(b.weight for b in wBallots if b[cand] >= threshold and b.weight > 0)
+                        weightSum = 0
+                        for i, w in enumerate(sortedWeights):
+                            if weightSum + w*(len(sortedWeights)-i) >= quota or w==sortedWeights[-1]:
+                                costs[cand] = (quota - weightSum)/(len(sortedWeights)-i)
+                                break
+                            else:
+                                weightSum += w
+                winnerCost = min(costs)
+                winner = costs.index(winnerCost)
+                if winner not in unelectedCands: print(costs, approvalCounts)
+                for b in wBallots:
+                    if b[winner] >= threshold:
+                        b.weight = max(b.weight - winnerCost, 0)
+                unelectedCands.remove(winner)
+                winners.append(winner)
+            else: threshold -= 1
+            #print(threshold, winners, [b.weight for b in wBallots])
+        while len(winners) < numWinners:
+            approvalCounts = [sum(ballot.weight if ballot[i] > 0 else 0 for ballot in wBallots)
+                                if i in unelectedCands else -1 for i in range(numCands)]
+            winner = approvalCounts.index(max(approvalCounts))
+            unelectedCands.remove(winner)
+            for b in wBallots:
+                if b[winner] > 0:
+                    b.weight = 0
+            winners.append(winner)
+            #print(threshold, winners, [b.weight for b in wBallots])
+        return winners
+
+
 class STV(Irv):
     """Weighted inclusive Gregory method (I think) with the Droop quota
     >>> STV.winnerSet([[0,1,2,3,4,5,6]]*40+[[6,5,4,3,2,1,0]]*10, 4)
