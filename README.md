@@ -2,7 +2,7 @@
 These are some methods for running VSE (Voter Satisfaction Efficiency)
 simulations for various voting systems. 
 
-See [Voter Satisfaction Efficiency FAQ](http://electionscience.github.io/vse-sim/VSE/) for an explanation of the methods and results.
+See [Voter Satisfaction Efficiency FAQ](http://electionscience.github.io/vse-sim/) for an explanation of the methods and results.
 
 # Installing the code
 Requirements: python3, scipy, pydoc
