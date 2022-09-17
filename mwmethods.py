@@ -518,3 +518,74 @@ class MinimaxSTV(STV):
                 finalWinner = i
         winners.append(finalWinner)
         return winners
+
+def assignBallot(ballot, candsLeft):
+    activeScore = max(ballot[i] for i in candsLeft)
+    if activeScore == 0:
+        return set()
+    else:
+        return set(i for i in candsLeft if ballot[i] == activeScore)
+
+class S5HtoSTV(S5H):
+    """Uses S5H for as long as a Droop quota can be filled, then switches to STV
+    """
+    methodQuota = staticmethod(droop)
+    @classmethod
+    def winnerSet(cls, ballots, numWinners):
+        """
+        >>> S5HtoSTV.winnerSet([[0,1,2]]*5+[[2,1,0]]*4+[[0,2,1]]*2,2)
+        [2, 0]
+        >>> S5HtoSTV.winnerSet([[0,1,5]]*5+[[5,1,0]]*4+[[0,5,1]]*2,2)
+        [2, 0]
+        >>> S5HtoSTV.winnerSet([[0,4,5]]*5+[[5,4,0]]*4+[[0,5,4]]*2,2)
+        [1, 2]
+        """
+        quota = cls.methodQuota(len(ballots), numWinners)
+        wBallots = [weightedBallot(b) for b in ballots]
+        winners = []
+        unelectedCands = list(range(len(ballots[0])))
+        while any(sum(b[i]*b.weight for b in wBallots) >= quota*cls.topRank for i in unelectedCands):
+            winner = cls.oneS5HRound(wBallots, unelectedCands, quota, numWinners)
+            winners.append(winner)
+            unelectedCands.remove(winner)
+        if len(winners) < numWinners:
+            cls.useSTV(wBallots, numWinners, winners, quota, True)
+        return winners
+
+    @classmethod
+    def oneS5HRound(cls, ballots, unelectedCands, quota, numWinners):
+        winner = S5H.pickWinner(ballots, unelectedCands, quota, numWinners)
+        S5H.reweight(ballots, winner, quota)
+        return winner
+
+    @classmethod
+    def useSTV(cls, wBallots, numWinners, winners, quota, useForLastRound):
+        numToElect = numWinners if useForLastRound else numWinners - 1
+        nCands = len(wBallots[0])
+        candsLeft = set(i for i in range(nCands) if i not in winners)
+        assignedBallots = [[b, assignBallot(b, candsLeft)] for b in wBallots]
+        while len(winners) < numToElect and len(winners) + len(candsLeft) > numToElect:
+            candTotals = [sum(b.weight/len(topCands) for b, topCands in assignedBallots if cand in topCands)
+                            if cand in candsLeft else -1 for cand in range(nCands)]
+            if max(candTotals) >= quota:
+                winner = candTotals.index(max(candTotals))
+                weightFactor = (candTotals[winner] - quota)/candTotals[winner]
+                winners.append(winner)
+                candsLeft.remove(winner)
+                for b, topCands in assignedBallots:
+                    if winner in topCands:
+                        b.weight *= weightFactor
+                        topCands.remove(winner)
+                        if len(topCands) == 0:
+                            topCands.update(assignBallot(b, candsLeft))
+            else:
+                loser = candTotals.index(min(t for t in candTotals if t != -1))
+                candsLeft.remove(loser)
+                for b, topCands in assignedBallots:
+                    if loser in topCands:
+                        topCands.remove(loser)
+                        if len(topCands) == 0:
+                            topCands.update(assignBallot(b, candsLeft))
+        if len(winners) < numToElect:
+            for c in candsLeft:
+                winners.append(c)
