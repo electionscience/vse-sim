@@ -6,6 +6,7 @@ import os
 import multiprocessing
 import re
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mtick
 from numpy.core.fromnumeric import mean, std
 
 from mydecorators import *
@@ -258,7 +259,7 @@ def simOneElectorate(model, nvot, ncand, ms, nwinners, utilChange, numBuckets, s
                 method=method.__name__, strat=strat.__name__, stratArgs=stratArgs, voterModel=str(model)))
     return results
 
-def showChart(fileName, norm=1, methodOnly=True, forResult='all'):
+def showChart(fileName, norm=1, methodOnly=True, forResult='all', percentages=True, wholeOnly=True):
     with open(fileName) as file:
         reader = csv.DictReader(file)
         fig, ax = plt.subplots()
@@ -272,9 +273,19 @@ def showChart(fileName, norm=1, methodOnly=True, forResult='all'):
                 normFactor = max(rawData)
             data = [d/normFactor for d in rawData]
             name = re.match(".*(?=:)", row['name']).group(0) if methodOnly else row['name']
-            ax.plot([(i+.5)/buckets for i in range(buckets)], data, label=name)
+            ax.plot([(i+.5)*100/buckets for i in range(buckets)], data, label=name)
         ax.set_xlabel("Voter's support for candidate")
         ax.set_ylabel("Candidate's incentive to appeal to voter")
+        if percentages:
+            ax.xaxis.set_major_formatter(mtick.FormatStrFormatter('%.0f%%'))
+        def yFormatFunc(value, position):
+            if value == 1: return "Average"
+            if value == 0: return "0"
+            if wholeOnly:
+                if value % 1 != 0: return ""
+                return f'{int(value)}x Avg'
+            return f'{value:1.1f}x Avg'
+        ax.yaxis.set_major_formatter(mtick.FuncFormatter(yFormatFunc))
         ax.grid(True)
         ax.legend()
         plt.show()

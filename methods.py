@@ -530,7 +530,7 @@ class Approval(makeScoreMethod(1,True)):
 
     @classmethod
     def honBallot(cls, utils, **kw):
-        return Approval.zeroInfoBallot(utils, pickiness=0.4)
+        return Approval.zeroInfoBallot(utils, pickiness=0.5)
 
     @classmethod
     def diehardBallot(cls, utils, intensity, candToHelp, candToHurt, **kw):
