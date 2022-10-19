@@ -77,26 +77,20 @@ class CsvBatch:
         i = 1
         while os.path.isfile(baseName + str(i) + ".csv"):
             i += 1
-        keys = ["vse","method","chooser"] #important stuff first
-        keys.extend(list(self.rows[0].keys())) #any other stuff I missed; dedup later
+        keys = ["vse", "method", "chooser", *list(self.rows[0].keys())]
         for n in range(4):
-            keys.extend(["tallyName"+str(n),"tallyVal"+str(n)])
+            keys.extend([f"tallyName{str(n)}", f"tallyVal{str(n)}"])
         keys = uniquify(keys)
-        myFile = open(baseName + str(i) + ".csv", "w")
-        print("# " + str(dict(media = self.media.__name__,
-                             version = self.repo_version,
-                             seed=self.seed,
-                             model=self.model,
-                             methods=self.methods,
-                             nvot=self.nvot,
-                             ncand=self.ncand,
-                             niter=self.niter)),
-            file=myFile)
-        dw = csv.DictWriter(myFile, keys, restval = "NA")
-        dw.writeheader()
-        for r in self.rows:
-            dw.writerow(r)
-        myFile.close()
+        with open(baseName + str(i) + ".csv", "w") as myFile:
+            print(
+                f"# {dict(media=self.media.__name__, version=self.repo_version, seed=self.seed, model=self.model, methods=self.methods, nvot=self.nvot, ncand=self.ncand, niter=self.niter)}",
+                file=myFile,
+            )
+
+            dw = csv.DictWriter(myFile, keys, restval = "NA")
+            dw.writeheader()
+            for r in self.rows:
+                dw.writerow(r)
 
 
 

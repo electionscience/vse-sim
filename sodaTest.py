@@ -9,8 +9,8 @@ def autoargs(*include,**kwargs):
         attrs,varargs,varkw,defaults=inspect.getargspec(func)
         def sieve(attr):
             if kwargs and attr in kwargs['exclude']: return False
-            if not include or attr in include: return True
-            else: return False            
+            return not include or attr in include
+
         @functools.wraps(func)
         def wrapper(self,*args,**kwargs):
             # handle default values
@@ -30,7 +30,9 @@ def autoargs(*include,**kwargs):
                 for attr,val in list(kwargs.items()):
                     if sieve(attr): setattr(self,attr,val)            
             return func(self,*args,**kwargs)
+
         return wrapper
+
     return _autoargs
 
 #Hah: http://www.pydanny.com/cached-property.html
@@ -89,8 +91,7 @@ class ElectionCounts():
                 assert(delg[i] == 0)
                 
     def __repr__(self):
-        return ("ElectionCounts(%s,%s,%s,%s)"%
-               (self.delg, self.appr.tolist()[0], self.prefs, self.order))
+        return f"ElectionCounts({self.delg},{self.appr.tolist()[0]},{self.prefs},{self.order})"
     
     def oneMatrix(self, pref, size=1):
         n = self.n
@@ -137,19 +138,17 @@ class ElectionCounts():
                     toWin = max((m[best,loser] - m[c,loser]), (m[best,c] - m[loser,c]))
                     if rival[0][0] < toWin:
                         rival[0] = (toWin,best,loser,c)
-                        
+
                 if private:
                     outer.remove(c)
                 yield c
-            else:
-                if m[loser,c] >= m[c,loser]:
+            elif m[loser,c] >= m[c,loser]:
                     #print("b",c,loser)
-                    if minwin[0]:
-                        if minwin[0][0] > m[loser,c]:
-                            minwin[0] = (m[loser,c],loser,c)
-                    if private:
-                        outer.remove(c)
-                    yield c
+                if minwin[0] and minwin[0][0] > m[loser, c]:
+                    minwin[0] = (m[loser,c],loser,c)
+                if private:
+                    outer.remove(c)
+                yield c
                     
     def oneWinner(self, m):
         start = np.argmax(m[0])
@@ -219,12 +218,8 @@ class ElectionCounts():
             if verbose > 2:
                 print("crystal ball", smith[0], self.matrix)
             return smith[0]
-        if self.oldSmith:
-            if verbose and len(smith) > len(self.oldSmith): #Check if smith set has grown. Surprising, but not decisive
-                print("Smith set expanded!")#,self.oldSmith, smith, self.matrix)
-                #print("old", self.oldSmith)
-                #print("new", smith, self.matrix)
-        
+        if self.oldSmith and verbose and len(smith) > len(self.oldSmith):
+            print("Smith set expanded!")#,self.oldSmith, smith, self.matrix)
         if self.cantWin:
             badWinners = True
             for possibility in smith:
@@ -234,7 +229,7 @@ class ElectionCounts():
                 if verbose > 2:
                     print("giving up", self.matrix)
                 return None #This is a shortcut. We don't know that this cand will win, but it will be ignored anyway.
-            
+
         #figure out reasonable bounds for whom to approve, who might win.
         idealWinnerIndex = bestHopeIndex = self.n
         bestHope = None
@@ -247,9 +242,9 @@ class ElectionCounts():
             if i < idealWinnerIndex:
                 idealWinnerIndex = i
         idealWinner = curPrefs[idealWinnerIndex]
-                
+
         cantWin = self.cantWin or set()
-        
+
         #print("looping",len(self.order))
         for amounts in self.possibleDelegations(worstWinnerIndex, idealWinnerIndex):
             #print(".")
@@ -335,9 +330,12 @@ def shuffled(n):
     return l
 
 def randomElection(ncand):
-    ec = ElectionCounts([random.randrange(4,20,3) for _ in range(ncand)],[round(random.random(),3)*10 for _ in range(ncand)],
-                        [shuffled(ncand) for _ in range(ncand)],list(range(ncand)))
-    return ec
+    return ElectionCounts(
+        [random.randrange(4, 20, 3) for _ in range(ncand)],
+        [round(random.random(), 3) * 10 for _ in range(ncand)],
+        [shuffled(ncand) for _ in range(ncand)],
+        list(range(ncand)),
+    )
 
 def monteCarlo(n):
     funky = []

@@ -43,7 +43,7 @@ class Chooser:
 
     @cached_property
     def myKeys(self):
-        prefix = self.getName() + "_"
+        prefix = f"{self.getName()}_"
         return [prefix + key for key in self.tallyKeys]
 
     @cached_property
@@ -71,8 +71,9 @@ class LazyChooser(Chooser):
 
 
     def __call__(self, cls, voter, tally):
-        if (getattr(voter, cls.__name__ + "_hon") ==
-            getattr(voter, cls.__name__ + "_strat")):
+        if getattr(voter, f"{cls.__name__}_hon") == getattr(
+            voter, f"{cls.__name__}_strat"
+        ):
             tally[self.myKeys[0]] += 0
             return self.subChoosers[0](cls, voter, tally) #hon
         tally[self.myKeys[0]] += 1
@@ -93,22 +94,15 @@ class OssChooser(Chooser):
 
     def __call__(self, cls, voter, tally):
         hon, strat = self.subChoosers
-        if getattr(voter, cls.__name__ + "_isStrat", False):
-            tally[self.myKeys[0]] += 1
-            tally[self.myKeys[1]] += getattr(voter, cls.__name__ + "_stratGap", 0)
-            if callable(strat):
-                #debug(strat)
-                return strat(cls, voter, tally)
-            return strat
-        else:
-            if callable(hon):
-                #debug(hon)
-                return hon(cls, voter, tally)
-            return hon
+        if not getattr(voter, f"{cls.__name__}_isStrat", False):
+            return hon(cls, voter, tally) if callable(hon) else hon
+        tally[self.myKeys[0]] += 1
+        tally[self.myKeys[1]] += getattr(voter, f"{cls.__name__}_stratGap", 0)
+        return strat(cls, voter, tally) if callable(strat) else strat
 
     def getName(self):
         baseName = super(OssChooser, self).getName()
-        return baseName + "." + "_".join(s.getName() for s in self.subChoosers) + "."
+        return f"{baseName}." + "_".join(s.getName() for s in self.subChoosers) + "."
 
 class ProbChooser(Chooser):
     @autoassign
@@ -121,12 +115,16 @@ class ProbChooser(Chooser):
             r -= p
             if r < 0:
                 if i > 0: #keep tally for all but first option
-                    tally[self.getName() + "_" + chooser.getName()] += 1
+                    tally[f"{self.getName()}_{chooser.getName()}"] += 1
                 return chooser(cls, voter, tally)
 
     def getName(self):
         baseName = super(ProbChooser, self).getName()
-        return baseName + "." + "_".join(s.getName() + str(round(p * 100)) for p,s in self.probs) + "."
+        return (
+            f"{baseName}."
+            + "_".join(s.getName() + str(round(p * 100)) for p, s in self.probs)
+            + "."
+        )
 
 
 
@@ -153,13 +151,11 @@ def fuzzyMediaFor(biaser = biaserAround(1)):
     def fuzzyMedia(standings, tally=None):
         if not tally:
             tally=SideTally()
-        if callable(biaser):
-            bias = biaser(standings)
-        else:
-            bias = biaser
+        bias = biaser(standings) if callable(biaser) else biaser
         result= [s + random.gauss(0,bias) for s in standings]
-        tally["changed"] += 0 if orderOf(result)[0:2] == orderOf(standings)[0:2] else 1
+        tally["changed"] += 0 if orderOf(result)[:2] == orderOf(standings)[:2] else 1
         return result
+
     return fuzzyMedia
 
 def biasedMediaFor(biaser=biaserAround(1),numerator=1):
@@ -175,15 +171,15 @@ def biasedMediaFor(biaser=biaserAround(1),numerator=1):
     def biasedMedia(standings, tally=None):
         if not tally:
             tally=SideTally()
-        if callable(biaser):
-            bias = biaser(standings)
-        else:
-            bias = biaser
-        result= (standings[0:2] +
-                 [(standing - bias + numerator * (bias / max(i+2, 1)))
-                        for i, standing in enumerate(standings[2:])])
-        tally["changed"] += 0 if orderOf(result)[0:2] == orderOf(standings)[0:2] else 1
+        bias = biaser(standings) if callable(biaser) else biaser
+        result = standings[:2] + [
+            (standing - bias + numerator * (bias / max(i + 2, 1)))
+            for i, standing in enumerate(standings[2:])
+        ]
+
+        tally["changed"] += 0 if orderOf(result)[:2] == orderOf(standings)[:2] else 1
         return result
+
     return biasedMedia
 
 def skewedMediaFor(biaser):
@@ -194,12 +190,10 @@ def skewedMediaFor(biaser):
     def skewedMedia(standings, tally=None):
         if not tally:
             tally=SideTally()
-        if callable(biaser):
-            bias = biaser(standings)
-        else:
-            bias = biaser
+        bias = biaser(standings) if callable(biaser) else biaser
         result= [(standing - bias * i / (len(standings) - 1)) for i, standing in enumerate(standings)]
 
-        tally["changed"] += 0 if orderOf(result)[0:2] == orderOf(standings)[0:2] else 1
+        tally["changed"] += 0 if orderOf(result)[:2] == orderOf(standings)[:2] else 1
         return result
+
     return skewedMedia
