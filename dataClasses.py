@@ -9,6 +9,7 @@ from numpy.ma.core import floor
 from scipy.stats import beta
 from test.test_binop import isnum
 from scipy.optimize import fmin
+from scipy.special import logsumexp
 import scipy.stats as stats
 import scipy.integrate as integrate
 from uuid import uuid4
@@ -479,16 +480,41 @@ def tieFor2Probs(polls, uncertainty=.15):
 def tieFor2Estimate(probs):
     """Estimates the probability of each candidate being in a tie for second place,
     normalized such that they sum to 1"""
-    EXP = 2
-
+    
+    """
     unnormalized = [x*(1-x)*(
-    sum(sum((y*z)**EXP for k, z in enumerate(probs) if i != k != j)
-    for j, y in enumerate(probs) if i != j)
-    /sum(y**EXP for j, y in enumerate(probs) if i != j)
-    )**(1/EXP) for i, x in enumerate(probs)]
+            sum(
+                    sum((y*z)**EXP for k, z in enumerate(probs) if i != k != j)
+                for j, y in enumerate(probs) if i != j)
+            /sum(y**EXP for j, y in enumerate(probs) if i != j)
+        )**(1/EXP) for i, x in enumerate(probs)]
 
     normFactor = sum(unnormalized)
     return [u/normFactor for u in unnormalized]
+    """
+    EXP = 2
+    LOGEXP = np.log(EXP)
+    #print()
+
+    np.seterr(divide = 'ignore') 
+    unnormalized_log_part1 = np.array([np.log(x*(1-x)) for i, x in enumerate(probs)])
+    np.seterr(divide = 'warn')
+    unnormalized_log_part1[unnormalized_log_part1 == -np.inf] = -1e9
+    unnormalized_log_part2 = np.array([ (
+            logsumexp(np.array([
+                    [(y*z)*LOGEXP for k, z in enumerate(probs) if i != k != j]
+                for j, y in enumerate(probs) if i != j]))
+            -logsumexp(np.array([y*LOGEXP for j, y in enumerate(probs) if i != j]))
+        )/LOGEXP for i, x in enumerate(probs)])
+    unnormalized_log = unnormalized_log_part1 + unnormalized_log_part2
+
+    unnormalized = np.exp(unnormalized_log - np.max(unnormalized_log))
+
+    #print(unnormalized)
+    normFactor = sum(unnormalized)
+    result = [u/normFactor for u in unnormalized]
+    print(result)
+    return result
 
 
 def adaptiveTieFor2(polls, uncertainty=.15):
