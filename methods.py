@@ -941,10 +941,10 @@ def makeSTARMethod(topRank=5):
                         ballot.append(i+1)
             return ballot
 
-        @classmethod
-        def defaultfgs(cls):
-            return super().defaultfgs()\
-            + [(cls.top6Ballot, targs) for targs in [selectRand, select21]]
+        #@classmethod
+        #def defaultfgs(cls):
+            #return super().defaultfgs()\
+            #+ [(cls.top6Ballot, targs) for targs in [selectRand, select21]]
 
 
     if topRank==5:
@@ -1763,14 +1763,14 @@ class Condorcet(RankedMethod):
     def defaultbgs(cls):
         return [cls.honBallot]
 
-    @classmethod
-    def defaultfgs(cls):
-        """
-        >>> len(Minimax.defaultfgs())
-        12
-        """
-        return super().defaultfgs()\
-        + [(Borda.vaBallot, targs) for targs in [select21, select31]]
+    #@classmethod
+    #def defaultfgs(cls):
+        #"""
+        #>>> len(Minimax.defaultfgs())
+        #12
+        #"""
+        #return super().defaultfgs()\
+        #+ [(Borda.vaBallot, targs) for targs in [select21, select31]]
 
 class Schulze(Condorcet):
 

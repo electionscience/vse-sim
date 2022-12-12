@@ -124,11 +124,11 @@ class Method:
                 for lev in cls.diehardLevels for targs in [select21, select31]]\
                 + [(cls.compBallot, targs, {'intensity': lev})
                 for lev in cls.compLevels for targs in [select21, select31]]\
-                + [(cls.stratBallot, targs) for targs in [select21, select31]]\
                 + [(cls.vaBallot, selectRand, {'info': 'p'}),
                 (cls.vaBallot, selectRand, {'info': 'e'}),
-                (cls.stratBallot, selectRand, {'info': 'p'}),
-                (cls.stratBallot, selectRand, {'info': 'e'})]
+                #(cls.stratBallot, selectRand, {'info': 'p'}),
+                #(cls.stratBallot, selectRand, {'info': 'e'})
+                ]
 
     @staticmethod
     def winner(results):
@@ -480,7 +480,7 @@ def tieFor2Probs(polls, uncertainty=.15):
 def tieFor2Estimate(probs):
     """Estimates the probability of each candidate being in a tie for second place,
     normalized such that they sum to 1"""
-    
+
     """
     unnormalized = [x*(1-x)*(
             sum(
@@ -496,7 +496,7 @@ def tieFor2Estimate(probs):
     LOGEXP = np.log(EXP)
     #print()
 
-    np.seterr(divide = 'ignore') 
+    np.seterr(divide = 'ignore')
     unnormalized_log_part1 = np.array([np.log(x*(1-x)) for i, x in enumerate(probs)])
     np.seterr(divide = 'warn')
     unnormalized_log_part1[unnormalized_log_part1 == -np.inf] = -1e9

@@ -35,7 +35,7 @@ library(scatterD3)
 # 
 # fvse = rbind(fvse,fread("wtf2.csv"))
 
-fvse = fread("starvse31.csv")
+fvse = fread("quicktest.csv.tst")
 numVoters = mean(fvse[,numVoters])
 vses = fvse[method != "ApprovalPoll",list(VSE=mean((r1WinnerUtil - meanCandidateUtil) / 
                       (magicBestUtil - meanCandidateUtil))),by=.(method,backgroundStrat)]
