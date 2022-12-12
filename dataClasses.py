@@ -513,7 +513,6 @@ def tieFor2Estimate(probs):
     #print(unnormalized)
     normFactor = sum(unnormalized)
     result = [float(u/normFactor) for u in unnormalized]
-    print(result)
     return result
 
 
