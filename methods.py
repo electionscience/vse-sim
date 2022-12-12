@@ -530,7 +530,7 @@ class Approval(makeScoreMethod(1,True)):
 
     @classmethod
     def honBallot(cls, utils, **kw):
-        return Approval.zeroInfoBallot(utils, pickiness=0.5)
+        return Approval.zeroInfoBallot(utils, pickiness=0.4)
 
     @classmethod
     def diehardBallot(cls, utils, intensity, candToHelp, candToHurt, **kw):
@@ -1396,6 +1396,50 @@ class IRV(Method):
                 i -= 1
         #assert list(range(n)) == sorted(ballot)
         assert i == -1
+
+    @classmethod
+    def firstOrThirdBallot(cls, utils, polls, **kw):
+        """Ranks either the first-place or third-place candidate first, the rest honestly
+        >>> IRV.firstOrThirdBallot([1,2,3,4,5], [.5,.3,.2,.1,.4])
+        [0, 4, 1, 2, 3]
+        """
+        numCands = len(utils)
+        pollTuples = zip(range(numCands), polls)
+        pollOrder = [t[0] for t in sorted(pollTuples, key=lambda x: -x[1])] #first to last
+
+        firstPreference = pollOrder[2] if utils[pollOrder[2]] > utils[pollOrder[0]] else pollOrder[0]
+
+        prefOrder = [cand for cand, util in sorted(zip(range(numCands), utils), key=lambda x: x[1])
+                    if cand != firstPreference] #worst to best
+        ballot = [0]*numCands
+        ballot[firstPreference] = numCands - 1
+        for place, cand in enumerate(prefOrder):
+            ballot[cand] = place
+        return ballot
+
+    @classmethod
+    def focusThirdBallot(cls, utils, polls, **kw):
+        """Ranks the third-place candidate first if they're preferred to the first-place candidate,
+        otherwise votes honestly
+        >>> IRV.focusThirdBallot([1,2,3,4,5], [.5,.3,.2,.1,.4])
+        [0, 4, 1, 2, 3]
+        """
+        numCands = len(utils)
+        pollTuples = zip(range(numCands), polls)
+        pollOrder = [t[0] for t in sorted(pollTuples, key=lambda x: -x[1])] #first to last
+
+        thirdPlace = pollOrder[2]
+        prefThird = utils[thirdPlace] > utils[pollOrder[0]]
+
+        prefOrder = [cand for cand, util in sorted(zip(range(numCands), utils), key=lambda x: x[1])
+                    if not prefThird or cand != thirdPlace] #worst to best
+        ballot = [0]*numCands
+        if prefThird:
+            ballot[thirdPlace] = numCands - 1
+        for place, cand in enumerate(prefOrder):
+            ballot[cand] = place
+        return ballot
+
 
 Irv = IRV
 

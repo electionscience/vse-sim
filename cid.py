@@ -45,6 +45,32 @@ class normalizedUtilDeviation:
     def score(self, voter, candIndex):
         return (voter[candIndex] - mean(voter))/std(voter)
 
+class devFromTop:
+    """
+    >>> devFromTop(1).score([0,3,10,5], 1)
+    -7
+    >>> devFromTop(1).score([0,3,10,5], 2)
+    5
+    """
+    def __init__(self, voters, **kw): pass
+    def score(self, voter, candIndex):
+        otherBest = max(util for i, util in enumerate(voter) if i != candIndex)
+        return voter[candIndex] - otherBest
+
+class normDevFromTop:
+    """
+    >>> normDevFromTop(1).score([0,3,10,5], 0)
+    -1.0
+    >>> normDevFromTop(1).score([0,3,10,5], 1)
+    -0.7
+    >>> normDevFromTop(1).score([0,3,10,5], 2)
+    0.5
+    """
+    def __init__(self, voters, **kw): pass
+    def score(self, voter, candIndex):
+        otherBest = max(util for i, util in enumerate(voter) if i != candIndex)
+        return (voter[candIndex] - otherBest)/(max(voter)-min(voter))
+
 class weightedUtilDev:
     """
     Like normalizedUtilDeviation, but weights the means and standard
