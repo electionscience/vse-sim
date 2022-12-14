@@ -1729,6 +1729,8 @@ class Condorcet(RankedMethod):
                 whichCands=[c for (c, r) in places[1:]],
                 lowSlot=0)
 
+    vaBallot = Borda.vaBallot
+
     @classmethod #copy-pasted from Irv. The alternatives seemed uglier.
     def compBallot(cls, utils, intensity, candToHelp, candToHurt=None, **kw):
         """Useless unless there's a cycle
@@ -1759,9 +1761,9 @@ class Condorcet(RankedMethod):
         ballot[candToHurt] = 0
         return ballot
 
-    @classmethod
-    def defaultbgs(cls):
-        return [cls.honBallot]
+    #@classmethod
+    #def defaultbgs(cls):
+        #return [cls.honBallot, cls.vaBallot]
 
     #@classmethod
     #def defaultfgs(cls):
