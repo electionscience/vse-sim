@@ -1765,14 +1765,14 @@ class Condorcet(RankedMethod):
     #def defaultbgs(cls):
         #return [cls.honBallot, cls.vaBallot]
 
-    #@classmethod
-    #def defaultfgs(cls):
-        #"""
-        #>>> len(Minimax.defaultfgs())
-        #12
-        #"""
-        #return super().defaultfgs()\
-        #+ [(Borda.vaBallot, targs) for targs in [select21, select31]]
+    @classmethod
+    def defaultfgs(cls):
+        """
+        >>> len(Minimax.defaultfgs())
+        12
+        """
+        return super().defaultfgs()\
+        + [(Borda.vaBallot, targs) for targs in [select21, select31]]
 
 class Schulze(Condorcet):
 

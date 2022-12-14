@@ -128,7 +128,7 @@ class Method:
                 (cls.vaBallot, selectRand, {'info': 'e'}),
                 #(cls.stratBallot, selectRand, {'info': 'p'}),
                 #(cls.stratBallot, selectRand, {'info': 'e'})
-                ]
+                (cls.bulletBallot, selectRand)]
 
     @staticmethod
     def winner(results):
