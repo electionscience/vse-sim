@@ -76,6 +76,17 @@ class Method:
         return ballot
 
     @classmethod
+    def honTargetBullet(cls, utils, candToHelp, fallback="hon", **kw):
+        if utils[candToHelp] == max(utils):
+            return cls.bulletBallot(utils)
+        elif fallback == "hon":
+            return cls.honBallot(utils)
+        elif fallback == "va":
+            return cls.vaBallot(utils, **kw)
+        else:
+            return fallback(utils, **kw)
+
+    @classmethod
     def abstain(cls, utils, **kw):
         return [0]*len(utils)
 
@@ -126,7 +137,8 @@ class Method:
                 for lev in cls.compLevels for targs in [select21, select31]]\
                 + [(cls.vaBallot, selectRand, {'info': 'p'}),
                 (cls.vaBallot, selectRand, {'info': 'e'})]\
-                + [(cls.bulletBallot, targs) for targs in [select12, select21, select31]]
+                + [(cls.honTargetBullet, targs, {'fallback':fallback, 'pollingUncertainty': 0.4})
+                for targs in [select12, select21, select31] for fallback in ['hon', 'va']]
 
     @staticmethod
     def winner(results):
