@@ -125,10 +125,8 @@ class Method:
                 + [(cls.compBallot, targs, {'intensity': lev})
                 for lev in cls.compLevels for targs in [select21, select31]]\
                 + [(cls.vaBallot, selectRand, {'info': 'p'}),
-                (cls.vaBallot, selectRand, {'info': 'e'}),
-                #(cls.stratBallot, selectRand, {'info': 'p'}),
-                #(cls.stratBallot, selectRand, {'info': 'e'})
-                (cls.bulletBallot, selectRand)]
+                (cls.vaBallot, selectRand, {'info': 'e'})]\
+                + [(cls.bulletBallot, targs) for targs in [select12, select21, select31]]
 
     @staticmethod
     def winner(results):
@@ -307,6 +305,10 @@ def selectAB(candA, candB): #candA and candB are candidate IDs
 
 def selectRand(polls, **kw):
     return tuple(random.sample(range(len(polls)), 2))
+
+def select12(polls, **kw):
+    pollOrder = [cand for cand, poll in sorted(enumerate(polls),key=lambda x: -x[1])]
+    return pollOrder[0], pollOrder[1]
 
 def select21(polls, **kw):
     pollOrder = [cand for cand, poll in sorted(enumerate(polls),key=lambda x: -x[1])]
