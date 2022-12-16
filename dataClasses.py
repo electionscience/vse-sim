@@ -131,14 +131,15 @@ class Method:
     def defaultfgs(cls):
         """Returns a list of the default foregrounds (see vse.threeRoundResults) for the voting method.
         """
-        return [(cls.diehardBallot, targs, {'intensity': lev})
-                for lev in cls.diehardLevels for targs in [select21, select31]]\
-                + [(cls.compBallot, targs, {'intensity': lev})
-                for lev in cls.compLevels for targs in [select21, select31]]\
+        return [(cls.diehardBallot, targs, {'intensity': lev, 'info': info})
+                for lev in cls.diehardLevels for targs in [select21, select31] for info in ('e','p')]\
+                + [(cls.compBallot, targs, {'intensity': lev, 'info': info})
+                for lev in cls.compLevels for targs in [select21, select31] for info in ('e','p')]\
                 + [(cls.vaBallot, selectRand, {'info': 'p'}),
                 (cls.vaBallot, selectRand, {'info': 'e'})]\
-                + [(cls.honTargetBullet, targs, {'fallback':fallback, 'pollingUncertainty': 0.4})
-                for targs in [select12, select21, select31] for fallback in ['hon', 'va']]
+                + [(cls.honTargetBullet, targs, {'fallback':fallback, 'info': info, 'pollingUncertainty': 0.4})
+                for targs in [select12, select21, select31] for fallback in ['hon', 'va'] for info in ('e','p')]\
+                + [(cls.bulletBallot, selectRand)]
 
     @staticmethod
     def winner(results):
