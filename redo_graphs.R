@@ -1,5 +1,15 @@
 library(data.table)
 library(scatterD3)
+library(ggplot2)
+library(ggthemes)
+library(dplyr)
+library(forcats)
+library(scales)
+library(extrafont)
+#remotes::install_version("Rttf2pt1", version = "1.3.8")
+extrafont::font_import()
+library(showtext)
+font_add("Arial", "/Library/Fonts/Arial.ttf")  
 # 
 # vse = fread("full1.csv")
 # vse = rbind(vse,fread("full2.csv"))
@@ -35,14 +45,16 @@ library(scatterD3)
 # 
 # fvse = rbind(fvse,fread("wtf2.csv"))
 
-fvse = fread(paste0(modelName, "1.csv"))
+modelName = "picky.7.pe.0.1.1"
+fvse = fread(paste0(modelName, ".csv"))
 numVoters = mean(fvse[,numVoters])
 vses = fvse[method != "ApprovalPoll",list(VSE=mean((r1WinnerUtil - meanCandidateUtil) / 
                       (magicBestUtil - meanCandidateUtil))),by=.(method,backgroundStrat)]
 dcast(vses, method ~ backgroundStrat)
 vses
 
-fromhons = fvse[backgroundStrat=="honBallot" & fgStrat == "lowInfoBallot" & method != "Minimax",
+fromhons = fvse[backgroundStrat=="honBallot" & fgStrat == "vaBallot" & 
+                  method != "Minimax" & fgArgs == "{'info': 'e'}",
      list(
        vse=mean((r1WinnerUtil - meanCandidateUtil) / (magicBestUtil - meanCandidateUtil)),
        fgMatters=mean(fgUtilDiff != 0),
@@ -55,7 +67,8 @@ fromhons = fvse[backgroundStrat=="honBallot" & fgStrat == "lowInfoBallot" & meth
      by=.(method,backgroundStrat, fgStrat, fgArgs)]
 fromhons
 
-fromawares = fvse[((backgroundStrat=="lowInfoBallot"  & method != "Minimax") | (backgroundStrat=="honBallot" &method == "Minimax")) & !fgStrat %in% c("", "lowInfoBallot"),
+fromawares = fvse[((backgroundStrat=="vaBallot"  & method != "Minimax") | (backgroundStrat=="honBallot" &method == "Minimax")) 
+                  & !fgStrat %in% c("", "vaBallot") & !startsWith(fgArgs, "{'fallback': 'hon',"),
      list(
        vse=mean((r1WinnerUtil - meanCandidateUtil) / (magicBestUtil - meanCandidateUtil)),
        fgMatters=mean(fgUtilDiff != 0),
@@ -74,12 +87,9 @@ besttargets = function(grouped) {
 }
 bestfromawares = besttargets(fromawares)
 bestfromawares
-
-library(ggplot2)
-library(ggthemes)
-library(dplyr)
-library(forcats)
-library(scales)
+fixedFavoriteBetrayal = fromawares[method=="STAR" & fgTargets == "select31" & fgStrat == "compBallot" & fgArgs == "{'intensity': 3}",]
+removeWrongFB = bestfromawares[!(fgStrat == "compBallot" & fgArgs == "{'intensity': 3}" & method=="STAR"),]
+bestfromawares = rbind(fixedFavoriteBetrayal, removeWrongFB)
 
 #vse as bars
 (ggplot(data = vses, aes(x = VSE, y = method, group = method)) 
@@ -89,7 +99,7 @@ library(scales)
 
 #vse as dots
 vseGraph = (
-vses[!(method=="Minimax" & backgroundStrat=="lowInfoBallot"),] %>% 
+vses[!(method=="Minimax" & backgroundStrat=="vaBallot"),] %>% 
     mutate(method = method 
                     %>% fct_reorder(VSE, .fun='mean') 
                     %>% recode(`STAR`="STAR", 
@@ -106,7 +116,8 @@ vses[!(method=="Minimax" & backgroundStrat=="lowInfoBallot"),] %>%
   + scale_x_continuous(labels=scales::percent_format(accuracy = 1))#, limits=c(.68, 1.0))
     + geom_point(size=3) #+ xlim(.65,1.00) 
   + theme_gdocs() 
-    + theme(axis.title.y=element_blank()) + xlab("% Voter Satisfaction Efficiency (VSE)")
+    + theme(axis.title.y=element_blank())
+    + xlab("% Voter Satisfaction Efficiency (VSE)")
     + labs(color="Voter Behavior") + scale_colour_colorblind(labels = c("Honest / Naive", "Viability-aware"))
    # + scale_y_discrete(breaks=c("STAR", "Plurality", "PluralityTop2", "Minimax", "Irv", "ApprovalTop2", "Approval"),
   #                     labels=c("STAR", "Plurality/Runoff", "Plurality", "Smith/Minimax", irv="IRV (RCV)", "Approval/Runoff", "Approval"))
@@ -114,9 +125,12 @@ vses[!(method=="Minimax" & backgroundStrat=="lowInfoBallot"),] %>%
 ggsave(paste0(modelName, " VSE.svg"),
        plot=vseGraph,
        width = 6.4, height = 2.4, dpi=1200, units = "in")
+ggsave(paste0(modelName, " VSE.png"),
+       plot=vseGraph,
+       width = 6.4, height = 2.4, dpi=1200, units = "in")
 
-#ASR for viability-aware
-ASR1 = (
+#ASI for viability-aware
+ASI1 = (
   fromhons %>% 
     mutate(method = method 
            %>% fct_reorder(avgStrategicRegret, .fun='mean') 
@@ -134,20 +148,33 @@ ASR1 = (
   + scale_x_continuous(labels=scales::percent_format(accuracy = 1))#, limits = c(-.0,.38))
   + geom_point(size=3) #+ xlim(.65,1.00) 
   + theme_gdocs() 
-  + theme(axis.title.y=element_blank()) + xlab("% Average Strategic Regret (ASR) for not casting a viability-aware ballot")
+  + theme(axis.title.y=element_blank()) + xlab("% Average Strategic Incentive (ASI)")
   #+ labs(color="Voter Behavior") 
   #+ scale_colour_colorblind(labels = c("Honest / Naive", "Viability-aware"))
   # + scale_y_discrete(breaks=c("STAR", "Plurality", "PluralityTop2", "Minimax", "Irv", "ApprovalTop2", "Approval"),
   #                     labels=c("STAR", "Plurality/Runoff", "Plurality", "Smith/Minimax", irv="IRV (RCV)", "Approval/Runoff", "Approval"))
 ) 
 
-ggsave(paste0(modelName, " ASR1.svg"),
-       plot=ASR1,
+ggsave(paste0(modelName, " ASI1.svg"),
+       plot=ASI1,
+       width = 7.8, height = 2.6, dpi=1200, units = "in")
+ggsave(paste0(modelName, " ASI1.png"),
+       plot=ASI1,
        width = 7.8, height = 2.6, dpi=1200, units = "in")
 
+bestfromawares[fgArgs == "{'intensity': 3}" & fgStrat=="compBallot",xStrategy:="Favorite Betrayal"]
+bestfromawares[fgArgs == "{'intensity': 3}" & fgStrat=="diehardBallot",xStrategy:="Burial"]
+bestfromawares[fgArgs == "{'intensity': 4}",xStrategy:="Bullet (random bloc)"]
+bestfromawares[(fgArgs %in% c("{'intensity': 1}","{'intensity': 2}")) & fgStrat=="diehardBallot",xStrategy:="Exclusive Approval-like"]
+bestfromawares[(fgArgs %in% c("{'intensity': 1}","{'intensity': 2}")) & fgStrat=="compBallot",xStrategy:="Inclusive Approval-like"]
+bestfromawares = bestfromawares[!(method=="STAR" & fgArgs == "{'intensity': 1}"),] 
+bestfromawares[startsWith(fgArgs,"{'fallback': 'va'"),xStrategy:="Bullet (one of top 3)"]
 
-#ASR for targeted strategy
-ASR2 = (
+strategies = sort(unique(bestfromawares[,xStrategy]))
+bestfromawares[,Strategy:=factor(xStrategy, levels = strategies[c(3,5,1,4,6,2)])]
+
+#ASI for targeted strategy
+ASI2 = (
   bestfromawares %>% 
     mutate(method = method 
            %>% fct_reorder(avgStrategicRegret, .fun='mean') 
@@ -161,17 +188,18 @@ ASR2 = (
            #VSE = VSE * 100
     ) %>%
     ggplot(
-      aes(x = avgStrategicRegret, y = as.factor(method), shape = as.factor(fgStrat), color = fgArgs)) 
+      aes(x = avgStrategicRegret, y = as.factor(method), color = Strategy, fill=Strategy, shape=Strategy)) 
   + scale_x_continuous(labels=scales::percent_format(accuracy = 1))
   + geom_point(size=3) #+ xlim(.65,1.00) 
+  #+ scale_shape_manual(values=c(0,1,5,2,6))
+  + scale_shape_manual(values=c(21:25,1))
   + theme_gdocs() 
-  + theme(axis.title.y=element_blank()) + xlab("% Average Strategic Regret (ASR) for not using targeted strategy")
-  + labs(color="Strategy level", shape="Strategy type") 
-  + scale_colour_colorblind(labels = c("Honest", "Semi-honest", "Dishonest", "Bullet"))
-  + scale_shape(labels = c("Compromise", "Die-hard"))
+  + theme(axis.title.y=element_blank()) + xlab("% Average Strategic Incentive (ASI)")
+  + labs(color="Strategy") 
   # + scale_y_discrete(breaks=c("STAR", "Plurality", "PluralityTop2", "Minimax", "Irv", "ApprovalTop2", "Approval"),
   #                     labels=c("STAR", "Plurality/Runoff", "Plurality", "Smith/Minimax", irv="IRV (RCV)", "Approval/Runoff", "Approval"))
 ) 
-ggsave(paste0(modelName, " ASR2.svg"),
-       plot=ASR2,
+ggsave(paste0(modelName, " ASI2.svg"),
+       plot=ASI2,
        width = 8.4, height = 2.8, dpi=1200, units = "in")
+
