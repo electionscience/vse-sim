@@ -507,7 +507,7 @@ class Score(makeScoreMethod(5, True)):
 
 class Approval(makeScoreMethod(1,True)):
     diehardLevels = [1, 4]
-    compLevels = [1]
+    compLevels = [1,3]
     @classmethod
     def zeroInfoBallot(cls, utils, electabilities=None, polls=None, pickiness=0.4, **kw):
         """Returns a ballot based on utils and pickiness
@@ -555,6 +555,8 @@ class Approval(makeScoreMethod(1,True)):
         """
         if intensity == 1:
             return super().compBallot(utils, 2, candToHelp, candToHurt, **kw)
+        elif intensity == 3:
+            return Plurality.compBallot(utils, 3, candToHelp, candToHurt, **kw)
         else:
             return super().compBallot(utils, intensity, candToHelp, candToHurt, **kw)
 
