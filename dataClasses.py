@@ -356,7 +356,7 @@ for prefix in ["", "min", "t1", "o"]:
     for columnName in ["fgUtil", "fgUtilDiff", "fgSize",
             "fgNumHelped", "fgHelpedUtil", "fgHelpedUtilDiff",
             "fgNumHarmed", "fgHarmedUtil", "fgHarmedUtilDiff",
-            "helpCandElected", "hurtCandElected"]:
+            "helpCandElected", "hurtCandElectedR1"]:
         resultColumns.append(prefix + columnName)
 
 def makeResults(**kw):
@@ -381,7 +381,7 @@ def makePartialResults(fgVoters, winner, r1Winner, prefix, candToHelp, candToHur
     fgHelpedUtilDiff= sum(v[winner] - v[r1Winner] for v in fgHelped),
     fgNumHarmed=len(fgHarmed), fgHarmedUtil=sum(v[winner] for v in fgHarmed),
     fgHarmedUtilDiff= sum(v[winner] - v[r1Winner] for v in fgHarmed),
-    helpCandElected=1 if winner==candToHelp else 0, hurtCandElected=1 if winner==candToHurt else 0)
+    helpCandElected=1 if winner==candToHelp else 0, hurtCandElectedR1=1 if r1Winner==candToHurt else 0)
     return{prefix+key:value for key, value in tempDict.items()}
 
 def simplePollsToProbs(polls, uncertainty=.05):
