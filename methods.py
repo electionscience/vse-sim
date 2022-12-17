@@ -1606,8 +1606,8 @@ class V321(Mav):
 
 class Condorcet(RankedMethod):
 
-    diehardLevels = [3]
-    compLevels = [3]
+    diehardLevels = [1,2,3]
+    compLevels = [1,2,3]
 
     @classmethod
     def resolveCycle(cls, cmat, n, ballots):
@@ -1753,7 +1753,7 @@ class Condorcet(RankedMethod):
         [0, 3, 1, 2]
         """
         ballot = cls.honBallot(utils)
-        if intensity < 3: return ballot
+        if intensity < 3: return STAR.compBallot(utils, intensity, candToHelp=candToHelp, candToHurt=candToHurt, **kw)
         helpRank = ballot[candToHelp]
         for cand, rank in enumerate(ballot):
             if rank > helpRank:
@@ -1768,7 +1768,7 @@ class Condorcet(RankedMethod):
         [1, 2, 0, 3, 4]
         """
         ballot = cls.honBallot(utils)
-        if intensity < 3: return ballot
+        if intensity < 3: return STAR.diehardBallot(utils, intensity, candToHelp=candToHelp, candToHurt=candToHurt, **kw)
         hurtRank = ballot[candToHurt]
         for cand, rank in enumerate(ballot):
             if rank < hurtRank:
