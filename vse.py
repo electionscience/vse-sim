@@ -166,6 +166,7 @@ def threeRoundResults(method, voters, backgroundStrat, foregrounds=[], bgArgs = 
         winnerPlaceInR0=r0Places[winner], winnerPlaceInR1=r1Places[winner],
         probOfWin=winProbs[winner], numWinnersFound=len(winnersFound), totalUtil=totalUtil,
         pivotalUtilDiff=deciderMargUtilDiffs[0][0]/deciderMargUtilDiffs[0][2] if deciderMargUtilDiffs else 0,
+        factionSize=fgSize, factionFraction = (deciderMargUtilDiffs[0][1]+1)/fgSize if deciderMargUtilDiffs else None,
         deciderUtilDiffSum=sum(uDiff for uDiff, _, _ in deciderMargUtilDiffs), **partialResults))
     return allResults
 
