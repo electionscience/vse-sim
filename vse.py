@@ -120,7 +120,7 @@ def threeRoundResults(method, voters, backgroundStrat, foregrounds=[], bgArgs = 
         while i < len(winnersFound):
             thisWinner = winnersFound[i][0]
             threshold = method.stratThresholdSearch(
-            thisWinner, winnersFound[i][1], permbgBallots, fgBallots, fgBaselineBallots, winnersFound)
+                thisWinner, winnersFound[i][1], permbgBallots, fgBallots, fgBaselineBallots, winnersFound)
             minfg = [voter for voter, _, _ in foreground][:threshold]
             prevWinner = method.winner(method.results(
             permbgBallots + fgBallots[:threshold-1] + fgBaselineBallots[threshold-1:]))
@@ -129,7 +129,7 @@ def threeRoundResults(method, voters, backgroundStrat, foregrounds=[], bgArgs = 
             elif r1Winner == prevWinner:
                 prefix = "t1"
             else: prefix = "o"#+str(i)
-            partialResults.update(makePartialResults(minfg, winner, r1Winner, prefix))
+            partialResults.update(makePartialResults(minfg, thisWinner, r1Winner, prefix, candToHelp, candToHurt))
             deciderUtils = foreground[threshold][0] #The deciding voter
             if threshold == 0: #this shouldn't actually matter as we'll end up ignoring it anyway
                             #, so having the wrong utilities would be OK. But let's get it right.
@@ -160,14 +160,14 @@ def threeRoundResults(method, voters, backgroundStrat, foregrounds=[], bgArgs = 
         partialResults['margStrategicRegret'] = margStrategicRegret
         partialResults['avgStrategicRegret'] = avgStrategicRegret
 
-        partialResults.update(makePartialResults([voter for voter, _, _ in foreground], winner, r1Winner, ""))
+        partialResults.update(makePartialResults([voter for voter, _, _ in foreground], winner, r1Winner, "", candToHelp, candToHurt))
         allResults.append(makeResults(results=results, fgStrat = foregroundStrat.__name__,
-        fgTargets=targetSelect.__name__, fgArgs=fgArgs,
-        winnerPlaceInR0=r0Places[winner], winnerPlaceInR1=r1Places[winner],
-        probOfWin=winProbs[winner], numWinnersFound=len(winnersFound), totalUtil=totalUtil,
-        pivotalUtilDiff=deciderMargUtilDiffs[0][0]/deciderMargUtilDiffs[0][2] if deciderMargUtilDiffs else 0,
-        factionSize=fgSize, factionFraction = (deciderMargUtilDiffs[0][1]+1)/fgSize if deciderMargUtilDiffs else None,
-        deciderUtilDiffSum=sum(uDiff for uDiff, _, _ in deciderMargUtilDiffs), **partialResults))
+            fgTargets=targetSelect.__name__, fgArgs=fgArgs,
+            winnerPlaceInR0=r0Places[winner], winnerPlaceInR1=r1Places[winner],
+            probOfWin=winProbs[winner], numWinnersFound=len(winnersFound), totalUtil=totalUtil,
+            pivotalUtilDiff=deciderMargUtilDiffs[0][0]/deciderMargUtilDiffs[0][2] if deciderMargUtilDiffs else 0,
+            factionSize=fgSize, factionFraction = (deciderMargUtilDiffs[0][1]+1)/fgSize if deciderMargUtilDiffs else None,
+            deciderUtilDiffSum=sum(uDiff for uDiff, _, _ in deciderMargUtilDiffs), **partialResults))
     return allResults
 
 class CsvBatch:

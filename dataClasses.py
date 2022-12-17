@@ -355,7 +355,8 @@ resultColumns = ["method", "backgroundStrat", "fgStrat", "numVoters", "numCandid
 for prefix in ["", "min", "t1", "o"]:
     for columnName in ["fgUtil", "fgUtilDiff", "fgSize",
             "fgNumHelped", "fgHelpedUtil", "fgHelpedUtilDiff",
-            "fgNumHarmed", "fgHarmedUtil", "fgHarmedUtilDiff"]:
+            "fgNumHarmed", "fgHarmedUtil", "fgHarmedUtilDiff",
+            "helpCandElected", "hurtCandElected"]:
         resultColumns.append(prefix + columnName)
 
 def makeResults(**kw):
@@ -363,7 +364,7 @@ def makeResults(**kw):
     results.update(kw)
     return results
 
-def makePartialResults(fgVoters, winner, r1Winner, prefix=""):
+def makePartialResults(fgVoters, winner, r1Winner, prefix, candToHelp, candToHurt):
     fgHelped = []
     fgHarmed = []
     numfg = len(fgVoters)
@@ -379,7 +380,8 @@ def makePartialResults(fgVoters, winner, r1Winner, prefix=""):
     fgNumHelped=len(fgHelped), fgHelpedUtil=sum(v[winner] for v in fgHelped),
     fgHelpedUtilDiff= sum(v[winner] - v[r1Winner] for v in fgHelped),
     fgNumHarmed=len(fgHarmed), fgHarmedUtil=sum(v[winner] for v in fgHarmed),
-    fgHarmedUtilDiff= sum(v[winner] - v[r1Winner] for v in fgHarmed))
+    fgHarmedUtilDiff= sum(v[winner] - v[r1Winner] for v in fgHarmed),
+    helpCandElected=1 if winner==candToHelp else 0, hurtCandElected=1 if winner==candToHurt else 0)
     return{prefix+key:value for key, value in tempDict.items()}
 
 def simplePollsToProbs(polls, uncertainty=.05):
