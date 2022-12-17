@@ -45,13 +45,20 @@ font_add("Arial", "/Library/Fonts/Arial.ttf")
 # 
 # fvse = rbind(fvse,fread("wtf2.csv"))
 
-modelName = "picky.7.pe.0.1.1"
-fvse = fread(paste0(modelName, ".csv"))
+modelName = "base_noise_0.1_"
+files = Sys.glob(paste0(modelName,"*.csv"))
+fileName = sort(files, decreasing = T)[1]
+fvse = fread(fileName)
 numVoters = mean(fvse[,numVoters])
 vses = fvse[method != "ApprovalPoll",list(VSE=mean((r1WinnerUtil - meanCandidateUtil) / 
                       (magicBestUtil - meanCandidateUtil))),by=.(method,backgroundStrat)]
 dcast(vses, method ~ backgroundStrat)
 vses
+
+fvse = fvse[,intensityMaybe:=substr(fgArgs,15,15)]
+unique(fvse[,intensityMaybe]) #Should be: [1] ""  "1" "2" "3" "4" "h" "v"
+fvse = fvse[,fgBaseMaybe:=substr(fgArgs,27,27)]
+unique(fvse[,fgBaseMaybe]) #Should be: [1] ""  "e" "p" ":" " "
 
 fromhons = fvse[backgroundStrat=="honBallot" & fgStrat == "vaBallot" & 
                   method != "Minimax" & fgArgs == "{'info': 'e'}",
@@ -64,7 +71,7 @@ fromhons = fvse[backgroundStrat=="honBallot" & fgStrat == "vaBallot" &
        fgHelpedUtilDiff=mean((fgHelpedUtilDiff) / (magicBestUtil - meanCandidateUtil) / numVoters),
        fgHarmedUtilDiff=mean((fgHarmedUtilDiff) / (magicBestUtil - meanCandidateUtil) / numVoters)
      ),
-     by=.(method,backgroundStrat, fgStrat, fgArgs)]
+     by=.(method,backgroundStrat, fgStrat, fgArgs, intensityMaybe, fgBaseMaybe)]
 fromhons
 
 fromawares = fvse[((backgroundStrat=="vaBallot"  & method != "Minimax") | (backgroundStrat=="honBallot" &method == "Minimax")) 
@@ -77,7 +84,7 @@ fromawares = fvse[((backgroundStrat=="vaBallot"  & method != "Minimax") | (backg
        avgStrategicRegret=mean(avgStrategicRegret / (magicBestUtil - meanCandidateUtil) / numVoters),
        fgHelpedUtilDiff=mean(fgHelpedUtilDiff  / (magicBestUtil - meanCandidateUtil) / numVoters),
        fgHarmedUtilDiff=mean(fgHarmedUtilDiff / (magicBestUtil - meanCandidateUtil) / numVoters)),
-     by=.(method,backgroundStrat, fgStrat, fgArgs, fgTargets)]
+     by=.(method,backgroundStrat, fgStrat, fgArgs, fgTargets, intensityMaybe, fgBaseMaybe)]
 fromawares
 
 besttargets = function(grouped) {
@@ -87,8 +94,8 @@ besttargets = function(grouped) {
 }
 bestfromawares = besttargets(fromawares)
 bestfromawares
-fixedFavoriteBetrayal = fromawares[method=="STAR" & fgTargets == "select31" & fgStrat == "compBallot" & fgArgs == "{'intensity': 3}",]
-removeWrongFB = bestfromawares[!(fgStrat == "compBallot" & fgArgs == "{'intensity': 3}" & method=="STAR"),]
+fixedFavoriteBetrayal = fromawares[method=="STAR" & fgTargets == "select31" & fgStrat == "compBallot" & intensityMaybe == "3",]
+removeWrongFB = bestfromawares[!(fgStrat == "compBallot" & intensityMaybe == "3" & method=="STAR"),]
 bestfromawares = rbind(fixedFavoriteBetrayal, removeWrongFB)
 
 #vse as bars
@@ -133,7 +140,7 @@ ggsave(paste0(modelName, " VSE.png"),
 ASI1 = (
   fromhons %>% 
     mutate(method = method 
-           %>% fct_reorder(avgStrategicRegret, .fun='mean') 
+           %>% fct_reorder(VSE, .fun='mean') 
            %>% recode(`STAR`="STAR", 
                       `PluralityTop2`="Plurality Top Two", 
                       `Minimax`="Smith/Minimax", 
@@ -148,7 +155,7 @@ ASI1 = (
   + scale_x_continuous(labels=scales::percent_format(accuracy = 1))#, limits = c(-.0,.38))
   + geom_point(size=3) #+ xlim(.65,1.00) 
   + theme_gdocs() 
-  + theme(axis.title.y=element_blank()) + xlab("% Average Strategic Incentive (ASI)")
+  + theme(axis.title.y=element_blank()) + xlab("% Factional Strategic Incentive (ASI)")
   #+ labs(color="Voter Behavior") 
   #+ scale_colour_colorblind(labels = c("Honest / Naive", "Viability-aware"))
   # + scale_y_discrete(breaks=c("STAR", "Plurality", "PluralityTop2", "Minimax", "Irv", "ApprovalTop2", "Approval"),
@@ -162,22 +169,36 @@ ggsave(paste0(modelName, " ASI1.png"),
        plot=ASI1,
        width = 7.8, height = 2.6, dpi=1200, units = "in")
 
-bestfromawares[fgArgs == "{'intensity': 3}" & fgStrat=="compBallot",xStrategy:="Favorite Betrayal"]
-bestfromawares[fgArgs == "{'intensity': 3}" & fgStrat=="diehardBallot",xStrategy:="Burial"]
-bestfromawares[fgArgs == "{'intensity': 4}",xStrategy:="Bullet (random bloc)"]
-bestfromawares[(fgArgs %in% c("{'intensity': 1}","{'intensity': 2}")) & fgStrat=="diehardBallot",xStrategy:="Exclusive Approval-like"]
-bestfromawares[(fgArgs %in% c("{'intensity': 1}","{'intensity': 2}")) & fgStrat=="compBallot",xStrategy:="Inclusive Approval-like"]
-bestfromawares = bestfromawares[!(method=="STAR" & fgArgs == "{'intensity': 1}"),] 
-bestfromawares[startsWith(fgArgs,"{'fallback': 'va'"),xStrategy:="Bullet (one of top 3)"]
+bestfromawares[intensityMaybe == "3" & fgStrat=="compBallot",xStrategy:="Favorite Betrayal"]
+bestfromawares[intensityMaybe == "3" & fgStrat=="diehardBallot",xStrategy:="Burial"]
+bestfromawares[intensityMaybe == "4",xStrategy:="Bullet (random bloc)"]
+bestfromawares[(intensityMaybe %in% c("1","2")) & fgStrat=="diehardBallot" &
+                 (method %in% c("Approval", "ApprovalTop2")),xStrategy:="Threshold (Exclusive)"]
+bestfromawares[(intensityMaybe %in% c("1","2")) & fgStrat=="compBallot" &
+                 (method %in% c("Approval", "ApprovalTop2")),xStrategy:="Threshold (Inclusive)"]
+bestfromawares[(intensityMaybe == "1") & fgStrat=="diehardBallot" &
+                 (method == "STAR"),xStrategy:="Exaggerate (Exclusive?)"]
+bestfromawares[(intensityMaybe == "1") & fgStrat=="compBallot" &
+                 (method == "STAR"),xStrategy:="Huh (Inclusive?)"]
+bestfromawares[(intensityMaybe == "2") & fgStrat=="diehardBallot" &
+                 (method == "STAR"),xStrategy:="Huh (Exclusive?)"]
+bestfromawares[(intensityMaybe == "2") & fgStrat=="compBallot" &
+                 (method == "STAR"),xStrategy:="Exaggerate (Inclusive?)"]
+bestfromawares[startsWith(fgArgs,"{'fallback': 'va'"),xStrategy:="XXX"]
+bestfromawares = bestfromawares[(!xStrategy=="XXX") & fgBaseMaybe == "p",] 
 
 strategies = sort(unique(bestfromawares[,xStrategy]))
-bestfromawares[,Strategy:=factor(xStrategy, levels = strategies[c(3,5,1,4,6,2)])]
+bestfromawares[,Strategy:=factor(xStrategy, levels = strategies[c(5,2,1,8,9,6,7,3,4)])]
+#methods = sort(unique(bestfromawares[,method]))
+#methodsInOrder = methods[c(5,6,3,1,2,4,7)]
+#methodsInOrder # should be: [1] "Plurality"     "PluralityTop2" "IRV"           "Approval"      "ApprovalTop2"  "Minimax"       "STAR"  
+#bestfromawares[,method:=factor(method, levels = methodsInOrder)]
 
 #ASI for targeted strategy
 ASI2 = (
   bestfromawares %>% 
     mutate(method = method 
-           %>% fct_reorder(avgStrategicRegret, .fun='mean') 
+           %>% fct_reorder(VSE, .fun='mean') 
            %>% recode(`STAR`="STAR", 
                       `PluralityTop2`="Plurality Top Two", 
                       `Minimax`="Smith/Minimax", 
@@ -192,9 +213,11 @@ ASI2 = (
   + scale_x_continuous(labels=scales::percent_format(accuracy = 1))
   + geom_point(size=3) #+ xlim(.65,1.00) 
   #+ scale_shape_manual(values=c(0,1,5,2,6))
-  + scale_shape_manual(values=c(21:25,1))
+  + scale_shape_manual(values=c(21,22,23,25,24,25,24,25,24))
+  + scale_color_manual(values=c(1,2,3,4,4,5,5,6,6))
+  + scale_fill_manual(values=c(1,2,3,4,4,5,5,6,6))
   + theme_gdocs() 
-  + theme(axis.title.y=element_blank()) + xlab("% Average Strategic Incentive (ASI)")
+  + theme(axis.title.y=element_blank()) + xlab("% Factional Strategic Incentive (ASI)")
   + labs(color="Strategy") 
   # + scale_y_discrete(breaks=c("STAR", "Plurality", "PluralityTop2", "Minimax", "Irv", "ApprovalTop2", "Approval"),
   #                     labels=c("STAR", "Plurality/Runoff", "Plurality", "Smith/Minimax", irv="IRV (RCV)", "Approval/Runoff", "Approval"))

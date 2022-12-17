@@ -773,12 +773,16 @@ def makeSTARMethod(topRank=5):
             if intensity == 1:
                 for i, u in enumerate(utils):
                     if u >= helpUtil:
-                        baseBallot[i] = max(cls.topRank - 1, baseBallot[i])
-                    elif u <= hurtUtil:
+                        baseBallot[i] = cls.topRank
+                    elif u > hurtUtil:
+                        baseBallot[i] = cls.topRank - 1#max(, baseBallot[i])
+                    elif u == hurtUtil:
+                        baseBallot[i] = min(1, baseBallot[i])
+                    elif u < hurtUtil:
                         baseBallot[i] = 0
             if intensity == 2:
                 for i, u in enumerate(utils):
-                    if u >= helpUtil:
+                    if u > hurtUtil:
                         baseBallot[i] = cls.topRank
                     elif u <= hurtUtil:
                         baseBallot[i] = 0
@@ -811,12 +815,16 @@ def makeSTARMethod(topRank=5):
             if intensity == 1:
                 for i, u in enumerate(utils):
                     if u <= hurtUtil:
-                        baseBallot[i] = min(1, baseBallot[i])
-                    elif u >= helpUtil:
+                        baseBallot[i] = 0
+                    elif u < helpUtil:
+                        baseBallot[i] = 1
+                    elif u == helpUtil:
+                        baseBallot[i] = max(cls.topRank - 1, baseBallot[i])
+                    elif u > helpUtil:
                         baseBallot[i] = cls.topRank
             if intensity == 2:
                 for i, u in enumerate(utils):
-                    if u <= hurtUtil:
+                    if u < helpUtil:
                         baseBallot[i] = 0
                     elif u >= helpUtil:
                         baseBallot[i] = cls.topRank
