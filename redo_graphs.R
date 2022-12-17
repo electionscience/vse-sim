@@ -136,8 +136,8 @@ ggsave(paste0(modelName, " VSE.png"),
        plot=vseGraph,
        width = 6.4, height = 2.4, dpi=1200, units = "in")
 
-#ASI for viability-aware
-ASI1 = (
+#PVSI for viability-aware
+PVSI1 = (
   fromhons %>% 
     mutate(method = method 
            %>% fct_reorder(VSE, .fun='mean') 
@@ -155,18 +155,18 @@ ASI1 = (
   + scale_x_continuous(labels=scales::percent_format(accuracy = 1))#, limits = c(-.0,.38))
   + geom_point(size=3) #+ xlim(.65,1.00) 
   + theme_gdocs() 
-  + theme(axis.title.y=element_blank()) + xlab("% Factional Strategic Incentive (ASI)")
+  + theme(axis.title.y=element_blank()) + xlab("% Pivotal Voter Strategic Incentive (PVSI)")
   #+ labs(color="Voter Behavior") 
   #+ scale_colour_colorblind(labels = c("Honest / Naive", "Viability-aware"))
   # + scale_y_discrete(breaks=c("STAR", "Plurality", "PluralityTop2", "Minimax", "Irv", "ApprovalTop2", "Approval"),
   #                     labels=c("STAR", "Plurality/Runoff", "Plurality", "Smith/Minimax", irv="IRV (RCV)", "Approval/Runoff", "Approval"))
 ) 
 
-ggsave(paste0(modelName, " ASI1.svg"),
-       plot=ASI1,
+ggsave(paste0(modelName, " PVSI1.svg"),
+       plot=PVSI1,
        width = 7.8, height = 2.6, dpi=1200, units = "in")
-ggsave(paste0(modelName, " ASI1.png"),
-       plot=ASI1,
+ggsave(paste0(modelName, " PVSI1.png"),
+       plot=PVSI1,
        width = 7.8, height = 2.6, dpi=1200, units = "in")
 
 bestfromawares[intensityMaybe == "3" & fgStrat=="compBallot",xStrategy:="Favorite Betrayal"]
@@ -194,8 +194,8 @@ bestfromawares[,Strategy:=factor(xStrategy, levels = strategies[c(5,2,1,8,9,6,7,
 #methodsInOrder # should be: [1] "Plurality"     "PluralityTop2" "IRV"           "Approval"      "ApprovalTop2"  "Minimax"       "STAR"  
 #bestfromawares[,method:=factor(method, levels = methodsInOrder)]
 
-#ASI for targeted strategy
-ASI2 = (
+#PVSI for targeted strategy
+PVSI2 = (
   bestfromawares %>% 
     mutate(method = method 
            %>% fct_reorder(VSE, .fun='mean') 
@@ -217,12 +217,12 @@ ASI2 = (
   + scale_color_manual(values=c(1,2,3,4,4,5,5,6,6))
   + scale_fill_manual(values=c(1,2,3,4,4,5,5,6,6))
   + theme_gdocs() 
-  + theme(axis.title.y=element_blank()) + xlab("% Factional Strategic Incentive (ASI)")
+  + theme(axis.title.y=element_blank()) + xlab("% Pivotal Voter Strategic Incentive (PVSI)")
   + labs(color="Strategy") 
   # + scale_y_discrete(breaks=c("STAR", "Plurality", "PluralityTop2", "Minimax", "Irv", "ApprovalTop2", "Approval"),
   #                     labels=c("STAR", "Plurality/Runoff", "Plurality", "Smith/Minimax", irv="IRV (RCV)", "Approval/Runoff", "Approval"))
 ) 
-ggsave(paste0(modelName, " ASI2.svg"),
-       plot=ASI2,
+ggsave(paste0(modelName, " PVSI2.svg"),
+       plot=PVSI2,
        width = 8.4, height = 2.8, dpi=1200, units = "in")
 
