@@ -239,7 +239,7 @@ class ThreeRoundResults:
             fgTargets=self.targetSelect.__name__, fgArgs=self.fgArgs,
             winnerPlaceInR0=self.r0Places[self.winner], winnerPlaceInR1=self.r1Places[self.winner],
             probOfWin=self.winProbs[self.winner], numWinnersFound=len(self.winnersFound), totalUtil=self.totalUtil,
-            firstDeciderUtilDiff=self.deciderMargUtilDiffs[0][0] if self.deciderMargUtilDiffs else 0,
+            pivotalUtilDiff=self.deciderMargUtilDiffs[0][0] if self.deciderMargUtilDiffs else 0,
             deciderUtilDiffSum=sum(uDiff for uDiff, _ in self.deciderMargUtilDiffs), **self.partialResults))
 
     def makeResults(self, **kw):
@@ -297,7 +297,7 @@ for stat in ["mean", "max", "median"]:
             "fgNumHarmed", "fgHarmedUtil", "fgHarmedUtilDiff",
             "totalUtil", "deciderUtilDiffs",
             "highUtil", "randUtil",
-            "firstDeciderUtilDiff", "deciderUtilDiffSum", "deciderMargUtilDiffs"]:
+            "pivotalUtilDiff", "deciderUtilDiffSum", "deciderMargUtilDiffs"]:
         resultColumns.append(stat + columnName)
 class TRRMW(ThreeRoundResults):
     def configureInputs(self):
@@ -361,5 +361,5 @@ class TRRMW(ThreeRoundResults):
         self.allResults.append(self.makeResults(results=self.results, fgStrat = self.foregroundStrat.__name__,
             fgTargets=self.targetSelect.__name__, fgArgs=self.fgArgs,
             numWinnersFound=len(self.winnersFound),
-            firstDeciderUtilDiff=self.deciderMargUtilDiffs[0][0] if self.deciderMargUtilDiffs else 0,
+            pivotalUtilDiff=self.deciderMargUtilDiffs[0][0] if self.deciderMargUtilDiffs else 0,
             deciderUtilDiffSum=sum(uDiff for uDiff, _ in self.deciderMargUtilDiffs), **self.partialResults))

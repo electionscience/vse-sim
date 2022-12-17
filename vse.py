@@ -141,7 +141,7 @@ def threeRoundResults(method, voters, backgroundStrat, foregrounds=[], bgArgs = 
                                     threshold))
             allUtilDiffs.append(([voter[0][thisWinner] - voter[0][r1Winner] for voter in foreground[:threshold+1]],
                                     threshold))
-            deciderMargUtilDiffs.append((deciderUtils[thisWinner] - deciderUtils[prevWinner], threshold))
+            deciderMargUtilDiffs.append((deciderUtils[thisWinner] - deciderUtils[prevWinner], threshold, max(deciderUtils)-mean(deciderUtils)))
             i += 1
         deciderMargUtilDiffs.sort(key=lambda x:x[1])
         partialResults['deciderMargUtilDiffs'] = deciderMargUtilDiffs
@@ -165,7 +165,7 @@ def threeRoundResults(method, voters, backgroundStrat, foregrounds=[], bgArgs = 
         fgTargets=targetSelect.__name__, fgArgs=fgArgs,
         winnerPlaceInR0=r0Places[winner], winnerPlaceInR1=r1Places[winner],
         probOfWin=winProbs[winner], numWinnersFound=len(winnersFound), totalUtil=totalUtil,
-        firstDeciderUtilDiff=deciderMargUtilDiffs[0][0] if deciderMargUtilDiffs else 0,
+        pivotalUtilDiff=deciderMargUtilDiffs[0][0]/deciderMargUtilDiffs[0][2] if deciderMargUtilDiffs else 0,
         deciderUtilDiffSum=sum(uDiff for uDiff, _ in deciderMargUtilDiffs), **partialResults))
     return allResults
 
@@ -285,3 +285,4 @@ def listProduct(lists, index=0):
 if __name__ == "__main__":
     import doctest
     doctest.testmod()
+pivotalUtilDiff

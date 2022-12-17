@@ -350,7 +350,7 @@ resultColumns = ["method", "backgroundStrat", "fgStrat", "numVoters", "numCandid
         "r1WinnerUtil", "probOfWin", "r1WinProb", "winnerPlaceInR0", "winnerPlaceInR1",
         "results", "bgArgs", "fgArgs", "totalUtil", "deciderUtilDiffs", "fgTargets",
         "totalStratUtilDiff", "margStrategicRegret", "avgStrategicRegret",
-        "firstDeciderUtilDiff", "deciderUtilDiffSum", "deciderMargUtilDiffs", "numWinnersFound"]
+        "pivotalUtilDiff", "deciderUtilDiffSum", "deciderMargUtilDiffs", "numWinnersFound"]
 for prefix in ["", "min", "t1", "o"]:
     for columnName in ["fgUtil", "fgUtilDiff", "fgSize",
             "fgNumHelped", "fgHelpedUtil", "fgHelpedUtilDiff",
