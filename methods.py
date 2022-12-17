@@ -1219,6 +1219,7 @@ class IRV(Method):
 
     stratTargetFor = Method.stratTarget3
     compLevels = [3]
+    diehardLevels = [3]
 
     @classmethod
     def oldResort(self, ballots, loser, ncand, piles):
@@ -1376,6 +1377,10 @@ class IRV(Method):
                 ballot[cand] -= 1
         ballot[candToHelp] = len(utils) - 1
         return ballot
+
+    @classmethod
+    def diehardBallot(cls, *args, **kw):
+        return Minimax.diehardBallot(*args, **kw)
 
     @classmethod
     def fillStratBallot(cls, voter, polls, places, n, stratGap, ballot,
