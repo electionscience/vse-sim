@@ -535,8 +535,6 @@ class Approval(makeScoreMethod(1,True)):
     @classmethod
     def diehardBallot(cls, utils, intensity, candToHelp, candToHurt, **kw):
         """
-        >>> Approval.diehardBallot([-10,1,2,3,4,10],0,4,2)
-        [0.0, 1.0, 1.0, 1.0, 1.0, 1.0]
         >>> Approval.diehardBallot([-10,1,2,3,4,10],1,4,2)
         [0, 0, 0, 0, 1, 1]
         """
@@ -551,7 +549,7 @@ class Approval(makeScoreMethod(1,True)):
         >>> Approval.compBallot([-10,1,2,3,4,20],1,4,2)
         [0, 0, 0, 1, 1, 1]
         >>> Approval.compBallot([-10,1,2,3,4,20],0,4,2)
-        [0.0, 0.0, 0.0, 0.0, 0.0, 1.0]
+        [0, 0, 0, 0, 0, 1]
         """
         if intensity == 1:
             return super().compBallot(utils, 2, candToHelp, candToHurt, **kw)
@@ -1780,14 +1778,10 @@ class Condorcet(RankedMethod):
     #def defaultbgs(cls):
         #return [cls.honBallot, cls.vaBallot]
 
-    @classmethod
-    def defaultfgs(cls):
-        """
-        >>> len(Minimax.defaultfgs())
-        12
-        """
-        return super().defaultfgs()\
-        + [(Borda.vaBallot, targs) for targs in [select21, select31]]
+    #@classmethod
+    #def defaultfgs(cls):
+        #return super().defaultfgs()\
+        #+ [(Borda.vaBallot, targs) for targs in [select21, select31]]
 
 class Schulze(Condorcet):
 
