@@ -169,7 +169,7 @@ class Method:
 
     @classmethod
     def stratThresholdSearch(cls, targetWinner, foundAt, bgBallots, fgBallots, fgBaselineBallots, winnersFound):
-        """Returns the minimum number of strategist needed to elect targetWinner
+        """Returns the minimum number of strategists needed to elect targetWinner
         and modifies winnersFound to include any additional winners found during the search"""
         maxThreshold, minThreshold = foundAt, 0
         while maxThreshold > minThreshold: #binary search for min foreground size

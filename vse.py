@@ -130,12 +130,12 @@ def threeRoundResults(method, voters, backgroundStrat, foregrounds=[], bgArgs = 
                 prefix = "t1"
             else: prefix = "o"#+str(i)
             partialResults.update(makePartialResults(minfg, thisWinner, r1Winner, prefix, candToHelp, candToHurt))
-            deciderUtils = foreground[threshold][0] #The deciding voter
+            deciderUtils = foreground[threshold-1][0] #The deciding voter
             if threshold == 0: #this shouldn't actually matter as we'll end up ignoring it anyway
                             #, so having the wrong utilities would be OK. But let's get it right.
                 predeciderUtils = [0.] * len(r1Results)
             else:
-                predeciderUtils = foreground[threshold - 1][0] #The one before the deciding voter
+                predeciderUtils = foreground[threshold - 2][0] #The one before the deciding voter
             deciderUtilDiffs.append((predeciderUtils[thisWinner] - predeciderUtils[r1Winner],
                                     deciderUtils[thisWinner] - deciderUtils[r1Winner],
                                     threshold))
