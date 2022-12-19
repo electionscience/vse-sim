@@ -7,7 +7,7 @@ library(forcats)
 library(scales)
 library(extrafont)
 #remotes::install_version("Rttf2pt1", version = "1.3.8")
-extrafont::font_import()
+#extrafont::font_import()
 library(showtext)
 font_add("Arial", "/Library/Fonts/Arial.ttf")  
 # 
@@ -44,16 +44,23 @@ font_add("Arial", "/Library/Fonts/Arial.ttf")
 # fvse = fread("wtf1.csv")
 # 
 # fvse = rbind(fvse,fread("wtf2.csv"))
-star_palette = c("#ee2c53", "#ff9900", "#c4e44c", "#2aa2b3", "#02627c", "#4d2586", "#000000")
+star_palette = c("#ee2c53", "#ff9900", "#60b33c", "#2aa2b3", "#02627c", "#4d2586", "#000000", "#c4e44c")
 correct_order = rev(c("STAR", "Minimax", "ApprovalTop2", "Approval", "IRV", "PluralityTop2", "Plurality"))
 correct_labels = rev(c("STAR", "Smith/Minimax", "Approval Top Two", "Approval", "IRV", "Plurality Top Two", "Plurality"))
-model_names = c("base_scenario". "impartial_culture", "2d_model", "3d_model", "3cand", "8cand", "plurality_picky", "no_noise")
+model_names = c("base_scenario", "impartial_culture", "2d_model", "3d_model", "3cand", "8cand", "plurality_picky", "no_noise",
+                "nostrats")
 
 #modelName = "base_scenario"
 for (modelName in model_names) {
+  svgfiles = Sys.glob(paste0(modelName,"*.svg"))
+  if (length(svgfiles) == 3) {
+    next
+  }
   files = Sys.glob(paste0(modelName,"*.csv"))
+  print(files[1])
   fvse = fread(files[1])
   for (file in files[-1]) {
+    print(file)
     fvse = rbind(fvse, fread(file))
   } 
   numVoters = mean(fvse[,numVoters])
@@ -137,9 +144,9 @@ for (modelName in model_names) {
   ggsave(paste0(modelName, " VSE.svg"),
          plot=vseGraph,
          width = 6.4, height = 2.4, dpi=1200, units = "in")
-  ggsave(paste0(modelName, " VSE.png"),
-         plot=vseGraph,
-         width = 6.4, height = 2.4, dpi=1200, units = "in")
+  # ggsave(paste0(modelName, " VSE.png"),
+  #        plot=vseGraph,
+  #        width = 6.4, height = 2.4, dpi=1200, units = "in")
   
   #correct_order = vses[,mean(VSE),by=method][order(V1),method]
   fromhons = fromhons[,method:=factor(method, levels=correct_order, labels = correct_labels)]
@@ -172,9 +179,9 @@ for (modelName in model_names) {
   ggsave(paste0(modelName, " PVSI1.svg"),
          plot=PVSI1,
          width = 7.8, height = 2.6, dpi=1200, units = "in")
-  ggsave(paste0(modelName, " PVSI1.png"),
-         plot=PVSI1,
-         width = 7.8, height = 2.6, dpi=1200, units = "in")
+  # ggsave(paste0(modelName, " PVSI1.png"),
+  #        plot=PVSI1,
+  #        width = 7.8, height = 2.6, dpi=1200, units = "in")
   
   bestfromawares = bestfromawares[fgBaseMaybe == "p" | fgStrat=="bulletBallot",] 
   
@@ -227,9 +234,9 @@ for (modelName in model_names) {
     + scale_x_continuous(labels=scales::percent_format(accuracy = 1))
     + geom_point(size=3) #+ xlim(.65,1.00) 
     #+ scale_shape_manual(values=c(0,1,5,2,6))
-    + scale_shape_manual(values=c(21,22,5,25,24,25,24,25,24))
+    + scale_shape_manual(values=c(21,22,23,25,24,25,24,25,24))
     + scale_color_manual(values=star_palette[c(1,2,3,4,4,5,5,6,6)])
-    + scale_fill_manual(values=star_palette[c(1,2,3,4,4,5,5,6,6)])
+    + scale_fill_manual(values=star_palette[c(1,2,8,4,4,5,5,6,6)])
     + theme_gdocs() 
     + theme(axis.title.y=element_blank()) + xlab("% Pivotal Voter Strategic Incentive (PVSI)")
     + labs(color="Strategy") 
@@ -239,4 +246,15 @@ for (modelName in model_names) {
   ggsave(paste0(modelName, " PVSI2.svg"),
          plot=PVSI2,
          width = 9.6, height = 3.1, dpi=1200, units = "in")
+  
+  
+  print("Did it!")
+  print(modelName)
+  print(modelName)
+  print(modelName)
+  print(modelName)
+  print(modelName)
+  print(modelName)
+  print(modelName)
 }
+
