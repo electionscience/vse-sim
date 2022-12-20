@@ -497,54 +497,24 @@ def tieFor2Probs(polls, uncertainty=.15):
 @functools.lru_cache(maxsize=1000)
 def tieFor2Estimate(probs):
     """Estimates the probability of each candidate being in a tie for second place,
-    normalized such that they sum to 1"""
-
+    normalized such that they sum to 1.
+    >>> tieFor2Estimate((.49,.49,.02))
+    [0.29762918476626044, 0.29762918476626044, 0.404741630467479]
+    >>> tieFor2Estimate((.4999999999,.4999999999,.0000000002))
+    [0.2928932188619805, 0.2928932188619805, 0.41421356227603895]
+    >>> tieFor2Estimate((.99,.005,.005))
+    [0.4129948110638391, 0.2935025944680804, 0.2935025944680804]
     """
     EXP = 2
-    unnormalized = [x*(1-x)*(
-            sum(
-                    sum((y*z)**EXP for k, z in enumerate(probs) if i != k != j)
-                for j, y in enumerate(probs) if i != j)
-            /sum(y**EXP for j, y in enumerate(probs) if i != j)
-        )**(1/EXP) for i, x in enumerate(probs)]
-
-    normFactor = sum(unnormalized)
-    return [u/normFactor for u in unnormalized]
-    """
-    """
-    EXP = 2
-    LOGEXP = np.log(EXP)
-    #print()
-
-    np.seterr(divide = 'ignore')
-    unnormalized_log_part1 = np.array([np.log(x*(1-x)) for i, x in enumerate(probs)])
-    np.seterr(divide = 'warn')
-    unnormalized_log_part1[unnormalized_log_part1 == -np.inf] = -1e9
-    unnormalized_log_part2 = np.array([ (
-            logsumexp(np.array([
-                    [y*LOGEXP + z*LOGEXP for k, z in enumerate(probs) if i != k != j]
+    unnormalized_log = np.array([np.log(x*(1-x))
+            + (logsumexp(np.array([
+                    [(np.log(y) + np.log(z))*EXP for k, z in enumerate(probs) if i != k != j]
                 for j, y in enumerate(probs) if i != j]))
-            -logsumexp(np.array([y*LOGEXP for j, y in enumerate(probs) if i != j]))
-        )/LOGEXP for i, x in enumerate(probs)])
-    unnormalized_log = unnormalized_log_part1 + unnormalized_log_part2
-    print(unnormalized_log_part1,unnormalized_log_part2)
+            - logsumexp(np.array([np.log(y)*EXP for j, y in enumerate(probs) if i != j])))/EXP
+        for i, x in enumerate(probs)])
     unnormalized = np.exp(unnormalized_log - np.max(unnormalized_log))
-
-    #print(unnormalized)
     normFactor = sum(unnormalized)
-    result = [float(u/normFactor) for u in unnormalized]
-    return result
-    """
-    EXP = 2
-    unnormalized = [x*(1-x)*(
-            sum(
-                    sum((y*z)**EXP if (y*z)**EXP > 1e-9 else 1e-10 for k, z in enumerate(probs) if i != k != j)
-                for j, y in enumerate(probs) if i != j)
-            /sum(y**EXP if y**EXP > 1e-9 else 1e-10 for j, y in enumerate(probs) if i != j)
-        )**(1/EXP) for i, x in enumerate(probs)]
-
-    normFactor = sum(unnormalized)
-    return [u/normFactor for u in unnormalized]
+    return [float(u/normFactor) for u in unnormalized]
 
 
 def adaptiveTieFor2(polls, uncertainty=.15):
@@ -584,3 +554,7 @@ def appendResults(filename, resultsList, globalComment = dict()):
         dw.writeheader()
         for r in resultsList:
             dw.writerow(r)
+
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()
