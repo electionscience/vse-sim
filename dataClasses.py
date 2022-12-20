@@ -506,11 +506,13 @@ def tieFor2Estimate(probs):
     [0.4129948110638391, 0.2935025944680804, 0.2935025944680804]
     """
     EXP = 2
-    unnormalized_log = np.array([np.log(x*(1-x))
+    np_probs = np.array(probs)
+    logprobs = np.log(np_probs)
+    unnormalized_log = np.array([logprobs[i] + np.log((1-x))
             + (logsumexp(np.array([
-                    [(np.log(y) + np.log(z))*EXP for k, z in enumerate(probs) if i != k != j]
+                    [(logprobs[j] + logprobs[k])*EXP for k, z in enumerate(probs) if i != k != j]
                 for j, y in enumerate(probs) if i != j]))
-            - logsumexp(np.array([np.log(y)*EXP for j, y in enumerate(probs) if i != j])))/EXP
+            - logsumexp(np.array([logprobs[j]*EXP for j, y in enumerate(probs) if i != j])))/EXP
         for i, x in enumerate(probs)])
     unnormalized = np.exp(unnormalized_log - np.max(unnormalized_log))
     normFactor = sum(unnormalized)
