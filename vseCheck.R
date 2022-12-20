@@ -35,7 +35,7 @@ library(scatterD3)
 # 
 # fvse = rbind(fvse,fread("wtf2.csv"))
 
-fvse = fread("quicktest.csv.tst")
+fvse = fread("quicktest3.csv")
 numVoters = mean(fvse[,numVoters])
 vses = fvse[method != "ApprovalPoll",list(VSE=mean((r1WinnerUtil - meanCandidateUtil) / 
                       (magicBestUtil - meanCandidateUtil))),by=.(method,backgroundStrat)]
@@ -183,3 +183,4 @@ vses[!(method=="Minimax" & backgroundStrat=="vaBallot"),] %>%
   # + scale_y_discrete(breaks=c("STAR", "Plurality", "PluralityTop2", "Minimax", "Irv", "ApprovalTop2", "Approval"),
   #                     labels=c("STAR", "Plurality/Runoff", "Plurality", "Smith/Minimax", irv="IRV (RCV)", "Approval/Runoff", "Approval"))
 ) 
+

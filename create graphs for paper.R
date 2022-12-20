@@ -47,13 +47,17 @@ font_add("Arial", "/Library/Fonts/Arial.ttf")
 star_palette = c("#ee2c53", "#ff9900", "#60b33c", "#2aa2b3", "#02627c", "#4d2586", "#000000", "#c4e44c")
 correct_order = rev(c("STAR", "Minimax", "ApprovalTop2", "Approval", "IRV", "PluralityTop2", "Plurality"))
 correct_labels = rev(c("STAR", "Smith/Minimax", "Approval Top Two", "Approval", "IRV", "Plurality Top Two", "Plurality"))
-model_names = c("base_scenario", "impartial_culture", "2d_model", "3d_model", "3cand", "8cand", "plurality_picky", "no_noise",
+model_names = c("base_scenario", "impartial_culture", "2d_model", "3d_model", "3cand", "9cand", "12cand", "plurality_picky", "no_noise",
                 "nostrats")
 
 #modelName = "base_scenario"
-for (modelName in model_names) {
-  svgfiles = Sys.glob(paste0(modelName,"*.svg"))
+for (rawModelName in model_names) {
+  modelName = paste0("output/", rawModelName)
+  print(modelName)
+  svgfiles = Sys.glob(paste0("svg_", modelName,"*.svg"))
   if (length(svgfiles) == 3) {
+    
+    cat(modelName, "...skipping (svgs exist)\n")
     next
   }
   files = Sys.glob(paste0(modelName,"*.csv"))
@@ -67,6 +71,8 @@ for (modelName in model_names) {
   vses = fvse[method != "ApprovalPoll",list(VSE=mean((r1WinnerUtil - meanCandidateUtil) / 
                         (magicBestUtil - meanCandidateUtil))),by=.(method,backgroundStrat)]
   dcast(vses, method ~ backgroundStrat)
+  
+  vses = vses[,method:=factor(method, levels=correct_order, labels = correct_labels)]
   vses
   
   fvse = fvse[,intensityMaybe:=substr(fgArgs,15,15)]
@@ -74,58 +80,28 @@ for (modelName in model_names) {
   fvse = fvse[,fgBaseMaybe:=substr(fgArgs,27,27)]
   unique(fvse[,fgBaseMaybe]) #Should be: [1] ""  "e" "p" ":" " "
   
-  fromhons = fvse[backgroundStrat=="honBallot" & fgStrat == "vaBallot" & 
-                     fgArgs == "{'info': 'e'}",
-       list(
-         vse=mean((r1WinnerUtil - meanCandidateUtil) / (magicBestUtil - meanCandidateUtil)),
-         fgMatters=mean(fgUtilDiff != 0),
-         VSEDiff=mean((totalUtil - r1WinnerUtil) / (magicBestUtil - meanCandidateUtil)),
-         #margStrategicRegret=mean(margStrategicRegret),
-         pivotalUtilDiff=mean(pivotalUtilDiff)
-       ),
-       by=.(method,backgroundStrat, fgStrat, fgArgs, intensityMaybe, fgBaseMaybe)]
-  fromhons
   
-  fromawares = fvse[((backgroundStrat=="vaBallot"  & method != "Minimax") | (backgroundStrat=="honBallot" &method == "Minimax")) 
-                    & !fgStrat %in% c("", "vaBallot") & !startsWith(fgArgs, "{'fallback': 'hon',"),
-       list(
-         vse=mean((r1WinnerUtil - meanCandidateUtil) / (magicBestUtil - meanCandidateUtil)),
-         fgMatters=mean(fgUtilDiff != 0),
-         VSEDiff=mean((totalUtil - r1WinnerUtil) / (magicBestUtil - meanCandidateUtil)),
-         #margStrategicRegret=mean(margStrategicRegret),
-         pivotalUtilDiff=mean(pivotalUtilDiff)
-         ),
-       by=.(method,backgroundStrat, fgStrat, fgArgs, fgTargets, intensityMaybe, fgBaseMaybe)]
-  fromawares
-  
-  besttargets = function(grouped) {
-    grouped[,target:=fgTargets[order(-pivotalUtilDiff)[1]], by=.(method,backgroundStrat, fgStrat, fgArgs)]
-  #  justBest = grouped[target,,]
-    chosen = grouped[grouped[, .I[pivotalUtilDiff == max(pivotalUtilDiff)], by = .(method,backgroundStrat, fgStrat, fgArgs)]$V1]
-  }
-  bestfromawares = besttargets(fromawares)
-  bestfromawares
-  fixedFavoriteBetrayal = fromawares[method=="STAR" & fgTargets == "select31" & fgStrat == "compBallot" & intensityMaybe == "3",]
-  removeWrongFB = bestfromawares[!(fgStrat == "compBallot" & intensityMaybe == "3" & method=="STAR"),]
-  bestfromawares = rbind(fixedFavoriteBetrayal, removeWrongFB)
-  
+  cat(modelName, "...bars\n")
   #vse as bars
-  (ggplot(data = vses, aes(x = VSE, y = method, group = method)) 
-    + geom_line(size=3) #+ xlim(.65,1.00) 
-    + theme_gdocs() 
-    + theme(axis.title.y=element_blank()) + xlab("% Voter Satisfaction Efficiency (VSE)")) 
+  if (F) {
+      (ggplot(data = vses, aes(x = VSE, y = method, group = method)) 
+        + geom_line(size=3) #+ xlim(.65,1.00) 
+        + theme_gdocs() 
+        + theme(axis.title.y=element_blank()) + xlab("% Voter Satisfaction Efficiency (VSE)")) 
+  }
   
+  cat(modelName, "...vse\n")
   #vse as dots
   vseGraph = (
   vses %>% 
       mutate(method = method 
-                      %>% fct_reorder(VSE, .fun='mean') 
-                      %>% recode(`STAR`="STAR", 
-                                 `PluralityTop2`="Plurality Top Two", 
-                                 `Minimax`="Smith/Minimax", 
-                                 `Irv`="IRV (RCV)", 
-                                 `ApprovalTop2`="Approval Top Two", 
-                                 ),
+                      #%>% fct_reorder(VSE, .fun='mean') 
+                      # %>% recode(`STAR`="STAR", 
+                      #            `PluralityTop2`="Plurality Top Two", 
+                      #            `Minimax`="Smith/Minimax", 
+                      #            `Irv`="IRV (RCV)", 
+                      #            `ApprovalTop2`="Approval Top Two", 
+                      #            ),
                                     #to=c("STAR", "Plurality/Runoff", "Plurality", "Smith/Minimax", irv="IRV (RCV)", "Approval/Runoff", "Approval")))
              #VSE = VSE * 100
              ) %>%
@@ -141,13 +117,50 @@ for (modelName in model_names) {
      # + scale_y_discrete(breaks=c("STAR", "Plurality", "PluralityTop2", "Minimax", "Irv", "ApprovalTop2", "Approval"),
     #                     labels=c("STAR", "Plurality/Runoff", "Plurality", "Smith/Minimax", irv="IRV (RCV)", "Approval/Runoff", "Approval"))
   ) 
-  ggsave(paste0(modelName, " VSE.svg"),
+  ggsave(paste0("svg_", modelName, "_VSE.svg"),
          plot=vseGraph,
          width = 6.4, height = 2.4, dpi=1200, units = "in")
   # ggsave(paste0(modelName, " VSE.png"),
   #        plot=vseGraph,
   #        width = 6.4, height = 2.4, dpi=1200, units = "in")
   
+  fromhons = fvse[backgroundStrat=="honBallot" & fgStrat == "vaBallot" & 
+                    fgArgs == "{'info': 'e'}",
+                  list(
+                    vse=mean((r1WinnerUtil - meanCandidateUtil) / (magicBestUtil - meanCandidateUtil)),
+                    fgMatters=mean(fgUtilDiff != 0),
+                    VSEDiff=mean((totalUtil - r1WinnerUtil) / (magicBestUtil - meanCandidateUtil)),
+                    #margStrategicRegret=mean(margStrategicRegret),
+                    pivotalUtilDiff=mean(pivotalUtilDiff)
+                  ),
+                  by=.(method,backgroundStrat, fgStrat, fgArgs, intensityMaybe, fgBaseMaybe)]
+  fromhons
+  
+  honBaseMethods = fromhons[pivotalUtilDiff<0,method]
+  fromawares = fvse[((backgroundStrat=="vaBallot"  & !(method %in% honBaseMethods)) | (backgroundStrat=="honBallot" & (method %in% honBaseMethods))) 
+                    & !fgStrat %in% c("", "vaBallot") & !startsWith(fgArgs, "{'fallback': 'hon',"),
+                    list(
+                      vse=mean((r1WinnerUtil - meanCandidateUtil) / (magicBestUtil - meanCandidateUtil)),
+                      fgMatters=mean(fgUtilDiff != 0),
+                      VSEDiff=mean((totalUtil - r1WinnerUtil) / (magicBestUtil - meanCandidateUtil)),
+                      #margStrategicRegret=mean(margStrategicRegret),
+                      pivotalUtilDiff=mean(pivotalUtilDiff)
+                    ),
+                    by=.(method,backgroundStrat, fgStrat, fgArgs, fgTargets, intensityMaybe, fgBaseMaybe)]
+  fromawares
+  
+  besttargets = function(grouped) {
+    grouped[,target:=fgTargets[order(-pivotalUtilDiff)[1]], by=.(method,backgroundStrat, fgStrat, fgArgs)]
+    #  justBest = grouped[target,,]
+    chosen = grouped[grouped[, .I[pivotalUtilDiff == max(pivotalUtilDiff)], by = .(method,backgroundStrat, fgStrat, fgArgs)]$V1]
+  }
+  bestfromawares = besttargets(fromawares)
+  bestfromawares
+  fixedFavoriteBetrayal = fromawares[method=="STAR" & fgTargets == "select31" & fgStrat == "compBallot" & intensityMaybe == "3",]
+  removeWrongFB = bestfromawares[!(fgStrat == "compBallot" & intensityMaybe == "3" & method=="STAR"),]
+  bestfromawares = rbind(fixedFavoriteBetrayal, removeWrongFB)
+  
+  cat(modelName, "...pvsi1\n")
   #correct_order = vses[,mean(VSE),by=method][order(V1),method]
   fromhons = fromhons[,method:=factor(method, levels=correct_order, labels = correct_labels)]
   #PVSI for viability-aware
@@ -176,7 +189,7 @@ for (modelName in model_names) {
     #                     labels=c("STAR", "Plurality/Runoff", "Plurality", "Smith/Minimax", irv="IRV (RCV)", "Approval/Runoff", "Approval"))
   ) 
   
-  ggsave(paste0(modelName, " PVSI1.svg"),
+  ggsave(paste0("svg_", modelName, "_PVSI1.svg"),
          plot=PVSI1,
          width = 7.8, height = 2.6, dpi=1200, units = "in")
   # ggsave(paste0(modelName, " PVSI1.png"),
@@ -215,6 +228,7 @@ for (modelName in model_names) {
   #methodsInOrder # should be: [1] "Plurality"     "PluralityTop2" "IRV"           "Approval"      "ApprovalTop2"  "Minimax"       "STAR"  
   #bestfromawares[,method:=factor(method, levels = methodsInOrder)]
   
+  cat(modelName, "...pvsi2\n")
   #PVSI for targeted strategy
   PVSI2 = (
     fixedfromawares %>% 
@@ -243,7 +257,7 @@ for (modelName in model_names) {
     # + scale_y_discrete(breaks=c("STAR", "Plurality", "PluralityTop2", "Minimax", "Irv", "ApprovalTop2", "Approval"),
     #                     labels=c("STAR", "Plurality/Runoff", "Plurality", "Smith/Minimax", irv="IRV (RCV)", "Approval/Runoff", "Approval"))
   ) 
-  ggsave(paste0(modelName, " PVSI2.svg"),
+  ggsave(paste0("svg_", modelName, "_PVSI2.svg"),
          plot=PVSI2,
          width = 9.6, height = 3.1, dpi=1200, units = "in")
   
