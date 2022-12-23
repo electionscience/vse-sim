@@ -507,8 +507,13 @@ def tieFor2Estimate(probs):
     """
     EXP = 2
     np_probs = np.array(probs)
+    np.seterr(divide = 'ignore')
     logprobs = np.log(np_probs)
-    unnormalized_log = np.array([logprobs[i] + np.log((1-x))
+    logconv = np.log(1 - np_probs)
+    np.seterr(divide = 'warn')
+    logprobs[logprobs == -np.inf] = -1e9
+    logconv[logconv == -np.inf] = -1e9
+    unnormalized_log = np.array([logprobs[i] + logconv[i]
             + (logsumexp(np.array([
                     [(logprobs[j] + logprobs[k])*EXP for k, z in enumerate(probs) if i != k != j]
                 for j, y in enumerate(probs) if i != j]))
