@@ -131,10 +131,10 @@ class Method:
     def defaultfgs(cls):
         """Returns a list of the default foregrounds (see vse.threeRoundResults) for the voting method.
         """
-        return [(cls.diehardBallot, targs, {'intensity': lev, 'info': info})
-                for lev in cls.diehardLevels for targs in [select21, select31] for info in ('e','p')]\
-                + [(cls.compBallot, targs, {'intensity': lev, 'info': info})
-                for lev in cls.compLevels for targs in [select21, select31] for info in ('e','p')]\
+        return [(cls.diehardBallot, targs, {'intensity': lev})
+                for lev in cls.diehardLevels for targs in [select21, select31]]\
+                + [(cls.compBallot, targs, {'intensity': lev})
+                for lev in cls.compLevels for targs in [select21, select31]]\
                 + [(cls.vaBallot, selectRand, {'info': 'p'}),
                 (cls.vaBallot, selectRand, {'info': 'e'})]\
                 + [(cls.honTargetBullet, targs, {'fallback':fallback, 'info': info, 'pollingUncertainty': 0.4})
@@ -504,6 +504,8 @@ def tieFor2Estimate(probs):
     [0.2928932188619805, 0.2928932188619805, 0.41421356227603895]
     >>> tieFor2Estimate((.99,.005,.005))
     [0.4129948110638391, 0.2935025944680804, 0.2935025944680804]
+    >>> tieFor2Estimate((0,.5,.5))
+    [0.4142135623730952, 0.2928932188134523, 0.2928932188134523]
     """
     EXP = 2
     np_probs = np.array(probs)
