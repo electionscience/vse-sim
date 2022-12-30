@@ -38,5 +38,3 @@ jobs:
       - name: Run test suite
         run: |
           pipenv run test -svvv
-      - name: Trunk Check
-        uses: trunk-io/trunk-action@v1
