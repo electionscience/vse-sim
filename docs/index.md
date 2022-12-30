@@ -110,7 +110,7 @@ The strategy models include various mixes of the following possibilities:
 
 Click to go to interactive versions of the following graphs:
 
-[![VSE](./vse.png)](./vse.html)
+[![VSE](./vse.png)](./vse-graph.html)
 
 [![Effectiveness of strategies](./vsestrat.png)](./stratstuff.html)
 
