@@ -142,6 +142,7 @@ class Plurality(RankedMethod):
 
 
 def Score(topRank=10, asClass=False):
+
     class Score0to(Method):
         """Score voting, 0-10.
 
@@ -225,17 +226,19 @@ def Score(topRank=10, asClass=False):
                 ballot[i] = strat[i]
 
     Score0to.topRank = topRank
-    if asClass:
-        return Score0to
-    return Score0to()
+    return Score0to if asClass else Score0to()
 
 def BulletyApprovalWith(bullets=0.5, asClass=False):
-    class BulletyApproval(Score(1,True)):
+
+
+
+    class BulletyApproval((Score(1,True))):
 
         bulletiness = bullets
 
         def __str__(self):
-            return "BulletyApproval" + str(round(self.bulletiness * 100))
+            return f"BulletyApproval{str(round(self.bulletiness * 100))}"
+
 
 
         @staticmethod #cls is provided explicitly, not through binding
@@ -255,9 +258,8 @@ def BulletyApprovalWith(bullets=0.5, asClass=False):
             best = max(utils)
             return [1 if util==best else 0 for util in utils]
 
-    if asClass:
-        return BulletyApproval
-    return BulletyApproval()
+
+    return BulletyApproval if asClass else BulletyApproval()
 
 
 def Srv(topRank=10):
@@ -347,7 +349,7 @@ class Mav(Method):
         nGrades = (len(self.baseCuts) + 1)
         i = int((nvot - 1) / 2)
         base = scores[i]
-        while (i < nvot and scores[i] == base):
+        while i < nvot and base == base:
             i += 1
         upper =  (base + 0.5) - (i - nvot/2) * nGrades / nvot
         lower = (base) - (i - nvot/2) / nvot
@@ -406,7 +408,7 @@ class Mav(Method):
         """
         places = sorted(enumerate(polls),key=lambda x:-x[1]) #from high to low
         #print("places",places)
-        ((frontId,frontResult), (targId, targResult)) = places[0:2]
+        ((frontId,frontResult), (targId, targResult)) = places[:2]
 
         @rememberBallots
         def stratBallot(cls, voter):
@@ -443,6 +445,7 @@ class Mav(Method):
                         for util in voter]
             return dict(strat=strat, extraStrat=extraStrat, isStrat=isStrat,
                         stratGap = stratGap)
+
         return stratBallot
 
 
@@ -518,11 +521,13 @@ class Irv(Method):
 
         prefs = {}
         for ranking, votes in inputPrefs.items():
-            newranking = []
-            for candidate in ranking:
-                if candidate != toEliminate.candidate:
-                    newranking.append(candidate)
-            if (len(newranking) == 0):
+            newranking = [
+                candidate
+                for candidate in ranking
+                if candidate != toEliminate.candidate
+            ]
+
+            if not newranking:
                 continue
             newkey = tuple(newranking)
             if newkey in prefs:
@@ -555,9 +560,8 @@ class Irv(Method):
 
     def getLeast(self, voteRanking, keep = {}):
         for candidate in reversed(voteRanking):
-            if not candidate.candidate in keep:
+            if candidate.candidate not in keep:
                 return candidate
-        pass
 
     def runIrv(self, remaining, ncand):
         """IRV results."""
@@ -883,11 +887,7 @@ class Schulze(RankedMethod):
         for i in range(n):
             for j in range(n):
                 if (i != j):
-                    if cmat[i][j] > cmat[j][i]:
-                        beatStrength[i][j] = cmat[i][j]
-                    else:
-                        beatStrength[i][j] = 0
-
+                    beatStrength[i][j] = cmat[i][j] if cmat[i][j] > cmat[j][i] else 0
                 for i in range(n):
                     for j in range(n):
                         if (i != j):
@@ -939,7 +939,7 @@ class Schulze(RankedMethod):
         {'scenario': 'spoiler'}
         """
         n = len(ballots[0])
-        cmat = [[0 for i in range(n)] for j in range(n)]
+        cmat = [[0 for _ in range(n)] for _ in range(n)]
         numWins = [0] * n
         for i in range(n):
             for j in range(n):
@@ -959,12 +959,12 @@ class Schulze(RankedMethod):
             order = None
 
         if isHonest:
-            self.__class__.extraEvents = dict()
+            self.__class__.extraEvents = {}
             #check scenarios
             plurTally = [0] * n
             plur3Tally = [0] * 3
             cond3 = [c for c,v in condOrder[:3]]
-            if condOrder==None:
+            if condOrder is None:
                 condOrder = sorted(enumerate(result),key=lambda x:-x[1])
             for b in ballots:
                 b3 = [b[c] for c in cond3]
@@ -1022,10 +1022,7 @@ class Rp(Schulze):
         for (i, j, margin) in rps:
             if margin < 0:
                 i, j = j, i
-            if cmat[j][i] is True:
-                #print("rejecting",cmat)
-                pass #reject this victory
-            else: #lock-in
+            if cmat[j][i] is not True:
                 #print(i,j,cmat)
                 cmat[i][j] = True
                 #print("....",i,j,cmat)
@@ -1038,10 +1035,7 @@ class Rp(Schulze):
 
                             #print(".......",i,j,k,cmat)
 
-        #print(cmat)
-        numWins = [sum(1 for j in range(n) if cmat[i][j] is True)
-                    for i in range(n)]
-        return numWins
+        return [sum(cmat[i][j] is True for j in range(n)) for i in range(n)]
 
 
 class IRNR(RankedMethod):
@@ -1068,10 +1062,9 @@ class IRNR(RankedMethod):
             mini = None
             minv = None
             for i, v in enumerate(tsum):
-                if enabled[i]:
-                    if (minv is None) or (tsum[i] < minv):
-                        minv = tsum[i]
-                        mini = i
+                if enabled[i] and ((minv is None) or (tsum[i] < minv)):
+                    minv = tsum[i]
+                    mini = i
             enabled[mini] = False
             results[mini] = minv
             numEnabled -= 1

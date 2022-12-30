@@ -133,11 +133,10 @@ class Method:
         return list(map(self.candScore,zip(*ballots)))
 
     @staticmethod #cls is provided explicitly, not through binding
-    #@rememberBallot
     def honBallot(cls, utils):
         """Takes utilities and returns an honest ballot
         """
-        raise NotImplementedError("{} needs honBallot".format(cls))
+        raise NotImplementedError(f"{cls} needs honBallot")
 
     @staticmethod
     def winner(results):
@@ -150,7 +149,7 @@ class Method:
         >>> 2 < Method().winner([1,2,1,3,3,3,2,1,2]) < 6
         True
         """
-        winScore = max([result for result in results if isnum(result)])
+        winScore = max(result for result in results if isnum(result))
         winners = [cand for (cand, score) in enumerate(results) if score==winScore]
         return random.choice(winners)
 
@@ -191,7 +190,7 @@ class Method:
         from stratFunctions import OssChooser
 
         honTally = SideTally()
-        self.__class__.extraEvents = dict()
+        self.__class__.extraEvents = {}
         hon = self.resultsFor(voters, self.honBallotFor(voters), honTally, isHonest=True)
 
         stratTally = SideTally()
@@ -244,7 +243,7 @@ class Method:
         utils = voters.socUtils
         best = max(utils)
         rand = mean(utils)
-        rows = list()
+        rows = []
         nvot=len(voters)
         for (result, chooser, tallyItems) in multiResults:
             row = {
@@ -262,8 +261,8 @@ class Method:
             #print(tallyItems)
             for (i, (k, v)) in enumerate(tallyItems):
                 #print("Result: tally ",i,k,v)
-                row["tallyName"+str(i)] = str(k)
-                row["tallyVal"+str(i)] = str(v)
+                row[f"tallyName{str(i)}"] = str(k)
+                row[f"tallyVal{str(i)}"] = str(v)
             rows.append(row)
         # if len(multiResults[1]):
         #     row = {
@@ -285,16 +284,17 @@ class Method:
         """Takes a chooserFun; returns a ballot chooser using that chooserFun
         """
         def ballotChooser(cls, voter, tally):
-            return getattr(voter, cls.__name__ + "_" + chooserFun(cls, voter, tally))
+            return getattr(voter, f"{cls.__name__}_{chooserFun(cls, voter, tally)}")
+
         ballotChooser.__name__ = chooserFun.getName()
         return ballotChooser
 
     def stratTarget2(self,places):
-        ((frontId,frontResult), (targId, targResult)) = places[0:2]
+        ((frontId,frontResult), (targId, targResult)) = places[:2]
         return (frontId, frontResult, targId, targResult)
 
     def stratTarget3(self,places):
-        ((frontId,frontResult), (targId, targResult)) = places[0:3:2]
+        ((frontId,frontResult), (targId, targResult)) = places[:3:2]
         return (frontId, frontResult, targId, targResult)
 
     stratTargetFor = stratTarget2
@@ -327,8 +327,9 @@ def rememberBallot(fun):
     """
     def getAndRemember(cls, voter, tally=None):
         ballot = fun(cls, voter)
-        setattr(voter, cls.__name__ + "_" + fun.__name__[:-6], ballot) #leave off the "...Ballot"
+        setattr(voter, f"{cls.__name__}_{fun.__name__[:-6]}", ballot)
         return ballot
+
     getAndRemember.__name__ = fun.__name__
     getAndRemember.allTallyKeys = lambda:[]
     return getAndRemember
@@ -342,9 +343,10 @@ def rememberBallots(fun):
         ballots = fun(cls, voter)
         for bType, ballot in ballots.items():
 
-            setattr(voter, cls.__name__ + "_" + bType, ballot)
+            setattr(voter, f"{cls.__name__}_{bType}", ballot)
 
         return ballots[fun.__name__[:-6]] #leave off the "...Ballot"
+
     getAndRemember.__name__ = fun.__name__
     getAndRemember.allTallyKeys = lambda:[]
     return getAndRemember
