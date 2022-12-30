@@ -1,7 +1,7 @@
 ---
 title: Voter Satisfaction Efficiency (VSE) summary
 layout: default
-permalink: /VSEBasic
+permalink: /VSEbasic
 ---
 
 Voter Satisfaction Efficiency, or VSE, is a measure of the quality of a election method. A VSE of 100% would mean an impossibly perfect method; 0% or lower would mean that the society would be better off picking a winner at random.
