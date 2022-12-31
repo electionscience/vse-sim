@@ -5,6 +5,7 @@
 theme: jekyll-theme-slate
 # Name of your site (displayed in the header)
 name: Jameson Quinn
+title: Voter Satisfaction Efficiency Simulator
 
 # Short bio or description (displayed in the header)
 description: By Jameson Quinn, statistician/theorist
@@ -32,7 +33,6 @@ footer-links:
   youtube: # channel/<your_long_string> or user/<user-name>
   googleplus: # anything in your profile username that comes after plus.google.com/
 
-
 # Enter your Disqus shortname (not your username) to enable commenting on posts
 # You can find your shortname on the Settings page of your Disqus account
 disqus:
@@ -54,8 +54,6 @@ baseurl: "/vse-sim"
 # !! You don't need to change any of the configuration flags below !!
 #
 
-permalink: /:title/
-
 # The release of Jekyll Now that you're using
 version: v1.2.0
 
@@ -67,10 +65,10 @@ kramdown:
   syntax_highlighter: rouge
   syntax_highlighter_opts:
     # Use existing pygments syntax highlighting css
-    css_class: 'highlight'
+    css_class: "highlight"
 
 # Use the following plug-ins
-gems:
+plugins:
   - jekyll-sitemap # Create a sitemap using the official Jekyll sitemap gem
   - jekyll-feed # Create an Atom feed using the official Jekyll feed gem
 
