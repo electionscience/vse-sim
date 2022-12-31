@@ -103,10 +103,9 @@ class Method:
         r = random.Random(utils.id).random()
         if r < baseBullets + slope * margin:
             return cls.bulletBallot(utils)
-        else:
-            if otherStrat is None:
-                otherStrat = cls.honBallot
-            return otherStrat(utils, electabilities=electabilities)
+        if otherStrat is None:
+            otherStrat = cls.honBallot
+        return otherStrat(utils, electabilities=electabilities)
 
     @classmethod
     def diehardBallot(
@@ -212,7 +211,7 @@ class Method:
                 bgBallots + fgBallots[:midpoint] + fgBaselineBallots[midpoint:]
             )
             midpointWinner = cls.winner(cls.results(midpointBallots))
-            if not any(midpointWinner == w for w, _ in winnersFound):
+            if all(midpointWinner != w for w, _ in winnersFound):
                 winnersFound.append((midpointWinner, midpoint))
             if midpointWinner == targetWinner:
                 maxThreshold = midpoint
@@ -225,16 +224,16 @@ class Method:
         """Create (honest/naive) ballots and get results.
         Again, test on subclasses.
         """
-        return cls.results(list(cls.honBallot(v) for v in voters))
+        return cls.results([cls.honBallot(v) for v in voters])
 
     @staticmethod
     def stratTarget2(places):
-        ((frontId, frontResult), (targId, targResult)) = places[0:2]
+        ((frontId, frontResult), (targId, targResult)) = places[:2]
         return (frontId, frontResult, targId, targResult)
 
     @staticmethod
     def stratTarget3(places):
-        ((frontId, frontResult), (targId, targResult)) = places[0:3:2]
+        ((frontId, frontResult), (targId, targResult)) = places[:3:2]
 
         return (frontId, frontResult, targId, targResult)
 
@@ -379,7 +378,7 @@ def paramStrat(strategy, **kw):
 
     strat.__name__ = strategy.__name__
     for key, value in kw.items():
-        strat.__name__ += "_" + str(key)[:4] + str(value)[:4]
+        strat.__name__ += f"_{str(key)[:4]}{str(value)[:4]}"
     return strat
 
 
@@ -391,7 +390,7 @@ def selectAB(candA, candB):  # candA and candB are candidate IDs
     def fgSelect(voter, **kw):
         return max(voter[candA] - voter[candB], 0)
 
-    fgSelect.__name__ = "select" + str(candA) + str(candB)
+    fgSelect.__name__ = f"select{str(candA)}{str(candB)}"
     return fgSelect
 
 
@@ -467,26 +466,26 @@ resultColumns = [
     "factionFraction",
 ]
 for prefix in ["", "min", "t1", "o"]:
-    for columnName in [
-        "fgUtil",
-        "fgUtilDiff",
-        "fgSize",
-        "fgNumHelped",
-        "fgHelpedUtil",
-        "fgHelpedUtilDiff",
-        "fgNumHarmed",
-        "fgHarmedUtil",
-        "fgHarmedUtilDiff",
-        "helpCandElected",
-        "hurtCandElectedR1",
-    ]:
-        resultColumns.append(prefix + columnName)
+    resultColumns.extend(
+        prefix + columnName
+        for columnName in [
+            "fgUtil",
+            "fgUtilDiff",
+            "fgSize",
+            "fgNumHelped",
+            "fgHelpedUtil",
+            "fgHelpedUtilDiff",
+            "fgNumHarmed",
+            "fgHarmedUtil",
+            "fgHarmedUtilDiff",
+            "helpCandElected",
+            "hurtCandElectedR1",
+        ]
+    )
 
 
 def makeResults(**kw):
-    results = {c: kw.get(c, None) for c in resultColumns}
-    results.update(kw)
-    return results
+    return {c: kw.get(c, None) for c in resultColumns} | kw
 
 
 def makePartialResults(fgVoters, winner, r1Winner, prefix, candToHelp, candToHurt):
@@ -703,10 +702,7 @@ def tieFor2Estimate(probs):
 
 
 def adaptiveTieFor2(polls, uncertainty=0.15):
-    if False and len(polls) < 6:
-        return tieFor2Probs(polls, uncertainty)
-    else:
-        return tieFor2Estimate(tuple(pollsToProbs(polls, uncertainty)))
+    return tieFor2Estimate(tuple(pollsToProbs(polls, uncertainty)))
 
 
 def appendResults(filename, resultsList, globalComment=dict()):
@@ -724,19 +720,7 @@ def appendResults(filename, resultsList, globalComment=dict()):
 
     with open(baseName + str(i) + ".csv", "a") as myFile:
         if needsHeader:
-            print(
-                "# " + str(globalComment),
-                # dict(
-                # media=self.media.__name__,
-                #              version=self.repo_version,
-                #              seed=self.seed,
-                ##              model=self.model,
-                #              methods=self.methods,
-                #              nvot=self.nvot,
-                #              ncand=self.ncand,
-                #              niter=self.niter)),
-                file=myFile,
-            )
+            print(f"# {str(globalComment)}", file=myFile)
         dw = csv.DictWriter(myFile, keys, restval="NA")
         dw.writeheader()
         for r in resultsList:
@@ -750,6 +734,8 @@ if __name__ == "__main__":
 
 
 class CandidateWithCount:
-    def __init__(self, c=[], v=0):
+    def __init__(self, c=None, v=0):
+        if c is None:
+            c = []
         self.candidate = c
         self.votes = v

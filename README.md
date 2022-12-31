@@ -1,10 +1,12 @@
 # Voter Satisfaction Efficiency
+
 These are some methods for running VSE (Voter Satisfaction Efficiency)
-simulations for various voting systems. 
+simulations for various voting systems.
 
 See [Voter Satisfaction Efficiency FAQ](http://electionscience.github.io/vse-sim/) for an explanation of the methods and results.
 
-# Installing the code
+## Installing the code
+
 Requirements: python3, scipy, pydoc
 
 Testing uses pydoc, which should make most things pretty self-documenting.
@@ -16,7 +18,7 @@ E.g.:
     python3 -m doctest dataClasses.py
     python3 vse.py
 
-# Running simulations
+## Running simulations
 
 Try
 

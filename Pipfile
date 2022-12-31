@@ -6,6 +6,11 @@ name = "pypi"
 [packages]
 numpy = "*"
 scipy = "*"
+sourcery = "*"
+pytest = "*"
+matplotlib = "*"
+torch = "*"
+autograd-minimize = "*"
 
 [dev-packages]
 pytest = "*"

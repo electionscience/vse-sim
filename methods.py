@@ -8,7 +8,13 @@ from numpy.lib.function_base import median
 from numpy.lib.scimath import sqrt
 from numpy.ma.core import ceil, floor
 
-from dataClasses import Method
+from dataClasses import (
+    Method,
+    adaptiveTieFor2,
+    simplePollsToProbs,
+    pollsToProbs,
+    rememberBallots,
+)
 from debugDump import *
 from mydecorators import autoassign, cached_property, decorator, setdefaultattr
 from stratFunctions import *
@@ -28,7 +34,7 @@ class Borda(Method):
         if type(ballots) is not list:
             ballots = list(ballots)
         n = len(ballots[0])
-        return list(map(lambda x: mean(x) / n, zip(*ballots)))
+        return [mean(x) / n for x in zip(*ballots)]
 
     @staticmethod
     def fillPrefOrder(
@@ -309,7 +315,7 @@ def top2(noRunoffMethod):
         def abstain(cls, utils, **kw):
             return [0] * len(utils), [0] * len(utils)
 
-    Top2Version.__name__ = noRunoffMethod.__name__ + "Top2"
+    Top2Version.__name__ = f"{noRunoffMethod.__name__}Top2"
     return Top2Version
 
 
@@ -467,7 +473,7 @@ def makeScoreMethod(topRank=10, asClass=False):
             pickiness=1 corresponds to bullet voting
             pickiness=0.4 seems about optimal under KSModel
             """
-            expectedUtility = sum(u for u in utils) / len(utils)
+            expectedUtility = sum(utils) / len(utils)
             best = max(utils)
             normalizedUtils = [
                 (u - expectedUtility) / (best - expectedUtility) for u in utils
@@ -640,7 +646,7 @@ class Approval(makeScoreMethod(1, True)):
         >>> Approval.zeroInfoBallot([1,2,3,-10], pickiness=0.6)
         [0, 1, 1, 0]
         """
-        expectedUtility = sum(u for u in utils) / len(utils)
+        expectedUtility = sum(utils) / len(utils)
         best = max(utils)
         normalizedUtils = [
             (u - expectedUtility) / (best - expectedUtility) for u in utils
@@ -805,7 +811,7 @@ def getCoefficients(
             # thirdProbs = pollsToProbs(
             # electabilities[:minF] + electabilities[minF+1:maxF] + electabilities[maxF+1:], pollingUncertainty)
             for third in range(nCands):
-                if third == winner or third == runnerUp:
+                if third in [winner, runnerUp]:
                     continue
                 upsetProb = pollsToProbs(
                     [
@@ -984,10 +990,7 @@ def makeSTARMethod(topRank=5):
                         baseBallot[i] = 0
             if intensity == 2:
                 for i, u in enumerate(utils):
-                    if u > hurtUtil:
-                        baseBallot[i] = cls.topRank
-                    elif u <= hurtUtil:
-                        baseBallot[i] = 0
+                    baseBallot[i] = cls.topRank if u > hurtUtil else 0
             if intensity >= 3:
                 baseBallot = [1 if u > hurtUtil else 0 for u in utils]
                 baseBallot[candToHelp] = cls.topRank
@@ -1039,10 +1042,7 @@ def makeSTARMethod(topRank=5):
                         baseBallot[i] = cls.topRank
             if intensity == 2:
                 for i, u in enumerate(utils):
-                    if u < helpUtil:
-                        baseBallot[i] = 0
-                    elif u >= helpUtil:
-                        baseBallot[i] = cls.topRank
+                    baseBallot[i] = 0 if u < helpUtil else cls.topRank
             if intensity == 3:
                 for i, u in enumerate(utils):
                     if u >= helpUtil:
@@ -1052,9 +1052,7 @@ def makeSTARMethod(topRank=5):
                     else:
                         baseBallot[i] = 0
                     baseBallot[candToHurt] = 0
-            if intensity == 4:
-                return cls.bulletBallot(utils)
-            return baseBallot
+            return cls.bulletBallot(utils) if intensity == 4 else baseBallot
 
         @classmethod
         def always510Ballot(cls, utils, **kw):
@@ -1116,10 +1114,7 @@ def makeSTARMethod(topRank=5):
                         maxGap = sortedUtils[i + 1][1] - sortedUtils[i][1]
                         gapLoc = (sortedUtils[i + 1][1] + sortedUtils[i][1]) / 2
                 for rank, (cand, util) in enumerate(sortedUtils):
-                    if util < gapLoc:
-                        ballot[cand] = rank
-                    else:
-                        ballot[cand] = rank + cls.topRank + 1 - n
+                    ballot[cand] = rank if util < gapLoc else rank + cls.topRank + 1 - n
             else:
                 utilRanges = [[u, u] for u in sorted(utils)]
                 # use a greedy algorithm to put most similar utilities together
@@ -1169,15 +1164,12 @@ def makeSTARMethod(topRank=5):
                         ballot.append(i + 1)
             return ballot
 
-        # @classmethod
-        # def defaultfgs(cls):
-        # return super().defaultfgs()\
-        # + [(cls.top6Ballot, targs) for targs in [selectRand, select21]]
+            # @classmethod
+            # def defaultfgs(cls):
+            # return super().defaultfgs()\
+            # + [(cls.top6Ballot, targs) for targs in [selectRand, select21]]
 
-    if topRank == 5:
-        STAR0to.__name__ = "STAR"
-    else:
-        STAR0to.__name__ = "STAR" + str(topRank)
+    STAR0to.__name__ = "STAR" if topRank == 5 else f"STAR{str(topRank)}"
     return STAR0to
 
 
@@ -1213,7 +1205,7 @@ class Mav(Method):
     specificPercentiles = [25, 50, 75, 90]
 
     @classmethod
-    def candScore(self, scores):
+    def candScore(cls, scores):
         """For now, only works correctly for odd nvot
 
         Basic tests
@@ -1232,7 +1224,7 @@ class Mav(Method):
         """
         scores = sorted(scores)
         nvot = len(scores)
-        nGrades = len(self.baseCuts) + 1
+        nGrades = len(cls.baseCuts) + 1
         i = int((nvot - 1) / 2)
         base = scores[i]
         while i < nvot and base == base:
@@ -1301,7 +1293,7 @@ class Mav(Method):
         if info == "e":
             polls = electabilities
         places = sorted(enumerate(polls), key=lambda x: -x[1])
-        ((frontId, frontResult), (targId, targResult)) = places[0:2]
+        ((frontId, frontResult), (targId, targResult)) = places[:2]
         frontUtils = [voter[frontId], voter[targId]]  # utils of frontrunners
         stratGap = frontUtils[1] - frontUtils[0]
         if stratGap == 0:
@@ -1309,26 +1301,25 @@ class Mav(Method):
 
         if stratGap < 0:
             return cls.honBallot(voter)
-        else:
-            # runner-up is preferred; be strategic in iss run
-            # sort cuts high to low
-            frontUtils = (frontUtils[1], frontUtils[0])
-            top = max(voter)
-            # print("lll312")
-            # print(self.baseCuts, front)
-            cutoffs = [
-                (
-                    (min(frontUtils[0], cls.baseCuts[i]))
-                    if (i < floor(targResult))
-                    else (
-                        (frontUtils[1])
-                        if (i < floor(frontResult) + 1)
-                        else min(top, cls.baseCuts[i])
-                    )
+        # runner-up is preferred; be strategic in iss run
+        # sort cuts high to low
+        frontUtils = (frontUtils[1], frontUtils[0])
+        top = max(voter)
+        # print("lll312")
+        # print(self.baseCuts, front)
+        cutoffs = [
+            (
+                (min(frontUtils[0], cls.baseCuts[i]))
+                if (i < floor(targResult))
+                else (
+                    (frontUtils[1])
+                    if (i < floor(frontResult) + 1)
+                    else min(top, cls.baseCuts[i])
                 )
-                for i in range(len(cls.baseCuts))
-            ]
-            return [toVote(cutoffs, util) for util in voter]
+            )
+            for i in range(len(cls.baseCuts))
+        ]
+        return [toVote(cutoffs, util) for util in voter]
 
     def stratBallotFor(self, polls):
         """Returns a function which takes utilities and returns a dict(
@@ -1496,11 +1487,11 @@ class IRV(Method):
         return prefs
 
     @classmethod
-    def oldResort(self, ballots, loser, ncand, piles):
+    def oldResort(cls, ballots, loser, ncand, piles):
         """No error checking; only works for exhaustive ratings."""
         # print("resort",ballots, loser, ncand)
         # print(piles)
-        for ballot in ballots:
+        for _ in ballots:
             if loser < 0:
                 nextrank = ncand - 1
 
@@ -1524,7 +1515,9 @@ class IRV(Method):
             + alternates
         )
 
-    def getLeast(self, voteRanking, keep={}):
+    def getLeast(self, voteRanking, keep=None):
+        if keep is None:
+            keep = {}
         for candidate in reversed(voteRanking):
             if candidate.candidate not in keep:
                 return candidate
@@ -1563,7 +1556,7 @@ class IRV(Method):
             ballots = list(ballots)
         ncand = len(ballots[0])
         nbal = len(ballots)
-        piles = [[] for i in range(ncand)]
+        piles = [[] for _ in range(ncand)]
         candsLeft = set(range(ncand))
         ballotsToSort = ballots
         eliminations = []  # (candidateIndex, defeatMargin) tuples
@@ -1591,7 +1584,7 @@ class IRV(Method):
         return results
 
     @classmethod
-    def oldResults(self, ballots, **kwargs):
+    def oldResults(cls, ballots, **kwargs):
         """IRV results.
 
         >>> #Irv.resultsFor(DeterministicModel(3)(5,3))
@@ -1605,7 +1598,7 @@ class IRV(Method):
         """
         if type(ballots) is not list:
             ballots = list(ballots)
-        return self.runIrv(self.buildPreferenceSchedule(ballots), len(ballots[0]))
+        return cls.runIrv(cls.buildPreferenceSchedule(ballots), len(ballots[0]))
 
     @classmethod
     def honBallot(cls, voter, **kw):
@@ -1649,8 +1642,8 @@ class IRV(Method):
         expectedUtility = sum(u * p for u, p in zip(utils, winProbs))
         scores = [(u - expectedUtility) * p for u, p in zip(utils, winProbs)]
         goodCandidates = sorted(
-            filter(lambda x: x[1] > 0, enumerate(scores)), key=lambda x: x[1]
-        )  # from worst to best score
+            (x for x in enumerate(scores) if x[1] > 0), key=lambda x: x[1]
+        )
         badCandidates = sorted(
             [(i, utils[i]) for i in range(len(utils)) if scores[i] <= 0],
             key=lambda x: x[1],
@@ -1876,7 +1869,7 @@ class V321(Mav):
     stratTargetFor = Method.stratTarget3
 
     @classmethod
-    def results(self, ballots, isHonest=False, **kwargs):
+    def results(cls, ballots, isHonest=False, **kwargs):
         """3-2-1 Voting results.
 
         >>> V321.resultsFor(DeterministicModel(3)(5,3))
@@ -1922,12 +1915,12 @@ class V321(Mav):
                 sign(ballot[semifinalists[o1s[0]]] - ballot[semifinalists[o1s[2]]])
                 for ballot in ballots
             )
-            self.__class__.extraEvents["3beats1"] = upset2 > 0
+            cls.__class__.extraEvents["3beats1"] = upset2 > 0
             upset3 = sum(
                 sign(ballot[semifinalists[o1s[0]]] - ballot[semifinalists[o1s[1]]])
                 for ballot in ballots
             )
-            self.__class__.extraEvents["3beats2"] = upset3 > 0
+            cls.__class__.extraEvents["3beats2"] = upset3 > 0
             if len(o2s) > 3:
                 fourth = o2s[-4]
                 fourthNotLasts = sum(1 if s > 1 else 0 for s in candScores[fourth])
@@ -1939,7 +1932,7 @@ class V321(Mav):
                     )
                     > 0
                 )
-                self.__class__.extraEvents["4beats1"] = fourthWin
+                cls.__class__.extraEvents["4beats1"] = fourthWin
 
         return r2s
 
@@ -2078,7 +2071,7 @@ class Condorcet(RankedMethod):
         [[0, 2, -4], [-2, 0, 6], [4, -6, 0]]
         """
         n = len(ballots[0])
-        cmat = [[0 for i in range(n)] for j in range(n)]
+        cmat = [[0 for _ in range(n)] for _ in range(n)]
 
         for i in range(n):
             for j in range(n):
@@ -2098,7 +2091,7 @@ class Condorcet(RankedMethod):
         {0, 1, 2, 3}
         """
         winCount = [sum(1 if matchup > 0 else 0 for matchup in row) for row in cmat]
-        s = set(candID for candID, wins in enumerate(winCount) if wins == max(winCount))
+        s = {candID for candID, wins in enumerate(winCount) if wins == max(winCount)}
         extensionFound = True
         while extensionFound:
             extensionFound = False
@@ -2132,9 +2125,7 @@ class Condorcet(RankedMethod):
         cmat = cls.compMatrix(ballots)
         numWins = [
             sum(
-                1
-                for j, matchup in enumerate(row)
-                if matchup > 0 or (matchup == 0 and i < j)
+                matchup > 0 or (matchup == 0 and i < j) for j, matchup in enumerate(row)
             )
             for i, row in enumerate(cmat)
         ]
@@ -2254,11 +2245,7 @@ class Schulze(Condorcet):
         for i in range(n):
             for j in range(n):
                 if i != j:
-                    if cmat[i][j] > cmat[j][i]:
-                        beatStrength[i][j] = cmat[i][j]
-                    else:
-                        beatStrength[i][j] = 0
-
+                    beatStrength[i][j] = cmat[i][j] if cmat[i][j] > cmat[j][i] else 0
                 for i in range(n):
                     for j in range(n):
                         if i != j:
@@ -2319,8 +2306,9 @@ class Minimax(Condorcet):
         """Unnecessary for Minimax; this method is never called."""
         smith = cls.smithSet(cmat)
         places = sorted(
-            [cand for cand in range(n) if cand not in smith], key=lambda c: min(cmat[c])
-        ) + sorted([cand for cand in smith], key=lambda c: min(cmat[c]))
+            [cand for cand in range(n) if cand not in smith],
+            key=lambda c: min(cmat[c]),
+        ) + sorted(list(smith), key=lambda c: min(cmat[c]))
         return [places.index(cand) for cand in range(n)]
 
     @classmethod
@@ -2336,23 +2324,22 @@ class Minimax(Condorcet):
         numCands = len(ballots[0])
         cmat = cls.compMatrix(ballots)
         smith = cls.smithSet(cmat)
-        if len(smith) == 1:
-            results = [0] * numCands
-            winner = smith.pop()
-            results[winner] = 0.5 + min(marg for marg in cmat[winner] if marg != 0) / (
-                2 * len(ballots)
-            )
-            for i in range(numCands):
-                if i == winner:
-                    continue
-                results[i] = 0.5 + cmat[i][winner] / (2 * len(ballots))
-            return results
-        else:
+        if len(smith) != 1:
             return [
                 0.5
                 + min(cmat[cand][i] for i in smith if cand != i) / (2 * len(ballots))
                 for cand in range(numCands)
             ]
+        results = [0] * numCands
+        winner = smith.pop()
+        results[winner] = 0.5 + min(marg for marg in cmat[winner] if marg != 0) / (
+            2 * len(ballots)
+        )
+        for i in range(numCands):
+            if i == winner:
+                continue
+            results[i] = 0.5 + cmat[i][winner] / (2 * len(ballots))
+        return results
 
 
 class Raynaud(Condorcet):
@@ -2401,7 +2388,7 @@ class RankedRobin(Condorcet):
         """
         numCands = len(ballots[0])
         cmat = cls.compMatrix(ballots)
-        matchupWins = [sum(1 for marg in row if marg > 0) for row in cmat]
+        matchupWins = [sum(marg > 0 for marg in row) for row in cmat]
         mostWins = max(matchupWins)
         finalists = [i for i in range(numCands) if matchupWins[i] == mostWins]
         rest = [i for i in range(numCands) if i not in finalists]
@@ -2603,7 +2590,7 @@ class ITRV(Method):
         rounds = []
         while candsLeft > 1:
             approvals = [0 if i in remainingCands else -1 for i in range(n)]
-            for i, b in enumerate(ballots):
+            for b in ballots:
                 threshold = sum(b[c] / candsLeft for c in remainingCands)
                 for cand in remainingCands:
                     if b[cand] > threshold:
