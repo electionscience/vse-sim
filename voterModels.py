@@ -263,7 +263,7 @@ class DimVoter(PersonalityVoter):
         and e.dimWeights (a list of numbers indicating how important each dimension is)
         Returns a voter whose utility for each candidate is minus the voter's distance from them in policyspace
         """
-        if caring==None:
+        if caring is None:
             caring = [1] * len(v)
             totCaring = e.totWeight
         else:
@@ -364,7 +364,12 @@ class KSElectorate(DimElectorate):
             for _ in range(self.numSubclusters[c]):
                 cares = caring()
 
-                subclusterMeans.append([random.gauss(0,sqrt(cares)) for i in range(self.dimsPerView[c])])
+                subclusterMeans.append(
+                    [
+                        random.gauss(0, sqrt(cares))
+                        for _ in range(self.dimsPerView[c])
+                    ]
+                )
                 subclusterCaring.append(caring())
             self.clusterMeans.append(subclusterMeans)
             self.clusterCaring.append(subclusterCaring)

@@ -40,10 +40,7 @@ def orderOf(standings):
 
 def fuzzyMediaFor(biaser = biaserAround(1)):
     def fuzzyMedia(standings):
-        if callable(biaser):
-            bias = biaser(standings)
-        else:
-            bias = biaser
+        bias = biaser(standings) if callable(biaser) else biaser
         result= [s + random.gauss(0,bias) for s in standings]
 
         return result
@@ -61,13 +58,11 @@ def biasedMediaFor(biaser=biaserAround(1),numerator=1):
 
     """
     def biasedMedia(standings):
-        if callable(biaser):
-            bias = biaser(standings)
-        else:
-            bias = biaser
-        result= (standings[0:2] +
-                 [(standing - bias + numerator * (bias / max(i+2, 1)))
-                        for i, standing in enumerate(standings[2:])])
+        bias = biaser(standings) if callable(biaser) else biaser
+        result = standings[:2] + [
+            (standing - bias + numerator * (bias / max(i + 2, 1)))
+            for i, standing in enumerate(standings[2:])
+        ]
 
         return result
 
@@ -79,10 +74,7 @@ def skewedMediaFor(biaser):
     [0, -1/3, -2/3, -1]
     """
     def skewedMedia(standings):
-        if callable(biaser):
-            bias = biaser(standings)
-        else:
-            bias = biaser
+        bias = biaser(standings) if callable(biaser) else biaser
         result= [(standing - bias * i / (len(standings) - 1)) for i, standing in enumerate(standings)]
         return result
 
