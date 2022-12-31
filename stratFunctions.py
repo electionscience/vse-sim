@@ -16,6 +16,7 @@ from dataClasses import *
 
 
 
+
 ###media
 
 def truth(standings, *args):
@@ -44,7 +45,9 @@ def fuzzyMediaFor(biaser = biaserAround(1)):
         else:
             bias = biaser
         result= [s + random.gauss(0,bias) for s in standings]
+
         return result
+
     return fuzzyMedia
 
 def biasedMediaFor(biaser=biaserAround(1),numerator=1):
@@ -65,7 +68,9 @@ def biasedMediaFor(biaser=biaserAround(1),numerator=1):
         result= (standings[0:2] +
                  [(standing - bias + numerator * (bias / max(i+2, 1)))
                         for i, standing in enumerate(standings[2:])])
+
         return result
+
     return biasedMedia
 
 def skewedMediaFor(biaser):
@@ -80,4 +85,5 @@ def skewedMediaFor(biaser):
             bias = biaser
         result= [(standing - bias * i / (len(standings) - 1)) for i, standing in enumerate(standings)]
         return result
+
     return skewedMedia

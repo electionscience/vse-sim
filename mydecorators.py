@@ -92,10 +92,9 @@ class memoized(object):
             return self.func(*args)
         if args in self.cache:
             return self.cache[args]
-        else:
-            value = self.func(*args)
-            self.cache[args] = value
-            return value
+        value = self.func(*args)
+        self.cache[args] = value
+        return value
     def __repr__(self):
         '''Return the function's docstring.'''
         return self.func.__doc__

@@ -56,7 +56,7 @@ class Method:
     def honBallot(cls, utils, **kw):
         """Takes utilities and returns an honest ballot
         """
-        raise NotImplementedError("{} needs honBallot".format(cls))
+        raise NotImplementedError(f"{cls} needs honBallot")
 
     @classmethod
     def vaBallot(cls, utils, electabilities, **kw):
@@ -152,7 +152,7 @@ class Method:
         >>> 2 < Method().winner([1,2,1,3,3,3,2,1,2]) < 6
         True
         """
-        winScore = max([result for result in results if isnum(result)])
+        winScore = max(result for result in results if isnum(result))
         winners = [cand for (cand, score) in enumerate(results) if score==winScore]
         #return random.choice(winners)
         return winners[0] #made it deterministic to prevent nondeterministic behaviors in useful functions
@@ -198,6 +198,7 @@ class Method:
     @staticmethod
     def stratTarget3(places):
         ((frontId,frontResult), (targId, targResult)) = places[0:3:2]
+
         return (frontId, frontResult, targId, targResult)
 
     stratTargetFor = stratTarget2
@@ -247,8 +248,9 @@ def rememberBallot(fun):
     """
     def getAndRemember(cls, voter, tally=None):
         ballot = fun(cls, voter)
-        setattr(voter, cls.__name__ + "_" + fun.__name__[:-6], ballot) #leave off the "...Ballot"
+        setattr(voter, f"{cls.__name__}_{fun.__name__[:-6]}", ballot)
         return ballot
+
     getAndRemember.__name__ = fun.__name__
     getAndRemember.allTallyKeys = lambda:[]
     return getAndRemember
@@ -263,9 +265,10 @@ def rememberBallots(fun):
         ballots = fun(cls, voter)
         for bType, ballot in ballots.items():
 
-            setattr(voter, cls.__name__ + "_" + bType, ballot)
+            setattr(voter, f"{cls.__name__}_{bType}", ballot)
 
         return ballots[fun.__name__[:-6]] #leave off the "...Ballot"
+
     getAndRemember.__name__ = fun.__name__
     getAndRemember.allTallyKeys = lambda:[]
     return getAndRemember

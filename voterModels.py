@@ -41,7 +41,7 @@ class Voter(tuple):
             >>> 0.8 < std(v100) < 1.2
             True
         """
-        return cls(random.gauss(0,1) for i in range(ncand))
+        return cls(random.gauss(0,1) for _ in range(ncand))
 
 
     def hybridWith(self, v2, w2):
@@ -160,7 +160,7 @@ class RandomModel:
     def __str__(self):
         return self.__class__.__name__
     def __call__(self, nvot, ncand, vType=PersonalityVoter):
-        return Electorate(vType.rand(ncand) for i in range(nvot))
+        return Electorate(vType.rand(ncand) for _ in range(nvot))
 
 class DeterministicModel(RandomModel):
     """Basically, a somewhat non-boring stub for testing.
@@ -288,7 +288,7 @@ class DimElectorate(Electorate):
             self.append(vType.fromDims(v,self))
 
     def calcTotWeight(self):
-        self.totWeight = sum([w**2 for w in self.dimWeights])
+        self.totWeight = sum(w**2 for w in self.dimWeights)
 
 class DimModel(RandomModel):
     """
@@ -361,7 +361,7 @@ class KSElectorate(DimElectorate):
         for c in range(self.numViews):
             subclusterMeans = []
             subclusterCaring = []
-            for i in range(self.numSubclusters[c]):
+            for _ in range(self.numSubclusters[c]):
                 cares = caring()
 
                 subclusterMeans.append([random.gauss(0,sqrt(cares)) for i in range(self.dimsPerView[c])])
@@ -371,7 +371,6 @@ class KSElectorate(DimElectorate):
 
     def asDims(self, v, i):
         result = []
-        dim = 0
         cares = []
         for c in range(self.numViews):
             clusterMean = self.clusterMeans[c][self.views[i][c]]
@@ -379,7 +378,6 @@ class KSElectorate(DimElectorate):
                 acare = self.clusterCaring[c][self.views[i][c]]
                 result.append(m + (v[dim] * sqrt(1-acare)))
                 cares.append(acare)
-            dim += 1
         v = PersonalityVoter(result) #TODO: do personality right
         v.cares = cares
         return v

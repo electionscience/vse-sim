@@ -291,6 +291,7 @@ class PluralityTop2(top2(Plurality)):
         else: return super().vaBallot(utils, electabilities=electabilities, **kw)
 
 def makeScoreMethod(topRank=10, asClass=False):
+
     class Score0to(Method):
         """Score voting, 0-10.
 
@@ -488,9 +489,7 @@ def makeScoreMethod(topRank=10, asClass=False):
                 ballot[i] = strat[i]
 
     Score0to.topRank = topRank
-    if asClass:
-        return Score0to
-    return Score0to()
+    return Score0to if asClass else Score0to()
 
 class Score(makeScoreMethod(5, True)):
     """
@@ -594,12 +593,16 @@ class ApprovalTop2(top2(Approval)):
             return super().diehardBallot(utils, intensity, candToHelp, candToHurt, **kw)
 
 def BulletyApprovalWith(bullets=0.5, asClass=False):
-    class BulletyApproval(Score(1,True)):
+
+
+
+    class BulletyApproval((Score(1,True))):
 
         bulletiness = bullets
 
         def __str__(self):
-            return "BulletyApproval" + str(round(self.bulletiness * 100))
+            return f"BulletyApproval{str(round(self.bulletiness * 100))}"
+
 
 
         @classmethod
@@ -618,9 +621,8 @@ def BulletyApprovalWith(bullets=0.5, asClass=False):
             best = max(utils)
             return [1 if util==best else 0 for util in utils]
 
-    if asClass:
-        return BulletyApproval
-    return BulletyApproval()
+
+    return BulletyApproval if asClass else BulletyApproval()
 
 def oldCoefficients(utils, electabilities, pollingUncertainty=0.15, scoreImportance=0.17, probFunc=adaptiveTieFor2):
     """Don't use"""
@@ -695,6 +697,7 @@ def makeSTARMethod(topRank=5):
             [2, 0, 1]
             """
             baseResults = super(STAR0to, cls).results(ballots, **kwargs)
+
             (runnerUp,top) = sorted(range(len(baseResults)), key=lambda i: baseResults[i])[-2:]
             upset = sum(sign(ballot[runnerUp] - ballot[top]) for ballot in ballots)
             if upset > 0:
@@ -1016,7 +1019,7 @@ class Mav(Method):
         nGrades = (len(self.baseCuts) + 1)
         i = int((nvot - 1) / 2)
         base = scores[i]
-        while (i < nvot and scores[i] == base):
+        while i < nvot and base == base:
             i += 1
         upper =  (base + 0.5) - (i - nvot/2) * nGrades / nvot
         lower = (base) - (i - nvot/2) / nvot
@@ -1125,7 +1128,7 @@ class Mav(Method):
         """
         places = sorted(enumerate(polls),key=lambda x:-x[1]) #from high to low
         #print("places",places)
-        ((frontId,frontResult), (targId, targResult)) = places[0:2]
+        ((frontId,frontResult), (targId, targResult)) = places[:2]
 
         @rememberBallots
         def stratBallot(cls, voter):
@@ -1162,6 +1165,7 @@ class Mav(Method):
                         for util in voter]
             return dict(strat=strat, extraStrat=extraStrat, isStrat=isStrat,
                         stratGap = stratGap)
+
         return stratBallot
 
 
@@ -1227,16 +1231,36 @@ class IRV(Method):
         for ballot in ballots:
             if loser < 0:
                 nextrank = ncand - 1
+
             else:
-                nextrank = ballot[loser] - 1
-            while 1:
-                try:
-                    piles[ballot.index(nextrank)].append(ballot)
-                    break
-                except AttributeError:
-                    nextrank -= 1
-                    if nextrank < 0:
-                        raise
+                candidates[candidate] = CandidateWithCount(candidate, votes)
+
+        # Simply for VSE which requires ranking of non-winners; in real election we don't really
+        # care
+        alternates = []
+        trackedalt = set()
+        for ranking, votes in prefSchedule.items():
+            for alternate in ranking[1:]:
+                if (alternate not in candidates) and alternate not in trackedalt:
+                    alternates.append(CandidateWithCount(alternate, 0))
+                    trackedalt.add(alternate)
+
+        return sorted(candidates.values(), key=lambda c: (c.votes, c.candidate), reverse = True) + alternates
+
+    def getLeast(self, voteRanking, keep = {}):
+        for candidate in reversed(voteRanking):
+            if candidate.candidate not in keep:
+                return candidate
+
+    def runIrv(self, remaining, ncand):
+        """IRV results."""
+        results = [-1] * ncand
+        for i in range(ncand):
+            votes = self.candidateVotes(remaining)
+            toEliminate = self.getLeast(votes)
+            results[ncand - i - 1] = toEliminate.candidate
+            remaining = self.eliminateCandidate(remaining, toEliminate)
+        return results
 
     @classmethod
     def resort(cls, ballotsToSort, candsLeft, piles):
@@ -1305,20 +1329,7 @@ class IRV(Method):
         """
         if type(ballots) is not list:
             ballots = list(ballots)
-        ncand = len(ballots[0])
-        results = [-1] * ncand
-        piles = [[] for i in range(ncand)]
-        loserpile = ballots
-        loser = -1
-        for i in range(ncand):
-            self.resort(loserpile, loser, ncand, piles)
-            negscores = ["x" if isnum(pile) else -len(pile)
-                         for pile in piles]
-            loser = self.winner(negscores)
-            results[loser] = i
-            loserpile, piles[loser] = piles[loser], -1
-        return results
-
+        return self.runIrv(self.buildPreferenceSchedule(ballots), len(ballots[0]))
 
     @classmethod
     def honBallot(cls, voter, **kw):
@@ -1409,6 +1420,101 @@ class IRV(Method):
                 i -= 1
         #assert list(range(n)) == sorted(ballot)
         assert i == -1
+        
+class IrvPrime(Irv):
+    """
+    IRV Prime.
+    
+    See https://electowiki.org/wiki/IRV_Prime
+    """
+
+    stratTargetFor = Method.stratTarget3
+
+    def results(self, ballots, **kwargs):
+        """IRV Prime results.
+
+        >>> IrvPrime().results([[0,1,2]])[2]
+        2
+        >>> IrvPrime().results([[0,1,2],[2,1,0]])[1]
+        0
+        >>> IrvPrime().results([[0,1,2]] * 4 + [[2,1,0]] * 3 + [[1,2,0]] * 2)
+        [1, 2, 0]
+        >>> IrvPrime().results([[2,1,0]] * 100 + [[1,0,2]] + [[0,2,1]] * 100)
+        [1, 0, 2]
+        >>> # Favorite betrayal example from http://rangevoting.org/IncentToExagg.html
+        >>> IrvPrime().results([[1,2,0]] * 8 + [[2,0,1]] * 6 + [[0,1,2]] * 5)
+        [0, 1, 2]
+        >>> IrvPrime().results([[0,4,3,1,2]] * 5 + [[1,4,3,2,1]] * 4 + [[2,3,4,0,1]] * 6)
+        [4, 2, 3, 0, 1]
+        >>> # Elections 3-5 from http://votingmatters.org.uk/ISSUE6/P4.HTM
+        >>> IrvPrime().results([[0,1,2,3,4,5]] * 12 + [[2,0,1,3,4,5]] * 11 + [[1,2,0,3,4,5]] * 10 +
+        ...     [[3,4,5]] * 27)
+        [1, 2, 3, 0, 4, 5]
+        >>> IrvPrime().results([[0,1]] * 11 + [[1]] * 7 + [[2]] * 12)
+        [1, 2, 0]
+        >>> IrvPrime().results([[0,3,2,1]] * 5 + [[1,2,0,3]] * 5 + [[2,0,1,3]] * 8 +
+        ...    [[3,0,1,2]] * 4 + [[3,1,2,0]] * 8)
+        [0, 3, 2, 1]
+        >>> IrvPrime().results([[0,2,1,3]] * 6 + [[0,3,1,2]] * 3 + [[0,3,2,1]] * 3 +
+        ...     [[1,2,0,3]] * 4 + [[2,0,1,3]] * 4 + [[3,1,2,0]] * 5)
+        [2, 0, 3, 1]
+        >>> # Failure of later-no-harm
+        >>> IrvPrime().results([[0, 1, 2]] * 32 + [[0, 2, 1]] * 20 + [[1,2,0]] * 30 +
+        ...     [[1,0,2]] * 21 + [[2,0,1]] * 30 + [[2,1,0]] * 20)
+        [2, 0, 1]
+        >>> IrvPrime().results([[0, 1, 2]] * 32 + [[0, 2, 1]] * 20 + [[1,2,0]] * 30 +
+        ...     [[1,0,2]] * 21 + [[2,1,0]] * 30 + [[2,1,0]] * 20)
+        [1, 0, 2]
+        """
+
+        if type(ballots) is not list:
+            ballots = list(ballots)
+
+        remaining = self.buildPreferenceSchedule(ballots)
+        ncand = len(self.candidateVotes(remaining))
+        classic = self.runIrv(remaining, ncand)
+
+        # Keep the winner from the classic IRV
+        winners = {classic[0]}
+
+        # Find all candidates that can beat classic IRV winner; this may be a superset
+        # of schwartz/smith, but it's all that matters
+        winnersPrime = set()
+        for possibleWinner in range(ncand):
+            if possibleWinner in winners:
+                continue
+
+            numWins = 0
+            numLosses = 0
+            for ranking, votes in remaining.items():
+                possibleWinnerRanking = winnerRanking = len(ranking) + 1
+                for pos in range(len(ranking)):
+                    if ranking[pos] == possibleWinner:
+                        possibleWinnerRanking = pos
+                    # We can change this to a loop if there's > 1 winner
+                    elif ranking[pos] == next(iter(winners)):
+                        winnerRanking = pos
+                if possibleWinnerRanking < winnerRanking:
+                    numWins += votes
+                elif winnerRanking < possibleWinnerRanking:
+                    numLosses += votes
+            if numWins > numLosses:
+                winnersPrime.add(possibleWinner)
+
+        # Now re-run IRV preserving all winners + winners prime
+        keepers = winners.union(winnersPrime)
+        results = [-1] * ncand
+        for i in range(ncand):
+            votes = self.candidateVotes(remaining)
+            toEliminate = self.getLeast(votes, keepers)
+            if not isinstance(toEliminate, CandidateWithCount):
+                # Begin "step 4", i.e. continue elimination without preserving anyone
+                keepers = {}
+                toEliminate = self.getLeast(votes)
+            results[ncand - i - 1] = toEliminate.candidate
+            remaining = self.eliminateCandidate(remaining, toEliminate)
+
+        return results
 
     @classmethod
     def firstOrThirdBallot(cls, utils, polls, **kw):
@@ -1645,6 +1751,7 @@ class Condorcet(RankedMethod):
         """
         n = len(ballots[0])
         cmat = [[0 for i in range(n)] for j in range(n)]
+
         for i in range(n):
             for j in range(n):
                 if i != j:
@@ -1829,10 +1936,7 @@ class Rp(Condorcet):
         for (i, j, margin) in rps:
             if margin < 0:
                 i, j = j, i
-            if cmat[j][i] is True:
-                #print("rejecting",cmat)
-                pass #reject this victory
-            else: #lock-in
+            if cmat[j][i] is not True:
                 #print(i,j,cmat)
                 cmat[i][j] = True
                 #print("....",i,j,cmat)
@@ -1845,10 +1949,7 @@ class Rp(Condorcet):
 
                             #print(".......",i,j,k,cmat)
 
-        #print(cmat)
-        numWins = [sum(1 for j in range(n) if cmat[i][j] is True)
-                    for i in range(n)]
-        return numWins
+        return [sum(cmat[i][j] is True for j in range(n)) for i in range(n)]
 
 class Minimax(Condorcet):
     """Smith Minimax margins"""
@@ -2039,10 +2140,9 @@ class IRNR(RankedMethod):
             mini = None
             minv = None
             for i, v in enumerate(tsum):
-                if enabled[i]:
-                    if (minv is None) or (tsum[i] < minv):
-                        minv = tsum[i]
-                        mini = i
+                if enabled[i] and ((minv is None) or (tsum[i] < minv)):
+                    minv = tsum[i]
+                    mini = i
             enabled[mini] = False
             results[mini] = minv
             numEnabled -= 1

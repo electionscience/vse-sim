@@ -232,6 +232,7 @@ class CsvBatch:
             dw.writerow(r)
         myFile.close()
 
+
 def oneStepWorker(model, nvot, ncand, ms, pickiness, pollingError, r1Media, r2Media, baseSeed=None, i = 0):
 
     if i>0 and i%50 == 0: print('Iteration:', i)
@@ -282,6 +283,7 @@ def listProduct(lists, index=0):
         for item in lists[0]:
             returnList.append([item] + other)
     return returnList
+
 
 if __name__ == "__main__":
     import doctest
