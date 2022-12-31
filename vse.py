@@ -74,6 +74,8 @@ def threeRoundResults(method, voters, backgroundStrat, foregrounds=[], bgArgs = 
             probOfWin=winProbs[r1Winner],
             winnerPlaceInR0=r0Places[r1Winner], **constResults)]
     allResults[0]['method'] = 'ApprovalPoll'
+    fgHelped = []
+    fgHarmed = []
     for foregroundStrat, targetSelect, foregroundSelect, fgArgs in foregrounds:
         polls = tuple(r2Media(r1Results, pollingError))
         candToHelp, candToHurt = targetSelect(electabilities=electabilities, polls=polls, r0polls=electabilities)
@@ -103,18 +105,13 @@ def threeRoundResults(method, voters, backgroundStrat, foregrounds=[], bgArgs = 
         #foregroundBaseUtil = sum(voter[r1Winner] for voter, _, _ in foreground)/fgSize if fgSize else 0
         #foregroundStratUtil = sum(voter[winner] for voter, _, _ in foreground)/fgSize if fgSize else 0
         totalUtil = voters.socUtils[winner]
-        fgHelped = []
-        fgHarmed = []
         winnersFound = [(r1Winner, 0)]
         partialResults = constResults.copy()
         if winner != r1Winner:
             winnersFound.append((winner, fgSize - 1))
         i = 1
         deciderMargUtilDiffs = []
-        if fgSize: #If not I should be quitting earlier than this but easier to just fake it.
-            lastVoter = foreground[fgSize - 1][0]
-        else: #zero-sized foreground
-            lastVoter = [0.] * len(r1Results)
+        lastVoter = foreground[fgSize - 1][0] if fgSize else [0.] * len(r1Results)
         deciderUtilDiffs = [(lastVoter[winner] - lastVoter[r1Winner] , nan, fgSize)]
         allUtilDiffs = [([voter[0][winner] - voter[0][r1Winner] for voter in foreground], fgSize)]
         while i < len(winnersFound):
@@ -129,7 +126,9 @@ def threeRoundResults(method, voters, backgroundStrat, foregrounds=[], bgArgs = 
             elif r1Winner == prevWinner:
                 prefix = "t1"
             else: prefix = "o"#+str(i)
-            partialResults.update(makePartialResults(minfg, thisWinner, r1Winner, prefix, candToHelp, candToHurt))
+            partialResults |= makePartialResults(
+                minfg, thisWinner, r1Winner, prefix, candToHelp, candToHurt
+            )
             deciderUtils = foreground[threshold-1][0] #The deciding voter
             if threshold == 0: #this shouldn't actually matter as we'll end up ignoring it anyway
                             #, so having the wrong utilities would be OK. But let's get it right.
@@ -225,12 +224,11 @@ class CsvBatch:
         if newFile:
             while os.path.isfile(baseName + str(i) + ".csv"):
                 i += 1
-        myFile = open(baseName + (str(i) if newFile else "") + ".csv", "w")
-        dw = csv.DictWriter(myFile, self.rows[0].keys(), restval="NA")
-        dw.writeheader()
-        for r in self.rows:
-            dw.writerow(r)
-        myFile.close()
+        with open(baseName + (str(i) if newFile else "") + ".csv", "w") as myFile:
+            dw = csv.DictWriter(myFile, self.rows[0].keys(), restval="NA")
+            dw.writeheader()
+            for r in self.rows:
+                dw.writerow(r)
 
 def oneStepWorker(model, nvot, ncand, ms, pickiness, pollingError, r1Media, r2Media, baseSeed=None, i = 0):
 
@@ -279,8 +277,7 @@ def listProduct(lists, index=0):
         return [[i] for i in lists[0]]
     returnList = []
     for other in listProduct(lists[1:]):
-        for item in lists[0]:
-            returnList.append([item] + other)
+        returnList.extend([item] + other for item in lists[0])
     return returnList
 
 if __name__ == "__main__":

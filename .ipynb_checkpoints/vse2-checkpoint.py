@@ -34,8 +34,7 @@ class CsvBatch:
                     fgs.extend([(paramStrat(m.diehardBallot, intensity=i), targetFunc) for i in m.diehardLevels]
                     + [(paramStrat(m.compBallot, intensity=i), targetFunc) for i in m.compLevels])
                     fgs.append((swapPolls(m.lowInfoBallot), targetFunc))
-                for bg in [m.honBallot, m.lowInfoBallot]:
-                    ms.append((m, bg, fgs))
+                ms.extend((m, bg, fgs) for bg in [m.honBallot, m.lowInfoBallot])
             else:
                 ms.append(m)
         for i in range(niter):
@@ -55,12 +54,11 @@ class CsvBatch:
         i = 1
         while os.path.isfile(baseName + str(i) + ".csv"):
             i += 1
-        myFile = open(baseName + str(i) + ".csv", "w")
-        dw = csv.DictWriter(myFile, self.rows[0].keys(), restval="NA")
-        dw.writeheader()
-        for r in self.rows:
-            dw.writerow(r)
-        myFile.close()
+        with open(baseName + str(i) + ".csv", "w") as myFile:
+            dw = csv.DictWriter(myFile, self.rows[0].keys(), restval="NA")
+            dw.writeheader()
+            for r in self.rows:
+                dw.writerow(r)
 
 
 def compareStrats(method, model, backgroundStrat, nvot, ncand, niter): pass

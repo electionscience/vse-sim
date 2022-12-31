@@ -160,7 +160,7 @@ class ThreeRoundResults:
     def addRound0Results(self):
         r = self.makeResults(results=self.r0Results, totalUtil=self.totalUtils[r0Winner],
                 probOfWin=self.winProbs[r0Winner], **self.constResults)
-        r['method'] = self.pollingMethod.__name__+'Poll'
+        r['method'] = f'{self.pollingMethod.__name__}Poll'
         self.allResults.append(r)
 
     def addRound1Results(self):
@@ -195,7 +195,7 @@ class ThreeRoundResults:
             midpoint = int(floor((maxThreshold + minThreshold)/2))
             midpointBallots = bgBallots + fgBallots[:midpoint] + fgBaselineBallots[midpoint:]
             midpointWinner = self.winnerFunc(midpointBallots)
-            if not any(midpointWinner == w for w, _ in winnersFound):
+            if all(midpointWinner != w for w, _ in winnersFound):
                 winnersFound.append((midpointWinner, midpoint))
             if midpointWinner == targetWinner:
                 maxThreshold = midpoint
@@ -243,9 +243,7 @@ class ThreeRoundResults:
             deciderUtilDiffSum=sum(uDiff for uDiff, _ in self.deciderMargUtilDiffs), **self.partialResults))
 
     def makeResults(self, **kw):
-        results = {c: kw.get(c, None) for c in resultColumns}
-        results.update(kw)
-        return results
+        return {c: kw.get(c, None) for c in resultColumns} | kw
 
     def makePartialResults(self, fgVoters, winner, r1Winner, prefix=""):
         fgHelped = []
@@ -273,20 +271,19 @@ def winnerSetSample(numCands, numWinners):
     winnerSetSample(5,2)
     [{0, 1}, {0, 2}, {0, 3}, {0, 4}, {1, 2}, {1, 3}, {1, 4}, {2, 3}, {2, 4}, {3, 4}]
     """
-    if math.comb(numCands, numWinners) < 100:
-        winners = list(range(numWinners))
-        winnerSets = [set(winners)]
-        while winners[0] < numCands - numWinners:
-            for i in range(numWinners-1, -1, -1):
-                if winners[i] < numCands - (numWinners - i) and (i==numWinners-1 or winners[i+1] - winners[i] > 1):
-                    winners[i] += 1
-                    for j in range(i+1, numWinners):
-                        winners[j] = winners[i] + j - i
-                    break
-            winnerSets.append(set(winners))
-        return winnerSets
-    else:
-        return [set(random.sample(range(numCands), numWinners)) for i in range(50)]
+    if math.comb(numCands, numWinners) >= 100:
+        return [set(random.sample(range(numCands), numWinners)) for _ in range(50)]
+    winners = list(range(numWinners))
+    winnerSets = [set(winners)]
+    while winners[0] < numCands - numWinners:
+        for i in range(numWinners-1, -1, -1):
+            if winners[i] < numCands - (numWinners - i) and (i==numWinners-1 or winners[i+1] - winners[i] > 1):
+                winners[i] += 1
+                for j in range(i+1, numWinners):
+                    winners[j] = winners[i] + j - i
+                break
+        winnerSets.append(set(winners))
+    return winnerSets
 
 mwResultColumns = ["method", "backgroundStrat", "fgStrat", "numVoters", "numCandidates",
         "numWinners", "magicBestUtil", "magicWorstUtil", "meanCandidateUtil",

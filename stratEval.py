@@ -43,11 +43,18 @@ def methodStratLoop(voterModel, methods, strats, nvot, ncand, numWinners, bgStra
     electabilities = noisyMedia(pollingMethod.results(pollingStrat(voter, **pollingStratArgs)
                                                         for voter in electorate), pollingError)
     bgBallots = [bgStrat(v, electabilities=electabilities, numWinners=numWinners, **bgStratArgs) for v in electorate]
-    methodResults = {}
-    for m in methods:
-        methodResults[m.__name__] = simpleStratTest(electorate, m, strats, numWinners,
-                                                    electabilities, bgBallots, pollingError)
-    return methodResults
+    return {
+        m.__name__: simpleStratTest(
+            electorate,
+            m,
+            strats,
+            numWinners,
+            electabilities,
+            bgBallots,
+            pollingError,
+        )
+        for m in methods
+    }
 
 def keyTuple(method, strat, statName):
     return (method.__name__, strat[0].__name__, str(strat[1]), statName)
@@ -102,7 +109,7 @@ class StratTest:
 
     def showESIF(self):
         for stat in self.statNames:
-            print(stat + ':')
+            print(f'{stat}:')
             print(("Method\t" if self.multiMethods else "")+("Strategy\t" if self.multiStrats else "")+("Arguments\t" if self.multiArgs else "")+"ESIF")
             for key, value in self.esif.items():
                 if key[3] != stat or key[1] == 'abstain': continue
