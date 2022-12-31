@@ -1,7 +1,4 @@
 # Voter Satisfaction Efficiency
-
-
-# Voter Satisfaction Efficiency
 These are some methods for running VSE (Voter Satisfaction Efficiency)
 simulations for various voting systems. 
 
@@ -30,14 +27,3 @@ Try
     >>> csvs.saveFile()
 
 and look for the results in `SimResults1.csv`
-* Install python dependencies (eg, scipy) and run "run sims for paper.ipynb"
-* Install R dependencies (eg, data.table) and run "create graphs for paper.R". Working directory must be here.
-* Install shell dependency (Inkscape for Mac — or, if other platform, edit script) and run "convert_pngs_for_paper.sh"
-
-# Recreating figures for STAR voting paper
-
-To reproduce the figures in the paper:
-
-* Install python dependencies (eg, scipy) and run "run sims for paper.ipynb"
-* Install R dependencies (eg, data.table) and run "create graphs for paper.R". Working directory must be here.
-* Install shell dependency (Inkscape for Mac — or, if other platform, edit script) and run "convert_pngs_for_paper.sh"
