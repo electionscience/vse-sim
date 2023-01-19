@@ -35,7 +35,7 @@ library(scatterD3)
 # 
 # fvse = rbind(fvse,fread("wtf2.csv"))
 
-fvse = fread("quicktest3.csv")
+fvse = fread("candnumbertest1.csv")
 numVoters = mean(fvse[,numVoters])
 vses = fvse[method != "ApprovalPoll",list(VSE=mean((r1WinnerUtil - meanCandidateUtil) / 
                       (magicBestUtil - meanCandidateUtil))),by=.(method,backgroundStrat)]
@@ -48,7 +48,7 @@ fromhons = fvse[backgroundStrat=="honBallot",
        fgMatters=mean(fgUtilDiff != 0),
        VSEDiff=mean((totalUtil - r1WinnerUtil) / (magicBestUtil - meanCandidateUtil)),
        #margStrategicRegret=mean(margStrategicRegret),
-       firstDeciderUtilDiff=mean(firstDeciderUtilDiff),
+       pivotalUtilDiff=mean(pivotalUtilDiff),
        deciderUtilDiffSum=mean(deciderUtilDiffSum),
        avgStrategicRegret=mean((avgStrategicRegret) / (magicBestUtil - meanCandidateUtil) / numVoters),
        fgHelpedUtilDiff=mean((fgHelpedUtilDiff) / (magicBestUtil - meanCandidateUtil) / numVoters),
