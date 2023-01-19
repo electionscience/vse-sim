@@ -126,7 +126,7 @@ def influentialBlocs(voters, method, numWinners=1, utilChange=0.1, numBuckets=5,
     or to an arbitrary voting method. Polling is then randomly perturbed according to pollingError.
 
     >>> influentialBlocs([Voter([0,1,2])]*3+[Voter([0,2,1])]*3+[Voter([2,1,0])]*4, Plurality, utilChange = 1.5)
-    ([[0, 0, 0, 1, 1], [1, 1, 1, 0, 0], [0, 0, 1, 0, 0]], [0], [0.4, 0.3, 0.3])
+    ([[0, 0, 0, 1, 1], [1, 1, 1, 1, 0], [0, 0, 1, 0, 0]], [0], [0.4, 0.3, 0.3])
     """
     numCands = len(voters[0])
     numVoters = len(voters)
@@ -315,3 +315,25 @@ def showChart(fileName, norm=1, methodOnly=True, forResult='all', percentages=Tr
         ax.grid(True)
         ax.legend()
         plt.show()
+<<<<<<< Updated upstream
+=======
+
+def showDFUandCS(fileName, positions=(0.25,0.5), methodOnly=True, forResult='all'):
+    with open(fileName) as file:
+        reader = csv.DictReader(file)
+        print("Name\tDFU\t"+"\t".join(str(pos) for pos in positions))
+        for row in reader:
+            if row['baseResult'] != forResult: continue
+            buckets = int(row['numBuckets'])
+            rawData = [float(row[str(i)]) for i in range(buckets)]
+            total = sum(rawData)
+            name = re.match(".*(?=:)", row['name']).group(0) if methodOnly else row['name']
+            DFU = sum(entry/total - 1/buckets for entry in rawData if entry/total > 1/buckets)
+            CSs = [sum(entry/total for i, entry in enumerate(rawData) if i < buckets*pos) for pos in positions]
+            csString = "\t".join(f"{cs:1.2f}" for cs in CSs)
+            print(f"{name}: {DFU:1.2f}\t"+csString)
+
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()
+>>>>>>> Stashed changes

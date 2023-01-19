@@ -370,9 +370,10 @@ def makeScoreMethod(topRank=10, asClass=False):
                 [4.0, 6.0, 5.0]
             """
             #raise Exception("NOT")
-            bot = min(utils)
-            scale = max(utils)-bot
-            return [floor((cls.topRank + .99) * (util-bot) / scale) for util in utils]
+            #bot = min(utils)
+            #scale = max(utils)-bot
+            #return [floor((cls.topRank + .99) * (util-bot) / scale) for util in utils]
+            return cls.mean0iBallot(utils, exp=1)
 
         @classmethod
         def zeroInfoBallot(cls, utils, exp=2, bottomSD=float('inf'), **kw):
@@ -394,6 +395,17 @@ def makeScoreMethod(topRank=10, asClass=False):
             expectedUtility = sum(utils)/len(utils)
             effectiveWorst = max(min(utils), expectedUtility - bottomSD*std(utils))
             adjustedUtils = [max(u - effectiveWorst, 0)**exp for u in utils]
+            return cls.interpolatedBallot(adjustedUtils, 0, max(adjustedUtils))
+
+        @classmethod
+        def mean0iBallot(cls, utils, exp=1, **kw):
+            """
+            Casts an honest ballot without the use of any polling data.
+            """
+            meanUtility = sum(utils)/len(utils)
+            bestUtility = max(utils)
+            bottom = max(bestUtility - 2*(bestUtility-meanUtility), min(utils))
+            adjustedUtils = [max(u - bottom, 0)**exp for u in utils]
             return cls.interpolatedBallot(adjustedUtils, 0, max(adjustedUtils))
 
         @classmethod
