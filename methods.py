@@ -1721,7 +1721,9 @@ class Condorcet(RankedMethod):
             plur3Tally[b3.index(max(b3))] += 1
         plurOrder = sorted(enumerate(plurTally),key=lambda x:-x[1])
         plur3Order = sorted(enumerate(plur3Tally),key=lambda x:-x[1])
-        if plurOrder[0][0] == condOrder[0][0]:
+        if any(tally > len(electorate)/2 for tally in plurTally):
+            return "trivial"
+        elif plurOrder[0][0] == condOrder[0][0]:
             return "easy"
         elif plur3Order[0][0] == condOrder[0][0]:
             return "spoiler"
