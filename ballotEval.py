@@ -8,7 +8,7 @@ def stratStats(model, strat, nvot, ncand, niter, stratArgs={}, numWinners=1, pol
                 usePolls=True, pickiness=0.7, pollFilter=None):
     bulletCount, totalScore = 0, 0
     scoreCounts = collections.Counter()
-    for i in range(niter):
+    for _ in range(niter):
         electorate = model(nvot, ncand)
         if usePolls:
             pollBallots = [Approval.zeroInfoBallot(v, pickiness=pickiness) for v in electorate]

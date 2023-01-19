@@ -2,6 +2,7 @@ from dataClasses import *
 from methods import *
 
 def makeBlock(method):
+
     class BlockVoting(method):
         @classmethod
         def winnerSet(cls, ballots, numWinners):
@@ -15,7 +16,7 @@ def makeBlock(method):
                 winners.append(winner)
                 unelectedCands.remove(winner)
             return winners
-    BlockVoting.__name__ = "Block" + method.__name__
+    BlockVoting.__name__ = f"Block{method.__name__}"
     return BlockVoting
 
 class BlockApproval(makeBlock(Approval)): pass #What's used in Fargo
@@ -99,10 +100,9 @@ class AllocatedScore(STAR):
         score = cls.topRank + 1
         while totalSupport < quota:
             score -= 1
-            scoreSupport = 0
-            for ballot in ballots:
-                if ballot[winner] == score:
-                    scoreSupport += ballot.weight
+            scoreSupport = sum(
+                ballot.weight for ballot in ballots if ballot[winner] == score
+            )
             totalSupport += scoreSupport
         surplusFraction = max(0, (totalSupport-quota)/scoreSupport)
         for ballot in ballots:
@@ -265,9 +265,7 @@ class ASFinalRunoff(AllocatedScore):
                 candTotals[c] += ballot[c]*ballot.weight
         (runnerUp,top) = sorted(range(len(ballots[0])), key=lambda i: candTotals[i])[-2:]
         upset = sum(sign(ballot[runnerUp] - ballot[top])*ballot.weight for ballot in ballots)
-        if upset > 0:
-            return runnerUp
-        else: return top
+        return runnerUp if upset > 0 else top
 
 class ASRunoffs(AllocatedScore):
     @classmethod
@@ -275,9 +273,7 @@ class ASRunoffs(AllocatedScore):
         candTotals = [sum(b[c]*b.weight for b in ballots) if c in unelectedCands else -1 for c in range(len(ballots[0]))]
         (runnerUp,top) = sorted(range(len(ballots[0])), key=lambda i: candTotals[i])[-2:]
         upset = sum(sign(ballot[runnerUp] - ballot[top])*ballot.weight for ballot in ballots)
-        if upset > 0:
-            return runnerUp
-        else: return top
+        return runnerUp if upset > 0 else top
 
 class ASRDroop(ASRunoffs):
     methodQuota = staticmethod(droop)
@@ -319,9 +315,8 @@ class SequentialMonroe(AllocatedScore):
         bestCands = [c for c in unelectedCands if quotaStrengths[c]==bestQuota]
         if len(bestCands) == 1:
             return bestCands[0]
-        else:
-            scores = [sum(ballot[c]*ballot.weight for ballot in ballots) if c in bestCands else -1 for c in range(ncand)]
-            return scores.index(max(scores))
+        scores = [sum(ballot[c]*ballot.weight for ballot in ballots) if c in bestCands else -1 for c in range(ncand)]
+        return scores.index(max(scores))
 
 class SSS(AllocatedScore):
     """
@@ -352,10 +347,11 @@ class S5H(SSS):
         score = cls.topRank + 1
         while totalSupport < quota*cls.topRank and score > 1:
             score -= 1
-            scoreSupport = 0
-            for ballot in ballots:
-                if ballot[winner] == score:
-                    scoreSupport += score*ballot.weight
+            scoreSupport = sum(
+                score * ballot.weight
+                for ballot in ballots
+                if ballot[winner] == score
+            )
             totalSupport += scoreSupport
         surplusFraction = max((totalSupport-quota*cls.topRank)/scoreSupport, 0) if scoreSupport else 0
         for ballot in ballots:
@@ -440,11 +436,12 @@ class STV(Irv):
         candsLeft = set(range(nCands))
         wBallots = [weightedBallot(b) for b in ballots]
         ballotsToSort = wBallots
-        piles = [[] for i in range(nCands)]
+        piles = [[] for _ in range(nCands)]
         while len(winners) + len(candsLeft) > numWinners:
             cls.resort(ballotsToSort, candsLeft, piles)
-            newWinners = [c for c in candsLeft if sum(b.weight for b in piles[c]) >= quota]
-            if newWinners:
+            if newWinners := [
+                c for c in candsLeft if sum(b.weight for b in piles[c]) >= quota
+            ]:
                 ballotsToSort = []
                 winners.extend(newWinners)
                 for w in newWinners:
@@ -462,8 +459,7 @@ class STV(Irv):
                         loserVotes = sum(b.weight for b in piles[cand])
                 candsLeft.remove(loser)
                 ballotsToSort = piles[loser]
-        for c in candsLeft:
-            winners.append(c)
+        winners.extend(iter(candsLeft))
         return winners
 
 class MinimaxSTV(STV):
@@ -481,11 +477,12 @@ class MinimaxSTV(STV):
         candsLeft = set(range(nCands))
         wBallots = [weightedBallot(b) for b in ballots]
         ballotsToSort = wBallots
-        piles = [[] for i in range(nCands)]
+        piles = [[] for _ in range(nCands)]
         while len(winners) < numWinners - 1 and len(winners) + len(candsLeft) > numWinners - 1:
             cls.resort(ballotsToSort, candsLeft, piles)
-            newWinners = [c for c in candsLeft if sum(b.weight for b in piles[c]) >= quota][:max(0, numWinners-len(winners)-1)]
-            if newWinners:
+            if newWinners := [
+                c for c in candsLeft if sum(b.weight for b in piles[c]) >= quota
+            ][: max(0, numWinners - len(winners) - 1)]:
                 ballotsToSort = []
                 winners.extend(newWinners)
                 for w in newWinners:
@@ -504,9 +501,7 @@ class MinimaxSTV(STV):
                 candsLeft.remove(loser)
                 ballotsToSort = piles[loser]
         if len(winners) < numWinners - 1:
-            for c in candsLeft:
-                winners.append(c)
-
+            winners.extend(iter(candsLeft))
         #Minimax step
         compMatrix = [[float('inf') if i in winners or j in winners
                         else sum(b.weight*sign(b[i] - b[j]) for b in wBallots)
@@ -524,7 +519,7 @@ def assignBallot(ballot, candsLeft):
     if activeScore == 0:
         return set()
     else:
-        return set(i for i in candsLeft if ballot[i] == activeScore)
+        return {i for i in candsLeft if ballot[i] == activeScore}
 
 class S5HtoSTV(S5H):
     """Uses S5H for as long as a Droop quota can be filled, then switches to STV
@@ -562,7 +557,7 @@ class S5HtoSTV(S5H):
     def useSTV(cls, wBallots, numWinners, winners, quota, useForLastRound):
         numToElect = numWinners if useForLastRound else numWinners - 1
         nCands = len(wBallots[0])
-        candsLeft = set(i for i in range(nCands) if i not in winners)
+        candsLeft = {i for i in range(nCands) if i not in winners}
         assignedBallots = [[b, assignBallot(b, candsLeft)] for b in wBallots]
         while len(winners) < numToElect and len(winners) + len(candsLeft) > numToElect:
             candTotals = [sum(b.weight/len(topCands) for b, topCands in assignedBallots if cand in topCands)

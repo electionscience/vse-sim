@@ -14,13 +14,16 @@ def pollPert(model, methodsAndStrats, nvot, ncand, niter, nwinners=1, perturbati
     totalResults = {p:{m[0].__name__: [0,0,0] for m in ms} for p in perturbations}
     condResults = {p:{m[0].__name__: [0,0,0] for m in ms} for p in perturbations}
     nonCondResults = {p:{m[0].__name__: [0,0,0] for m in ms} for p in perturbations}
-    for i in range(niter):
+    for _ in range(niter):
         electorate = model(nvot, ncand)
         basePolls = pollingMethod.results([pollingStrat(v) for v in electorate])
-        if Condorcet.scenarioType(electorate) == 'cycle':
-            condWinner = None
-        else:
-            condWinner = Condorcet.winnerSet([Condorcet.honBallot(v) for v in electorate])[0]
+        condWinner = (
+            None
+            if Condorcet.scenarioType(electorate) == 'cycle'
+            else Condorcet.winnerSet(
+                [Condorcet.honBallot(v) for v in electorate]
+            )[0]
+        )
         for method, strat, stratArgs in ms:
             baseWinners = set(method.winnerSet([strat(v, polls=basePolls, electabilities=basePolls, **stratArgs)
                             for v in electorate], numWinners=nwinners))
