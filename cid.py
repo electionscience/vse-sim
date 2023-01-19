@@ -315,8 +315,6 @@ def showChart(fileName, norm=1, methodOnly=True, forResult='all', percentages=Tr
         ax.grid(True)
         ax.legend()
         plt.show()
-<<<<<<< Updated upstream
-=======
 
 def showDFUandCS(fileName, positions=(0.25,0.5), methodOnly=True, forResult='all'):
     with open(fileName) as file:
@@ -336,4 +334,3 @@ def showDFUandCS(fileName, positions=(0.25,0.5), methodOnly=True, forResult='all
 if __name__ == "__main__":
     import doctest
     doctest.testmod()
->>>>>>> Stashed changes
