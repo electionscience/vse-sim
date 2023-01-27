@@ -1692,7 +1692,7 @@ class Condorcet(RankedMethod):
         >>> Condorcet.scenarioType([[2,1,0]]*9 + [[1,0,2]]*8 + [[0,2,1]]*7)
         'cycle'
         >>> Condorcet.scenarioType([[0,1,2]]*2 + [[2,1,0]])
-        'easy'
+        'trivial'
         >>> Condorcet.scenarioType([[0,1,2],[2,1,0]])
         'easy'
         >>> Condorcet.scenarioType([[0,1,2]] * 4 + [[2,1,0]] * 3 + [[1,2,0]] * 2)
