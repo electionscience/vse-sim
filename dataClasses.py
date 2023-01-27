@@ -56,7 +56,7 @@ class Method:
     def honBallot(cls, utils, **kw):
         """Takes utilities and returns an honest ballot
         """
-        raise NotImplementedError("{} needs honBallot".format(cls))
+        raise NotImplementedError(f"{cls} needs honBallot")
 
     @classmethod
     def vaBallot(cls, utils, electabilities, **kw):
@@ -100,10 +100,9 @@ class Method:
         r = random.Random(utils.id).random()
         if r < baseBullets + slope*margin:
             return cls.bulletBallot(utils)
-        else:
-            if otherStrat is None:
-                otherStrat = cls.honBallot
-            return otherStrat(utils, electabilities=electabilities)
+        if otherStrat is None:
+            otherStrat = cls.honBallot
+        return otherStrat(utils, electabilities=electabilities)
 
     @classmethod
     def diehardBallot(cls, utils, intensity, candToHelp, candToHurt, electabilities=None, polls=None):
@@ -152,7 +151,7 @@ class Method:
         >>> 2 < Method().winner([1,2,1,3,3,3,2,1,2]) < 6
         True
         """
-        winScore = max([result for result in results if isnum(result)])
+        winScore = max(result for result in results if isnum(result))
         winners = [cand for (cand, score) in enumerate(results) if score==winScore]
         #return random.choice(winners)
         return winners[0] #made it deterministic to prevent nondeterministic behaviors in useful functions
@@ -176,7 +175,7 @@ class Method:
             midpoint = int(floor((maxThreshold + minThreshold)/2))
             midpointBallots = bgBallots + fgBallots[:midpoint] + fgBaselineBallots[midpoint:]
             midpointWinner = cls.winner(cls.results(midpointBallots))
-            if not any(midpointWinner == w for w, _ in winnersFound):
+            if all(midpointWinner != w for w, _ in winnersFound):
                 winnersFound.append((midpointWinner, midpoint))
             if midpointWinner == targetWinner:
                 maxThreshold = midpoint
@@ -189,15 +188,15 @@ class Method:
         """Create (honest/naive) ballots and get results.
         Again, test on subclasses.
         """
-        return cls.results(list(cls.honBallot(v) for v in voters))
+        return cls.results([cls.honBallot(v) for v in voters])
     @staticmethod
     def stratTarget2(places):
-        ((frontId,frontResult), (targId, targResult)) = places[0:2]
+        ((frontId,frontResult), (targId, targResult)) = places[:2]
         return (frontId, frontResult, targId, targResult)
 
     @staticmethod
     def stratTarget3(places):
-        ((frontId,frontResult), (targId, targResult)) = places[0:3:2]
+        ((frontId,frontResult), (targId, targResult)) = places[:3:2]
         return (frontId, frontResult, targId, targResult)
 
     stratTargetFor = stratTarget2
@@ -247,8 +246,9 @@ def rememberBallot(fun):
     """
     def getAndRemember(cls, voter, tally=None):
         ballot = fun(cls, voter)
-        setattr(voter, cls.__name__ + "_" + fun.__name__[:-6], ballot) #leave off the "...Ballot"
+        setattr(voter, f"{cls.__name__}_{fun.__name__[:-6]}", ballot)
         return ballot
+
     getAndRemember.__name__ = fun.__name__
     getAndRemember.allTallyKeys = lambda:[]
     return getAndRemember
@@ -263,9 +263,10 @@ def rememberBallots(fun):
         ballots = fun(cls, voter)
         for bType, ballot in ballots.items():
 
-            setattr(voter, cls.__name__ + "_" + bType, ballot)
+            setattr(voter, f"{cls.__name__}_{bType}", ballot)
 
         return ballots[fun.__name__[:-6]] #leave off the "...Ballot"
+
     getAndRemember.__name__ = fun.__name__
     getAndRemember.allTallyKeys = lambda:[]
     return getAndRemember
@@ -302,9 +303,10 @@ def paramStrat(strategy, **kw):
     def strat(voter, polls=None, electabilities=None, candToHelp=None, candToHurt=None):
         return strategy(voter, polls=polls, electabilities=electabilities,
         candToHelp=candToHelp, candToHurt=candToHurt, **kw)
+
     strat.__name__ = strategy.__name__
     for key, value in kw.items():
-        strat.__name__ += "_"+str(key)[:4]+str(value)[:4]
+        strat.__name__ += f"_{str(key)[:4]}{str(value)[:4]}"
     return strat
 
 def wantToHelp(voter, candToHelp, candToHurt, **kw):
@@ -313,7 +315,8 @@ def wantToHelp(voter, candToHelp, candToHurt, **kw):
 def selectAB(candA, candB): #candA and candB are candidate IDs
     def fgSelect(voter, **kw):
         return max(voter[candA] - voter[candB], 0)
-    fgSelect.__name__ = "select"+str(candA)+str(candB)
+
+    fgSelect.__name__ = f"select{str(candA)}{str(candB)}"
     return fgSelect
 
 def selectRand(polls, **kw):
@@ -353,16 +356,25 @@ resultColumns = ["method", "backgroundStrat", "fgStrat", "numVoters", "numCandid
         "pivotalUtilDiff", "deciderUtilDiffSum", "deciderMargUtilDiffs", "numWinnersFound",
         "factionSize", "factionFraction"]
 for prefix in ["", "min", "t1", "o"]:
-    for columnName in ["fgUtil", "fgUtilDiff", "fgSize",
-            "fgNumHelped", "fgHelpedUtil", "fgHelpedUtilDiff",
-            "fgNumHarmed", "fgHarmedUtil", "fgHarmedUtilDiff",
-            "helpCandElected", "hurtCandElectedR1"]:
-        resultColumns.append(prefix + columnName)
+    resultColumns.extend(
+        prefix + columnName
+        for columnName in [
+            "fgUtil",
+            "fgUtilDiff",
+            "fgSize",
+            "fgNumHelped",
+            "fgHelpedUtil",
+            "fgHelpedUtilDiff",
+            "fgNumHarmed",
+            "fgHarmedUtil",
+            "fgHarmedUtilDiff",
+            "helpCandElected",
+            "hurtCandElectedR1",
+        ]
+    )
 
 def makeResults(**kw):
-    results = {c: kw.get(c, None) for c in resultColumns}
-    results.update(kw)
-    return results
+    return {c: kw.get(c, None) for c in resultColumns} | kw
 
 def makePartialResults(fgVoters, winner, r1Winner, prefix, candToHelp, candToHurt):
     fgHelped = []
@@ -527,10 +539,7 @@ def tieFor2Estimate(probs):
 
 
 def adaptiveTieFor2(polls, uncertainty=.15):
-    if False and len(polls) < 6:
-        return tieFor2Probs(polls, uncertainty)
-    else:
-        return tieFor2Estimate(tuple(pollsToProbs(polls, uncertainty)))
+    return tieFor2Estimate(tuple(pollsToProbs(polls, uncertainty)))
 
 def appendResults(filename, resultsList, globalComment = dict()):
     """append list of results created by makeResults to a csv file.
@@ -548,17 +557,7 @@ def appendResults(filename, resultsList, globalComment = dict()):
 
     with open(baseName + str(i) + ".csv", "a") as myFile:
         if needsHeader:
-            print("# " + str(globalComment),
-            #dict(
-                        #media=self.media.__name__,
-            #              version=self.repo_version,
-            #              seed=self.seed,
-            ##              model=self.model,
-            #              methods=self.methods,
-            #              nvot=self.nvot,
-            #              ncand=self.ncand,
-            #              niter=self.niter)),
-                file=myFile)
+            print(f"# {str(globalComment)}", file=myFile)
         dw = csv.DictWriter(myFile, keys, restval="NA")
         dw.writeheader()
         for r in resultsList:

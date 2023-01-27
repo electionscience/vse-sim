@@ -139,7 +139,7 @@ def influentialBlocs(voters, method, numWinners=1, utilChange=0.1, numBuckets=5,
             pollingMethod = method
             pollingStrat = method.honBallot
         basePollBallots = [pollingStrat(v, numWinners=numWinners, **pollingStratArgs) for v in voters]
-        pollErrors = [random.gauss(0, pollingError/2) for i in range(numCands)]
+        pollErrors = [random.gauss(0, pollingError/2) for _ in range(numCands)]
         polls = [min(1, max(0, r + e)) for r, e in zip(pollingMethod.results(basePollBallots), pollErrors)]
         #polls = media(pollingMethod.results(pollBallots), pollingError) #method.results can't depend on numWinners; this may need to be changed
         baseBallots = [strat(v,  polls=polls, electabilities=polls, numWinners=numWinners, **stratArgs) for v in voters]
@@ -147,7 +147,7 @@ def influentialBlocs(voters, method, numWinners=1, utilChange=0.1, numBuckets=5,
         sorter = sorter(voters)
     baseWinners = method.winnerSet(baseBallots, numWinners)
     baseResults = method.results(baseBallots)
-    isIncentive = [[] for i in range(numCands)]
+    isIncentive = [[] for _ in range(numCands)]
     #isIncentive[c][b] is 1 if candidate c is incentivized to appeal to the bth bucket of voters, 0 otherwise
     for cand in range(numCands):
         utilShifts = [0]*numCands
@@ -205,7 +205,7 @@ class CID:
             elif len(m) == 2:
                 ms.append((m[0], m[1], {}))
             else: ms.append(m)
-        self.mNames = [m[0].__name__ + ':' + m[1].__name__ + str(m[2]) for m in ms]
+        self.mNames = [f'{m[0].__name__}:{m[1].__name__}{str(m[2])}' for m in ms]
         self.rows = []
         args = (model, nvot, ncand, ms, nwinners, utilChange, numBuckets, sorter, pollingMethod, pollingError, pollAfterPert)
         with multiprocessing.Pool(processes=7) as pool:
@@ -233,7 +233,10 @@ class CID:
         fig, ax = plt.subplots()
         incentFracts = self.summarize()[0]
         if methodOnly:
-            incentFracts = {re.match(".*(?=:)", name).group(0): data for name, data in incentFracts.items()}
+            incentFracts = {
+                re.match(".*(?=:)", name)[0]: data
+                for name, data in incentFracts.items()
+            }
         for name, data in incentFracts.items():
             ax.plot([i/self.numBuckets for i in range(1, self.numBuckets+1)], data, label=name)
         #ax.set_xlim(1, self.numBuckets)
@@ -258,16 +261,17 @@ class CID:
         fields = ['name', 'baseResult'] + list(range(self.numBuckets)) + list(universalInfo.keys())
         resultTypeIndices = {'all': 1, 'loss': 2, 'win': 3}
 
-        myFile = open(baseName + (str(i) if newFile else "") + ".csv", "w")
-        dw = csv.DictWriter(myFile, fields, restval="data missing")
-        dw.writeheader()
-        for outcome, index in resultTypeIndices.items():
-            for name, results in self.summarize()[index].items():
-                row = {'name': name, 'baseResult': outcome}
-                row.update({i: result for i, result in enumerate(results)})
-                row.update(universalInfo)
-                dw.writerow(row)
-        myFile.close()
+        with open(baseName + (str(i) if newFile else "") + ".csv", "w") as myFile:
+            dw = csv.DictWriter(myFile, fields, restval="data missing")
+            dw.writeheader()
+            for outcome, index in resultTypeIndices.items():
+                for name, results in self.summarize()[index].items():
+                    row = (
+                        {'name': name, 'baseResult': outcome}
+                        | enumerate(results)
+                        | universalInfo
+                    )
+                    dw.writerow(row)
 
 def simOneElectorate(model, nvot, ncand, ms, nwinners, utilChange, numBuckets, sorter,
                     pollingMethod, pollingError, pollAfterPert, baseSeed=None, i = 0):
@@ -280,9 +284,17 @@ def simOneElectorate(model, nvot, ncand, ms, nwinners, utilChange, numBuckets, s
     for method, strat, stratArgs in ms:
         allIncentives, baseWinners, baseResults = influentialBlocs(electorate, method, nwinners, utilChange, numBuckets,
                 sorter, strat, stratArgs, pollingMethod, pollAfterPert=pollAfterPert, pollingError=pollingError)
-        for i, candIncentives in enumerate(allIncentives):
-            results.append(dict(incentives=candIncentives, isWinner=i in baseWinners,
-                method=method.__name__, strat=strat.__name__, stratArgs=stratArgs, voterModel=str(model)))
+        results.extend(
+            dict(
+                incentives=candIncentives,
+                isWinner=i in baseWinners,
+                method=method.__name__,
+                strat=strat.__name__,
+                stratArgs=stratArgs,
+                voterModel=str(model),
+            )
+            for i, candIncentives in enumerate(allIncentives)
+        )
     return results
 
 def showChart(fileName, norm=1, methodOnly=True, forResult='all', percentages=True, wholeOnly=True):
@@ -298,7 +310,7 @@ def showChart(fileName, norm=1, methodOnly=True, forResult='all', percentages=Tr
             elif norm == 'max':
                 normFactor = max(rawData)
             data = [d/normFactor for d in rawData]
-            name = re.match(".*(?=:)", row['name']).group(0) if methodOnly else row['name']
+            name = re.match(".*(?=:)", row['name'])[0] if methodOnly else row['name']
             ax.plot([(i+.5)*100/buckets for i in range(buckets)], data, label=name)
         ax.set_xlabel("Voter's support for candidate")
         ax.set_ylabel("Candidate's incentive to appeal to voter")
@@ -308,9 +320,9 @@ def showChart(fileName, norm=1, methodOnly=True, forResult='all', percentages=Tr
             if value == 1: return "Average"
             if value == 0: return "0"
             if wholeOnly:
-                if value % 1 != 0: return ""
-                return f'{int(value)}x Avg'
+                return "" if value % 1 != 0 else f'{int(value)}x Avg'
             return f'{value:1.1f}x Avg'
+
         ax.yaxis.set_major_formatter(mtick.FuncFormatter(yFormatFunc))
         ax.grid(True)
         ax.legend()
@@ -325,11 +337,11 @@ def showDFUandCS(fileName, positions=(0.25,0.5), methodOnly=True, forResult='all
             buckets = int(row['numBuckets'])
             rawData = [float(row[str(i)]) for i in range(buckets)]
             total = sum(rawData)
-            name = re.match(".*(?=:)", row['name']).group(0) if methodOnly else row['name']
+            name = re.match(".*(?=:)", row['name'])[0] if methodOnly else row['name']
             DFU = sum(entry/total - 1/buckets for entry in rawData if entry/total > 1/buckets)
             CSs = [sum(entry/total for i, entry in enumerate(rawData) if i < buckets*pos) for pos in positions]
             csString = "\t".join(f"{cs:1.2f}" for cs in CSs)
-            print(f"{name}: {DFU:1.2f}\t"+csString)
+            print(f"{name}: {DFU:1.2f}\t{csString}")
 
 if __name__ == "__main__":
     import doctest
