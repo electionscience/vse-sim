@@ -8,3 +8,8 @@ __pycache__
 .Rhistory
 ez_setup.py
 get-pip.py
+*.swp
+*.png
+.RData
+*.svg
+.dccache

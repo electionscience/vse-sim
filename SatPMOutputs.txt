@@ -1,0 +1,129 @@
+method backgroundStrat       fgStrat           fgArgs  fgTargets       vse fgMatters  fgVSEDiff totalStratUtilDiff fgHelpedUtilDiff fgHarmedUtilDiff
+1:     Plurality   lowInfoBallot    compBallot {'intensity': 3}   select21 0.8239297     0.344 0.09625666       0.8442803597       1.61971419     0.0000000000
+2:     Plurality   lowInfoBallot lowInfoBallot    {'info': 'e'}   select21 0.8239297     0.180 0.17507851       0.7328394431       0.79484010    -0.0054730031
+3:     Plurality   lowInfoBallot    compBallot {'intensity': 3}   select31 0.8239297     0.360 0.13100630       0.2356587655       1.41971908    -0.0946857486
+4:     Plurality   lowInfoBallot lowInfoBallot    {'info': 'e'}   select31 0.8239297     0.126 0.19611899       0.3613879038       0.53140236    -0.0397514728
+5:     Plurality   lowInfoBallot    compBallot {'intensity': 3} selectRand 0.8239297     0.496 0.08589745      -0.4041559526       1.15172834    -1.2101098121
+6:     Plurality   lowInfoBallot lowInfoBallot    {'info': 'e'} selectRand 0.8239297     0.120 0.07576157       0.0958384509       0.33666166    -0.2082616602
+7:          STAR   lowInfoBallot diehardBallot {'intensity': 1}   select21 0.9713795     0.376 0.05883734       0.1374335264       0.62673934    -0.0653357483
+8:          STAR   lowInfoBallot diehardBallot {'intensity': 2}   select21 0.9713795     0.438 0.03464821       0.2272448381       0.79615176    -0.0152543235
+9:          STAR   lowInfoBallot diehardBallot {'intensity': 3}   select21 0.9713795     0.810 0.17265299      -0.1460705587       0.79663075    -1.1888530336
+10:          STAR   lowInfoBallot    compBallot {'intensity': 1}   select21 0.9713795     0.424 0.03940085       0.2010727461       0.76753371    -0.0302730892
+11:          STAR   lowInfoBallot    compBallot {'intensity': 2}   select21 0.9713795     0.438 0.03464821       0.2272448381       0.79615176    -0.0152543235
+12:          STAR   lowInfoBallot    compBallot {'intensity': 3}   select21 0.9713795     0.348 0.05254995       0.1615194297       0.64362825    -0.0221622215
+13:          STAR   lowInfoBallot lowInfoBallot    {'info': 'e'}   select21 0.9713795     0.056 0.10454472       0.1037120076       0.12221163    -0.0163508176
+14:          STAR   lowInfoBallot diehardBallot {'intensity': 1}   select31 0.9713795     0.420 0.15803980      -0.0268913318       0.44556381    -0.3029010957
+15:          STAR   lowInfoBallot diehardBallot {'intensity': 2}   select31 0.9713795     0.508 0.15635372      -0.0001602754       0.54738456    -0.3639353443
+16:          STAR   lowInfoBallot diehardBallot {'intensity': 3}   select31 0.9713795     0.656 0.28763946      -0.4089633391       0.47207515    -1.3347440096
+17:          STAR   lowInfoBallot    compBallot {'intensity': 1}   select31 0.9713795     0.498 0.15844176      -0.0126207178       0.53983804    -0.3766214674
+18:          STAR   lowInfoBallot    compBallot {'intensity': 2}   select31 0.9713795     0.508 0.15635372      -0.0001602754       0.54738456    -0.3639353443
+19:          STAR   lowInfoBallot    compBallot {'intensity': 3}   select31 0.9713795     0.384 0.17719748      -0.0938134676       0.35861897    -0.3490324174
+20:          STAR   lowInfoBallot lowInfoBallot    {'info': 'e'}   select31 0.9713795     0.094 0.15511719       0.0510897598       0.10888034    -0.0523583378
+21:          STAR   lowInfoBallot diehardBallot {'intensity': 1} selectRand 0.9713795     0.320 0.11281641      -0.1440308135       0.35966814    -0.8081625841
+22:          STAR   lowInfoBallot diehardBallot {'intensity': 2} selectRand 0.9713795     0.332 0.10933994      -0.1373325576       0.38479402    -0.8003058567
+23:          STAR   lowInfoBallot diehardBallot {'intensity': 3} selectRand 0.9713795     0.506 0.17864136      -0.5801910783       0.52484377    -1.6059815967
+24:          STAR   lowInfoBallot    compBallot {'intensity': 1} selectRand 0.9713795     0.268 0.10089371      -0.0949913076       0.30241566    -0.5596013898
+25:          STAR   lowInfoBallot    compBallot {'intensity': 2} selectRand 0.9713795     0.332 0.10933994      -0.1373325576       0.38479402    -0.8003058567
+26:          STAR   lowInfoBallot    compBallot {'intensity': 3} selectRand 0.9713795     0.480 0.13362284      -0.6483198652       0.61589534    -1.2494039383
+27:          STAR   lowInfoBallot lowInfoBallot    {'info': 'e'} selectRand 0.9713795     0.130 0.08749449      -0.1227124529       0.08579403    -0.2065499235
+28: PluralityTop2   lowInfoBallot    compBallot {'intensity': 3}   select21 0.8490387     0.100 0.22157292       0.3102300465       0.54171326    -0.0003516053
+29: PluralityTop2   lowInfoBallot lowInfoBallot    {'info': 'e'}   select21 0.8490387     0.066 0.24123944       0.2733242118       0.30777378    -0.0049870361
+30: PluralityTop2   lowInfoBallot    compBallot {'intensity': 3}   select31 0.8490387     0.268 0.14494296       0.4586559044       0.85388008    -0.0831833682
+31: PluralityTop2   lowInfoBallot lowInfoBallot    {'info': 'e'}   select31 0.8490387     0.098 0.18371715       0.2306054038       0.31708369    -0.0547938369
+32: PluralityTop2   lowInfoBallot    compBallot {'intensity': 3} selectRand 0.8490387     0.366 0.09075988      -0.0670588620       0.67451914    -0.9100494041
+33: PluralityTop2   lowInfoBallot lowInfoBallot    {'info': 'e'} selectRand 0.8490387     0.088 0.07831339       0.0274483720       0.17045495    -0.1686444987
+34:      Approval   lowInfoBallot diehardBallot {'intensity': 1}   select21 0.9570367     0.528 0.03521226       0.5706370323       1.06034151     0.0000000000
+35:      Approval   lowInfoBallot    compBallot {'intensity': 1}   select21 0.9570367     0.544 0.04113936       0.5459305798       1.00949571    -0.0132399272
+36:      Approval   lowInfoBallot lowInfoBallot    {'info': 'e'}   select21 0.9570367     0.212 0.10742799       0.3822661582       0.41067112    -0.0370296010
+37:      Approval   lowInfoBallot diehardBallot {'intensity': 1}   select31 0.9570367     0.380 0.15635547       0.0566135949       0.50386777    -0.2502442467
+38:      Approval   lowInfoBallot    compBallot {'intensity': 1}   select31 0.9570367     0.482 0.15970241       0.0903908318       0.52355739    -0.3037868357
+39:      Approval   lowInfoBallot lowInfoBallot    {'info': 'e'}   select31 0.9570367     0.126 0.16593607       0.0806966169       0.14729715    -0.0712742365
+40:      Approval   lowInfoBallot diehardBallot {'intensity': 1} selectRand 0.9570367     0.388 0.11625146      -0.1808318494       0.55524052    -0.9336758801
+41:      Approval   lowInfoBallot    compBallot {'intensity': 1} selectRand 0.9570367     0.350 0.13992480      -0.1382430186       0.35770712    -1.1230976735
+42:      Approval   lowInfoBallot lowInfoBallot    {'info': 'e'} selectRand 0.9570367     0.120 0.08848288      -0.0494480383       0.16718407    -0.1940270866
+43:  ApprovalTop2   lowInfoBallot diehardBallot {'intensity': 1}   select21 0.9577387     0.308 0.06660504       0.1792626237       0.56392309    -0.0442632509
+44:  ApprovalTop2   lowInfoBallot    compBallot {'intensity': 1}   select21 0.9577387     0.424 0.03952594       0.2762111505       0.81843867    -0.0493273365
+45:  ApprovalTop2   lowInfoBallot lowInfoBallot    {'info': 'e'}   select21 0.9577387     0.108 0.10404828       0.1506016515       0.17720915    -0.0193830243
+46:  ApprovalTop2   lowInfoBallot diehardBallot {'intensity': 1}   select31 0.9577387     0.356 0.13102785       0.0537363833       0.46418670    -0.2540795963
+47:  ApprovalTop2   lowInfoBallot    compBallot {'intensity': 1}   select31 0.9577387     0.440 0.12339164       0.1048690556       0.55818411    -0.2836390676
+48:  ApprovalTop2   lowInfoBallot lowInfoBallot    {'info': 'e'}   select31 0.9577387     0.082 0.13551205       0.1117047278       0.11371056    -0.0140622817
+49:  ApprovalTop2   lowInfoBallot diehardBallot {'intensity': 1} selectRand 0.9577387     0.238 0.08986278      -0.0933033721       0.30360475    -0.4816360593
+50:  ApprovalTop2   lowInfoBallot    compBallot {'intensity': 1} selectRand 0.9577387     0.260 0.10172043      -0.1012246758       0.31256581    -0.7241661202
+51:  ApprovalTop2   lowInfoBallot lowInfoBallot    {'info': 'e'} selectRand 0.9577387     0.080 0.07466645       0.0266841994       0.08978399    -0.0952574044
+52:           Irv   lowInfoBallot    compBallot {'intensity': 3}   select21 0.9013811     0.044 0.23928397       0.0589105372       0.12227949    -0.0069311752
+53:           Irv   lowInfoBallot lowInfoBallot    {'info': 'e'}   select21 0.9013811     0.046 0.24179360       0.0863359337       0.09391045    -0.0075039033
+54:           Irv   lowInfoBallot    compBallot {'intensity': 3}   select31 0.9013811     0.222 0.17310987       0.1592808413       0.57462390    -0.0865753384
+55:           Irv   lowInfoBallot lowInfoBallot    {'info': 'e'}   select31 0.9013811     0.038 0.20703497       0.0428804408       0.04991509    -0.0060867302
+56:           Irv   lowInfoBallot    compBallot {'intensity': 3} selectRand 0.9013811     0.418 0.12254466      -0.3217741165       0.74868969    -1.2250049631
+57:           Irv   lowInfoBallot lowInfoBallot    {'info': 'e'} selectRand 0.9013811     0.046 0.08635987       0.0119683469       0.06205150    -0.0494853002
+58:       Minimax   lowInfoBallot diehardBallot {'intensity': 3}   select21 0.9202142     0.526 0.08690095       0.0989967180       0.94167669    -0.3227900425
+59:       Minimax   lowInfoBallot    compBallot {'intensity': 3}   select21 0.9202142     0.258 0.07964232       0.1424733212       0.61838553    -0.0013993575
+60:       Minimax   lowInfoBallot lowInfoBallot    {'info': 'e'}   select21 0.9202142     0.032 0.14242405       0.0548774107       0.05767753    -0.0239623097
+61:       Minimax   lowInfoBallot diehardBallot {'intensity': 3}   select31 0.9202142     0.452 0.22388342       0.0083000995       0.62269505    -0.3513459780
+62:       Minimax   lowInfoBallot    compBallot {'intensity': 3}   select31 0.9202142     0.206 0.19203338       0.0820801022       0.47109916    -0.0295873656
+63:       Minimax   lowInfoBallot lowInfoBallot    {'info': 'e'}   select31 0.9202142     0.016 0.23672382       0.0094641084       0.05189706    -0.0299904816
+64:       Minimax   lowInfoBallot diehardBallot {'intensity': 3} selectRand 0.9202142     0.198 0.09505496      -0.0138760717       0.26710308    -0.3221391889
+65:       Minimax   lowInfoBallot    compBallot {'intensity': 3} selectRand 0.9202142     0.424 0.11879672      -0.4770415814       0.66347374    -1.1652897647
+66:       Minimax   lowInfoBallot lowInfoBallot    {'info': 'e'} selectRand 0.9202142     0.042 0.09322875      -0.0620523714       0.03947873    -0.1380252484
+method backgroundStrat       fgStrat           fgArgs  fgTargets       vse fgMatters  fgVSEDiff totalStratUtilDiff fgHelpedUtilDiff fgHarmedUtilDiff
+
+
+
+
+
+method backgroundStrat       fgStrat  fgTargets       vse fgMatters totalStratUtilDiff fgHelpedUtilDiff fgHarmedUtilDiff
+1:     Plurality       honBallot    compBallot   select21 0.6872505 0.6220000        1.144421018       3.16579287      0.000000000
+2:     Plurality       honBallot lowInfoBallot   select21 0.6872505 0.5000000        0.918044202       2.48267027     -0.022866835
+3:     Plurality       honBallot    compBallot   select31 0.6872505 0.5060000        0.720310406       2.55361241      0.000000000
+4:     Plurality       honBallot lowInfoBallot   select31 0.6872505 0.4160000        0.804751818       2.10064397     -0.047544433
+5:     Plurality       honBallot    compBallot selectRand 0.6872505 0.5180000       -0.324112860       1.40165412     -1.234543078
+6:     Plurality       honBallot lowInfoBallot selectRand 0.6872505 0.2620000        0.199874231       0.90613579     -0.337172509
+7:          STAR       honBallot diehardBallot   select21 0.9717298 0.7646667        0.256068073       1.12974782     -0.375466573
+8:          STAR       honBallot    compBallot   select21 0.9717298 0.6773333        0.335243019       1.13367248     -0.124692904
+9:          STAR       honBallot lowInfoBallot   select21 0.9717298 0.3480000        0.303751867       0.74479766     -0.038885123
+10:          STAR       honBallot diehardBallot   select31 0.9717298 0.7266667        0.145818659       1.04221274     -0.476946300
+11:          STAR       honBallot    compBallot   select31 0.9717298 0.6600000        0.226834279       0.98600360     -0.269534921
+12:          STAR       honBallot lowInfoBallot   select31 0.9717298 0.3160000        0.256135626       0.68726412     -0.065282556
+13:          STAR       honBallot diehardBallot selectRand 0.9717298 0.3653333       -0.171772715       0.55065865     -0.861796981
+14:          STAR       honBallot    compBallot selectRand 0.9717298 0.3420000       -0.166739893       0.52017823     -0.745502869
+15:          STAR       honBallot lowInfoBallot selectRand 0.9717298 0.2240000        0.020194544       0.40352521     -0.258703796
+16: PluralityTop2       honBallot    compBallot   select21 0.8102535 0.1260000        0.369749808       0.69049452     -0.009999208
+17: PluralityTop2       honBallot lowInfoBallot   select21 0.8102535 0.1340000        0.321086288       0.69082835     -0.007211323
+18: PluralityTop2       honBallot    compBallot   select31 0.8102535 0.3120000        0.501076513       1.14105496     -0.108788903
+19: PluralityTop2       honBallot lowInfoBallot   select31 0.8102535 0.2240000        0.222325528       0.76087381     -0.126015291
+20: PluralityTop2       honBallot    compBallot selectRand 0.8102535 0.4200000       -0.157764788       0.69872117     -1.170047431
+21: PluralityTop2       honBallot lowInfoBallot selectRand 0.8102535 0.1740000        0.008587798       0.33236613     -0.378023139
+22:      Approval       honBallot diehardBallot   select21 0.8824618 0.9140000        0.972325202       2.07108757      0.000000000
+23:      Approval       honBallot    compBallot   select21 0.8824618 0.9200000        0.977373435       1.98604739     -0.011460981
+24:      Approval       honBallot lowInfoBallot   select21 0.8824618 0.6340000        0.790184213       1.68822645     -0.084083711
+25:      Approval       honBallot diehardBallot   select31 0.8824618 0.7560000        0.580234557       1.83509408     -0.119146912
+26:      Approval       honBallot    compBallot   select31 0.8824618 0.8440000        0.645261874       1.61311456     -0.192073573
+27:      Approval       honBallot lowInfoBallot   select31 0.8824618 0.5660000        0.564329107       1.46555490     -0.141300619
+28:      Approval       honBallot diehardBallot selectRand 0.8824618 0.4400000       -0.056002250       0.86216945     -0.849991083
+29:      Approval       honBallot    compBallot selectRand 0.8824618 0.3840000       -0.077018644       0.48516792     -1.175108757
+30:      Approval       honBallot lowInfoBallot selectRand 0.8824618 0.3700000        0.158572486       0.80513523     -0.437175491
+31:  ApprovalTop2       honBallot diehardBallot   select21 0.9188837 0.5440000        0.396740221       1.05175955     -0.163774316
+32:  ApprovalTop2       honBallot    compBallot   select21 0.9188837 0.6620000        0.538513829       1.28482991     -0.148178192
+33:  ApprovalTop2       honBallot lowInfoBallot   select21 0.9188837 0.3200000        0.359997371       0.75655210     -0.046098683
+34:  ApprovalTop2       honBallot diehardBallot   select31 0.9188837 0.6420000        0.349291620       1.13849812     -0.276681266
+35:  ApprovalTop2       honBallot    compBallot   select31 0.9188837 0.7240000        0.405079805       1.24889002     -0.266204223
+36:  ApprovalTop2       honBallot lowInfoBallot   select31 0.9188837 0.3600000        0.397680505       0.88760706     -0.056243359
+37:  ApprovalTop2       honBallot diehardBallot selectRand 0.9188837 0.3500000       -0.006013247       0.54841995     -0.452609729
+38:  ApprovalTop2       honBallot    compBallot selectRand 0.9188837 0.3680000        0.030646503       0.44419676     -0.704480471
+39:  ApprovalTop2       honBallot lowInfoBallot selectRand 0.9188837 0.2460000        0.112766617       0.46746879     -0.214651046
+40:           Irv       honBallot    compBallot   select21 0.8804050 0.0120000        0.004813567       0.02604069     -0.005911160
+41:           Irv       honBallot lowInfoBallot   select21 0.8804050 0.1040000        0.144262942       0.24284239     -0.004487921
+42:           Irv       honBallot    compBallot   select31 0.8804050 0.1860000        0.417607301       0.70845048     -0.003942389
+43:           Irv       honBallot lowInfoBallot   select31 0.8804050 0.1240000        0.163635813       0.30056893     -0.024550948
+44:           Irv       honBallot    compBallot selectRand 0.8804050 0.4500000       -0.253924426       0.83444524     -1.269795300
+45:           Irv       honBallot lowInfoBallot selectRand 0.8804050 0.1540000        0.039798914       0.24901828     -0.189404634
+46:       Minimax       honBallot diehardBallot   select21 0.9656280 0.6900000       -0.038521431       1.04376761     -0.767380079
+47:       Minimax       honBallot    compBallot   select21 0.9656280 0.0080000        0.007874218       0.03104040      0.000000000
+48:       Minimax       honBallot lowInfoBallot   select21 0.9656280 0.1960000        0.045801265       0.40772016     -0.132504569
+49:       Minimax       honBallot diehardBallot   select31 0.9656280 0.7480000       -0.238031437       0.65796895     -0.867430939
+50:       Minimax       honBallot    compBallot   select31 0.9656280 0.0140000        0.007258423       0.03541334      0.000000000
+51:       Minimax       honBallot lowInfoBallot   select31 0.9656280 0.1480000        0.005049332       0.26951054     -0.104620009
+52:       Minimax       honBallot diehardBallot selectRand 0.9656280 0.1080000       -0.022664884       0.09997565     -0.109828354
+53:       Minimax       honBallot    compBallot selectRand 0.9656280 0.3380000       -0.290661500       0.52103719     -0.996700912
+54:       Minimax       honBallot lowInfoBallot selectRand 0.9656280 0.1820000       -0.127480146       0.25229441     -0.702532866
+method backgroundStrat       fgStrat  fgTargets       vse fgMatters totalStratUtilDiff fgHelpedUtilDiff fgHarmedUtilDiff

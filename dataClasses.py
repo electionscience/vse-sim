@@ -1,115 +1,30 @@
-
-from mydecorators import autoassign, cached_property, setdefaultattr, decorator
+import functools
 import random
-from numpy.lib.scimath import sqrt
-from numpy.core.fromnumeric import mean, std
-from numpy.lib.function_base import median
-from numpy.ma.core import floor
 from test.test_binop import isnum
-from debugDump import *
 from uuid import uuid4
 
+import numpy as np
+import scipy.integrate as integrate
+import scipy.stats as stats
+from numpy.core.fromnumeric import mean, std
+from numpy.lib.function_base import median
+from numpy.lib.scimath import sqrt
+from numpy.ma.core import floor
+from scipy.optimize import fmin
+from scipy.special import logsumexp
+from scipy.stats import beta
 
+from debugDump import *
+from mydecorators import (
+    autoassign,
+    cached_property,
+    decorator,
+    setdefaultattr,
+    uniquify,
+)
 from stratFunctions import *
+from version import version
 
-class VseOneRun:
-    @autoassign
-    def __init__(self, result, tallyItems, strat):
-        pass
-
-class VseMethodRun:
-    @autoassign
-    def __init__(self, method, choosers, results):
-        pass
-
-
-####data holders for output
-from collections import defaultdict
-class SideTally(defaultdict):
-    """Used for keeping track of how many voters are being strategic, etc.
-
-    DO NOT use plain +; for this class, it is equivalent to +=, but less readable.
-
-    """
-    def __init__(self):
-        super().__init__(int)
-    #>>> tally = SideTally()
-    #>>> tally += {1:2,3:4}
-    #>>> tally
-    #{1: 2, 3: 4}
-    #>>> tally += {1:2,3:4,5:6}
-    #>>> tally
-    #{1: 4, 3: 8, 5: 6}
-    #"""
-    #def __add__(self, other):
-    #    for (key, val) in other.items():
-    #        try:
-    #            self[key] += val
-    #        except KeyError:
-    #            self[key] = val
-    #    return self
-
-    def initKeys(self, chooser):
-        try:
-            self.keyList = chooser.allTallyKeys()
-        except AttributeError:
-            try:
-                self.keyList = list(chooser)
-            except TypeError:
-                pass
-                #TODO: Why does this happen?
-                #debug("Chooser has no tally keys:", str(chooser))
-        self.initKeys = staticmethod(lambda x:x) #don't do it again
-
-    def serialize(self):
-        try:
-            return [self[key] for key in self.keyList]
-        except AttributeError:
-            return []
-
-    def fullSerialize(self):
-        try:
-            kl = self.keyList
-        except AttributeError:
-            return [self[key] for key in self.keys()]
-
-    def itemList(self):
-        try:
-            kl = self.keyList
-            return ([(k, self[k]) for k in kl] +
-                    [(k, self[k]) for k in self.keys() if k not in kl])
-        except AttributeError:
-            return list(self.items())
-
-class Tallies(list):
-    """Used (ONCE) as an enumerator, gives an inexhaustible flow of SideTally objects.
-    After that, use as list to see those objects.
-
-    >>> ts = Tallies()
-    >>> for i, j in zip(ts, [5,4,3]):
-    ...     i[j] += j
-    ...
-    >>> [t.serialize() for t in ts]
-    [[], [], [], []]
-    >>> [t.fullSerialize() for t in ts]
-    [[5], [4], [3], []]
-    >>> [t.initKeys([k]) for (t,k) in zip(ts,[6,4,3])]
-    [None, None, None]
-    >>> [t.serialize() for t in ts]
-    [[0], [4], [3], []]
-    """
-    def __iter__(self):
-        try:
-            self.used
-            return super().__iter__()
-        except:
-            self.used = True
-            return self
-
-    def __next__(self):
-        tally = SideTally()
-        self.append(tally)
-        return tally
 
 ##Election Methods
 class Method:
@@ -118,7 +33,8 @@ class Method:
     def __str__(self):
         return self.__class__.__name__
 
-    def results(self, ballots, **kwargs):
+    @classmethod
+    def results(cls, ballots, **kwargs):
         """Combines ballots into results. Override for comparative
         methods.
 
@@ -130,13 +46,123 @@ class Method:
         """
         if type(ballots) is not list:
             ballots = list(ballots)
-        return list(map(self.candScore,zip(*ballots)))
+        return list(map(cls.candScore, zip(*ballots)))
 
-    @staticmethod #cls is provided explicitly, not through binding
-    def honBallot(cls, utils):
-        """Takes utilities and returns an honest ballot
-        """
+    @classmethod
+    def winnerSet(cls, ballots, numWinners=1):
+        """Returns a list with all the winning candidates. Override for multi-winner methods."""
+        return [cls.winner(cls.results(ballots))]
+
+    @classmethod
+    def honBallot(cls, utils, **kw):
+        """Takes utilities and returns an honest ballot"""
         raise NotImplementedError(f"{cls} needs honBallot")
+
+    @classmethod
+    def vaBallot(cls, utils, electabilities, **kw):
+        """Viability-aware strategy.
+        Takes utilities and information on each candidate's electability
+        and returns a strategically optimal ballot based on that information
+        """
+        return cls.honBallot(utils)
+
+    @classmethod
+    def bulletBallot(cls, utils, **kw):
+        """Bullet votes for the voter's favorite candidate"""
+        best = utils.index(max(utils))
+        ballot = [0] * len(utils)
+        ballot[best] = getattr(cls, "topRank", 1)
+        return ballot
+
+    @classmethod
+    def honTargetBullet(cls, utils, candToHelp, fallback="hon", **kw):
+        if utils[candToHelp] == max(utils):
+            return cls.bulletBallot(utils)
+        elif fallback == "hon":
+            return cls.honBallot(utils)
+        elif fallback == "va":
+            return cls.vaBallot(utils, **kw)
+        else:
+            return fallback(utils, **kw)
+
+    @classmethod
+    def abstain(cls, utils, **kw):
+        return [0] * len(utils)
+
+    @classmethod
+    def realisticBullets(
+        cls, utils, electabilities, baseBullets=0.3, slope=0.35, otherStrat=None, **kw
+    ):
+        """
+        Randomly bullet votes with bullet voting being more likely when one's favorite is further ahead in the polls
+        """
+        favorite = utils.index(max(utils))
+        margin = electabilities[favorite] - max(
+            electabilities[:favorite] + electabilities[favorite + 1 :]
+        )
+        r = random.Random(utils.id).random()
+        if r < baseBullets + slope * margin:
+            return cls.bulletBallot(utils)
+        if otherStrat is None:
+            otherStrat = cls.honBallot
+        return otherStrat(utils, electabilities=electabilities)
+
+    @classmethod
+    def diehardBallot(
+        cls, utils, intensity, candToHelp, candToHurt, electabilities=None, polls=None
+    ):
+        "Returns a ballot using a diehard strategy with the given intensity"
+        return cls.honBallot(utils)
+
+    @classmethod
+    def compBallot(
+        cls, utils, intensity, candToHelp, candToHurt, electabilities=None, polls=None
+    ):
+        "Returns a ballot using a compromising strategy with the given intensity"
+        return cls.honBallot(utils)
+
+    # lists of which diehard and compromising strategies are available for a voting method
+    diehardLevels = []
+    compLevels = []
+
+    @classmethod
+    def defaultbgs(cls):
+        """Returns a list of the default backgrounds (see vse.threeRoundResults) for the voting method.
+        These can be individual functions (like cls.honBallot) or (strat, bgargs) tuples
+        (like (cls.vaBallot, {'pollingUncertainty': 0.4}))
+        """
+        return [cls.honBallot, (cls.vaBallot, {"pollingUncertainty": 0.4})]
+
+    @classmethod
+    def defaultfgs(cls):
+        """Returns a list of the default foregrounds (see vse.threeRoundResults) for the voting method."""
+        return (
+            [
+                (cls.diehardBallot, targs, {"intensity": lev})
+                for lev in cls.diehardLevels
+                for targs in [select21, select31]
+            ]
+            + [
+                (cls.compBallot, targs, {"intensity": lev})
+                for lev in cls.compLevels
+                for targs in [select21, select31]
+            ]
+            + [
+                (cls.vaBallot, selectRand, {"info": "p"}),
+                (cls.vaBallot, selectRand, {"info": "e"}),
+            ]
+            + [
+                (
+                    cls.honTargetBullet,
+                    targs,
+                    {"fallback": fallback, "info": info, "pollingUncertainty": 0.4},
+                )
+                for targs in [select12, select21, select31]
+                for fallback in ["hon", "va"]
+                for info in ("e", "p")
+            ]
+            + [(cls.bulletBallot, selectRand)]
+        )
 
     @staticmethod
     def winner(results):
@@ -150,8 +176,11 @@ class Method:
         True
         """
         winScore = max(result for result in results if isnum(result))
-        winners = [cand for (cand, score) in enumerate(results) if score==winScore]
-        return random.choice(winners)
+        winners = [cand for (cand, score) in enumerate(results) if score == winScore]
+        # return random.choice(winners)
+        return winners[
+            0
+        ]  # made it deterministic to prevent nondeterministic behaviors in useful functions
 
     def honBallotFor(self, voters):
         """This is where you would do any setup necessary and create an honBallot
@@ -163,195 +192,550 @@ class Method:
         for the given "polling" info."""
         return lambda cls, utilities, stratTally: utilities
 
-    def resultsFor(self, voters, chooser, tally=None, **kwargs):
-        """create ballots and get results.
+    @classmethod
+    def stratThresholdSearch(
+        cls,
+        targetWinner,
+        foundAt,
+        bgBallots,
+        fgBallots,
+        fgBaselineBallots,
+        winnersFound,
+    ):
+        """Returns the minimum number of strategists needed to elect targetWinner
+        and modifies winnersFound to include any additional winners found during the search"""
+        maxThreshold, minThreshold = foundAt, 0
+        while maxThreshold > minThreshold:  # binary search for min foreground size
+            midpoint = int(floor((maxThreshold + minThreshold) / 2))
+            midpointBallots = (
+                bgBallots + fgBallots[:midpoint] + fgBaselineBallots[midpoint:]
+            )
+            midpointWinner = cls.winner(cls.results(midpointBallots))
+            if all(midpointWinner != w for w, _ in winnersFound):
+                winnersFound.append((midpointWinner, midpoint))
+            if midpointWinner == targetWinner:
+                maxThreshold = midpoint
+            else:
+                minThreshold = midpoint + 1
+        return maxThreshold
 
+    @classmethod
+    def resultsFor(cls, voters):
+        """Create (honest/naive) ballots and get results.
         Again, test on subclasses.
         """
-        if tally is None:
-            tally = SideTally()
-        tally.initKeys(chooser)
-        return dict(results=self.results([chooser(self.__class__, voter, tally)
-                                  for voter in voters],
-                              **kwargs),
-                chooser=chooser.__name__,
-                tally=tally)
-
-    def multiResults(self, voters, chooserFuns=(), media=(lambda x,t:x),
-                checkStrat = True):
-        """Runs two base elections: first with honest votes, then
-        with strategic results based on the first results (filtered by
-        the media). Then, runs a series of elections using each chooserFun
-        in chooserFuns to select the votes for each voter.
-
-        Returns a tuple of (honResults, stratResults, ...). The stratresults
-        are based on common polling information, which is given by media(honresults).
-        """
-        from stratFunctions import OssChooser
-
-        honTally = SideTally()
-        self.__class__.extraEvents = {}
-        hon = self.resultsFor(voters, self.honBallotFor(voters), honTally, isHonest=True)
-
-        stratTally = SideTally()
-
-        polls = media(hon["results"], stratTally)
-        winner, _w, target, _t = self.stratTargetFor(sorted(enumerate(polls),key=lambda x:-x[1]))
-
-        strat = self.resultsFor(voters, self.stratBallotFor(polls), stratTally)
-
-        ossTally = SideTally()
-        oss = self.resultsFor(voters, self.ballotChooserFor(OssChooser()), ossTally)
-        ossWinner = oss["results"].index(max(oss["results"]))
-        ossTally["worked"] += (1 if ossWinner==target else
-                                    (0 if ossWinner==winner else -1))
-
-        smart = dict(results=(hon["results"]
-                                    if ossTally["worked"] == 1
-                                else oss["results"]),
-                chooser="smartOss",
-                tally=SideTally())
-
-        extraTallies = Tallies()
-        results = ([strat, oss, smart] +
-                [self.resultsFor(voters, self.ballotChooserFor(chooserFun), aTally)
-                    for (chooserFun, aTally) in zip(chooserFuns, extraTallies)]
-                  )
-        return ([(hon["results"], hon["chooser"],
-                        list(self.__class__.extraEvents.items()))]  +
-                [(r["results"], r["chooser"], r["tally"].itemList()) for r in results])
-
-    def vseOn(self, voters, chooserFuns=(), **args):
-        """Finds honest and strategic voter satisfaction efficiency (VSE)
-        for this method on the given electorate.
-        """
-        multiResults = self.multiResults(voters, chooserFuns, **args)
-        utils = voters.socUtils
-        best = max(utils)
-        rand = mean(utils)
-
-        #import pprint
-        #pprint.pprint(multiResults)
-        vses = VseMethodRun(self.__class__, chooserFuns,
-                    [VseOneRun([(utils[self.winner(result)] - rand) / (best - rand)],tally,chooser)
-                        for (result, chooser, tally) in multiResults[0]])
-        vses.extraEvents=multiResults[1]
-        return vses
-
-    def resultsTable(self, eid, emodel, cands, voters, chooserFuns=(), **args):
-        multiResults = self.multiResults(voters, chooserFuns, **args)
-        utils = voters.socUtils
-        best = max(utils)
-        rand = mean(utils)
-        rows = []
-        nvot=len(voters)
-        for (result, chooser, tallyItems) in multiResults:
-            row = {
-                "eid":eid,
-                "emodel":emodel,
-                "ncand":cands,
-                "nvot":nvot,
-                "best":best,
-                "rand":rand,
-                "method":str(self),
-                "chooser":chooser,#.getName(),
-                "util":utils[self.winner(result)],
-                "vse":(utils[self.winner(result)] - rand) / (best - rand)
-            }
-            #print(tallyItems)
-            for (i, (k, v)) in enumerate(tallyItems):
-                #print("Result: tally ",i,k,v)
-                row[f"tallyName{str(i)}"] = str(k)
-                row[f"tallyVal{str(i)}"] = str(v)
-            rows.append(row)
-        # if len(multiResults[1]):
-        #     row = {
-        #         "eid":eid,
-        #         "emodel":emodel,
-        #         "method":self.__class__.__name__,
-        #         "chooser":"extraEvents",
-        #         "util":None
-        #     }
-        #     for (i, (k, v)) in enumerate(multiResults[1]):
-        #         row["tallyName"+str(i)] = str(k)
-        #         row["tallyVal"+str(i)] = str(v)
-        #     rows.append(row)
-        return(rows)
-
+        return cls.results([cls.honBallot(v) for v in voters])
 
     @staticmethod
-    def ballotChooserFor(chooserFun):
-        """Takes a chooserFun; returns a ballot chooser using that chooserFun
-        """
-        def ballotChooser(cls, voter, tally):
-            return getattr(voter, f"{cls.__name__}_{chooserFun(cls, voter, tally)}")
-
-        ballotChooser.__name__ = chooserFun.getName()
-        return ballotChooser
-
-    def stratTarget2(self,places):
-        ((frontId,frontResult), (targId, targResult)) = places[:2]
+    def stratTarget2(places):
+        ((frontId, frontResult), (targId, targResult)) = places[:2]
         return (frontId, frontResult, targId, targResult)
 
-    def stratTarget3(self,places):
-        ((frontId,frontResult), (targId, targResult)) = places[:3:2]
+    @staticmethod
+    def stratTarget3(places):
+        ((frontId, frontResult), (targId, targResult)) = places[:3:2]
+
         return (frontId, frontResult, targId, targResult)
 
     stratTargetFor = stratTarget2
 
-    def stratBallotFor(self,polls):
-        """Returns a (function which takes utilities and returns a strategic ballot)
+    @classmethod
+    def stratBallot(cls, voter, polls, electabilities=None, info="p", **kw):
+        """Returns a strategic (high-info) ballot, using the strategies in version 1"""
+        if info == "e":
+            polls = electabilities
+        places = sorted(enumerate(polls), key=lambda x: -x[1])  # from high to low
+        frontId, frontResult, targId, targResult = cls.stratTargetFor(places)
+        n = len(polls)
+        stratGap = voter[targId] - voter[frontId]
+        ballot = [0] * len(voter)
+        cls.fillStratBallot(
+            voter,
+            polls,
+            places,
+            n,
+            stratGap,
+            ballot,
+            frontId,
+            frontResult,
+            targId,
+            targResult,
+        )
+        return ballot
+
+    def stratBallotFor(self, polls):
+        """DEPRECATED - use stratBallot instead.
+        Returns a (function which takes utilities and returns a strategic ballot)
         for the given "polling" info."""
 
-        places = sorted(enumerate(polls),key=lambda x:-x[1]) #from high to low
-        #print("places",places)
+        places = sorted(enumerate(polls), key=lambda x: -x[1])  # from high to low
+        # print("places",places)
         (frontId, frontResult, targId, targResult) = self.stratTargetFor(places)
         n = len(polls)
+
         @rememberBallots
         def stratBallot(cls, voter):
             stratGap = voter[targId] - voter[frontId]
             ballot = [0] * len(voter)
             isStrat = stratGap > 0
-            extras = cls.fillStratBallot(voter, polls, places, n, stratGap, ballot,
-                                frontId, frontResult, targId, targResult)
-            result =  dict(strat=ballot, isStrat=isStrat, stratGap=stratGap)
+            extras = cls.fillStratBallot(
+                voter,
+                polls,
+                places,
+                n,
+                stratGap,
+                ballot,
+                frontId,
+                frontResult,
+                targId,
+                targResult,
+            )
+            result = dict(strat=ballot, isStrat=isStrat, stratGap=stratGap)
             if extras:
                 result.update(extras)
             return result
+
         return stratBallot
+
 
 @decorator
 def rememberBallot(fun):
-    """A decorator for a function of the form xxxBallot(cls, voter)
+    """DEPRECATED - to be removed
+    A decorator for a function of the form xxxBallot(cls, voter)
     which memoizes the vote onto the voter in an attribute named <methName>_xxx
     """
+
     def getAndRemember(cls, voter, tally=None):
         ballot = fun(cls, voter)
         setattr(voter, f"{cls.__name__}_{fun.__name__[:-6]}", ballot)
         return ballot
 
     getAndRemember.__name__ = fun.__name__
-    getAndRemember.allTallyKeys = lambda:[]
+    getAndRemember.allTallyKeys = lambda: []
     return getAndRemember
+
 
 @decorator
 def rememberBallots(fun):
-    """A decorator for a function of the form xxxBallot(cls, voter)
+    """DEPRECATED - to be removed
+    A decorator for a function of the form xxxBallot(cls, voter)
     which memoizes the vote onto the voter in an attribute named <methName>_xxx
     """
+
     def getAndRemember(cls, voter, tally=None):
         ballots = fun(cls, voter)
         for bType, ballot in ballots.items():
 
             setattr(voter, f"{cls.__name__}_{bType}", ballot)
 
-        return ballots[fun.__name__[:-6]] #leave off the "...Ballot"
+        return ballots[fun.__name__[:-6]]  # leave off the "...Ballot"
 
     getAndRemember.__name__ = fun.__name__
-    getAndRemember.allTallyKeys = lambda:[]
+    getAndRemember.allTallyKeys = lambda: []
     return getAndRemember
 
+
+def hybridStrat(voter, stratTuples, **kwForAll):
+    """Randomly chooses a strategy and uses it.
+    stratTuples is a list of (strategy, probability, kwargs) tuples
+    (where kwargs is optional).
+    Example:
+    b = hybridStrat(Voter([0,9,10]),
+            [(Approval.honBallot, 0.4), (Approval.diehardBallot, 0.6, {'intensity': 3})],
+            electabilities=[.5,.5,.3], candToHelp=2, candToHurt=1)
+    """
+    cumProb, i = 0, -1
+    r = random.Random(voter.id).random()
+    while cumProb < r:
+        i += 1
+        cumProb += stratTuples[i][1]
+    kwForMethod = {} if len(stratTuples[i]) == 2 else stratTuples[i][2]
+    return stratTuples[i][0](voter, **kwForAll, **kwForMethod)
+
+
+@functools.lru_cache(maxsize=10000)
+def useStrat(voter, strategy, **kw):
+    """Returns the ballot cast by voter using strategy.
+    This function exists purely for the sake of memoization.
+    """
+    return strategy(voter, **kw)
+
+
+def paramStrat(strategy, **kw):
+    """A wrapper for strategy that gives it arguments in addition to voter, polls, electabilities, and targets.
+    Incompatible with multithreading; use bgArgs and fgArgs in threeRoundResults instead.
+    """
+
+    def strat(voter, polls=None, electabilities=None, candToHelp=None, candToHurt=None):
+        return strategy(
+            voter,
+            polls=polls,
+            electabilities=electabilities,
+            candToHelp=candToHelp,
+            candToHurt=candToHurt,
+            **kw,
+        )
+
+    strat.__name__ = strategy.__name__
+    for key, value in kw.items():
+        strat.__name__ += f"_{str(key)[:4]}{str(value)[:4]}"
+    return strat
+
+
+def wantToHelp(voter, candToHelp, candToHurt, **kw):
+    return max(voter[candToHelp] - voter[candToHurt], 0)
+
+
+def selectAB(candA, candB):  # candA and candB are candidate IDs
+    def fgSelect(voter, **kw):
+        return max(voter[candA] - voter[candB], 0)
+
+    fgSelect.__name__ = f"select{str(candA)}{str(candB)}"
+    return fgSelect
+
+
+def selectRand(polls, **kw):
+    return tuple(random.sample(range(len(polls)), 2))
+
+
+def select12(polls, **kw):
+    pollOrder = [cand for cand, poll in sorted(enumerate(polls), key=lambda x: -x[1])]
+    return pollOrder[0], pollOrder[1]
+
+
+def select21(polls, **kw):
+    pollOrder = [cand for cand, poll in sorted(enumerate(polls), key=lambda x: -x[1])]
+    return pollOrder[1], pollOrder[0]
+
+
+def select31(polls, **kw):
+    pollOrder = [cand for cand, poll in sorted(enumerate(polls), key=lambda x: -x[1])]
+    return pollOrder[2], pollOrder[0]
+
+
+def select012(polls, r0polls, **kw):
+    pollOrder = [cand for cand, poll in sorted(enumerate(r0polls), key=lambda x: -x[1])]
+    return pollOrder[0], pollOrder[1]
+
+
+def nullTarget(*args, **kw):
+    return 0, 0
+
+
+def selectAll(**kw):
+    return 1
+
+
+def selectVoter(voter):
+    def selectV(v, **kw):
+        return 1 if v is voter else 0
+
+    return selectV
+
+
+resultColumns = [
+    "method",
+    "backgroundStrat",
+    "fgStrat",
+    "numVoters",
+    "numCandidates",
+    "magicBestUtil",
+    "magicWorstUtil",
+    "meanCandidateUtil",
+    "r0ExpectedUtil",
+    "r0WinnerUtil",
+    "r1WinnerUtil",
+    "probOfWin",
+    "r1WinProb",
+    "winnerPlaceInR0",
+    "winnerPlaceInR1",
+    "results",
+    "bgArgs",
+    "fgArgs",
+    "totalUtil",
+    "deciderUtilDiffs",
+    "fgTargets",
+    "totalStratUtilDiff",
+    "margStrategicRegret",
+    "avgStrategicRegret",
+    "pivotalUtilDiff",
+    "deciderUtilDiffSum",
+    "deciderMargUtilDiffs",
+    "numWinnersFound",
+    "factionSize",
+    "factionFraction",
+]
+for prefix in ["", "min", "t1", "o"]:
+    resultColumns.extend(
+        prefix + columnName
+        for columnName in [
+            "fgUtil",
+            "fgUtilDiff",
+            "fgSize",
+            "fgNumHelped",
+            "fgHelpedUtil",
+            "fgHelpedUtilDiff",
+            "fgNumHarmed",
+            "fgHarmedUtil",
+            "fgHarmedUtilDiff",
+            "helpCandElected",
+            "hurtCandElectedR1",
+        ]
+    )
+
+
+def makeResults(**kw):
+    return {c: kw.get(c, None) for c in resultColumns} | kw
+
+
+def makePartialResults(fgVoters, winner, r1Winner, prefix, candToHelp, candToHurt):
+    fgHelped = []
+    fgHarmed = []
+    numfg = len(fgVoters)
+    if winner != r1Winner:
+        for voter in fgVoters:
+            if voter[winner] > voter[r1Winner]:
+                fgHelped.append(voter)
+            elif voter[winner] < voter[r1Winner]:
+                fgHarmed.append(voter)
+
+    tempDict = dict(
+        fgUtil=sum(v[winner] for v in fgVoters) / numfg if numfg else 0,
+        fgUtilDiff=sum(v[winner] - v[r1Winner] for v in fgVoters) / numfg
+        if numfg
+        else 0,
+        fgSize=numfg,
+        fgNumHelped=len(fgHelped),
+        fgHelpedUtil=sum(v[winner] for v in fgHelped),
+        fgHelpedUtilDiff=sum(v[winner] - v[r1Winner] for v in fgHelped),
+        fgNumHarmed=len(fgHarmed),
+        fgHarmedUtil=sum(v[winner] for v in fgHarmed),
+        fgHarmedUtilDiff=sum(v[winner] - v[r1Winner] for v in fgHarmed),
+        helpCandElected=1 if winner == candToHelp else 0,
+        hurtCandElectedR1=1 if r1Winner == candToHurt else 0,
+    )
+    return {prefix + key: value for key, value in tempDict.items()}
+
+
+def simplePollsToProbs(polls, uncertainty=0.05):
+    """Takes approval-style polling as input i.e. a list of floats in the interval [0,1],
+    and returns a list of the estimated probabilities of each candidate winning based on
+    uncertainty. Uncertainty is a float that corresponds to the difference in polling
+    that's required for one candidate to be twice as viable as another.
+    >>> simplePollsToProbs([.5,.4,.4],.1)
+    [0.5, 0.25, 0.25]
+    """
+    unnormalizedProbs = [2 ** (pollResult / uncertainty) for pollResult in polls]
+    normFactor = sum(unnormalizedProbs)
+    return [p / normFactor for p in unnormalizedProbs]
+
+
+def marginToBetaSize(twosig):
+    """Takes x, and returns a sample size n such that 2*stdev(beta(n/2,n/2))=x"""
+    return (1 / (twosig**2)) - 1
+
+
+def multi_beta_probs_of_highest(parms):
+    """Given a list of beta distribution params, returns a quick-and-dirty
+    approximation of the chance that each respective beta is the max across
+    all of them."""
+
+    betas = [beta(*parm) for parm in parms]
+
+    def multi_beta_cdf_loss(x):
+        """Given x, return the loss which (when minimized) leads x to be
+        the median of the max when drawing one sample from each of the betas."""
+
+        p = 1.0
+        for beta in betas:
+            p = p * (beta.cdf(x))
+        return (0.5 - p) ** 2
+
+    res = fmin(multi_beta_cdf_loss, np.array([0.5]), disp=False)[0]
+
+    probs = np.array([1 - beta.cdf(res) for beta in betas])
+    probs = probs / np.sum(probs)
+    return probs
+
+
+@functools.lru_cache(maxsize=1000)
+def principledPollsToProbs(polls, uncertainty=0.15):
+    """Takes approval-style polling as input i.e. a list of floats in the interval [0,1],
+    and returns a list of the estimated probabilities of each candidate winning based on
+    uncertainty. Uncertainty is a float that corresponds to margin of error (2 standard deviations) for
+    a candidate that polls exactly 0.5.
+
+    >>> a = principledPollsToProbs((.5,.4,.4),.1); a
+    array([0.92336235, 0.03831882, 0.03831882])
+    >>> a[1] == a[2]
+    True
+    >>> b = principledPollsToProbs((.5,.4,.4),.2); b
+    array([0.6622815 , 0.16885925, 0.16885925])
+    >>> a[1] < b[1]
+    True
+    >>> b = principledPollsToProbs((.5,.45,.45),.1); b
+    array([0.6624054, 0.1687973, 0.1687973])
+    >>> a[1] < b[1]
+    True
+    """
+    nonzeroPolls = []
+    for poll in polls:
+        if poll <= 0:
+            nonzeroPolls.append(0.01)
+        elif poll >= 1:
+            nonzeroPolls.append(0.90)
+        else:
+            nonzeroPolls.append(poll)
+    betaSize = marginToBetaSize(uncertainty)
+    parms = [(betaSize * poll, betaSize * (1 - poll)) for poll in nonzeroPolls]
+    return multi_beta_probs_of_highest(parms)
+
+
+def pollsToProbs(polls, uncertainty=0.15):
+    return principledPollsToProbs(tuple(polls), uncertainty)
+
+
+def runnerUpProbs(winProbs):
+    unnormalizedRunnerUpProbs = [p * (1 - p) for p in winProbs]
+    normFactor = sum(unnormalizedRunnerUpProbs)
+    return [u / normFactor for u in unnormalizedRunnerUpProbs]
+
+
+def product(l):
+    result = 1
+    for i in l:
+        result *= i
+    return result
+
+
+@functools.lru_cache(maxsize=1000)
+def tieFor2NumIntegration(polls, uncertainty):
+    """Takes approval polling as input and returns a list of the estimated "probabilities" of each candidate
+    being in a two-way tie for second places, normalized such that the sum is 1.
+    """
+    n = len(polls)
+    tieProbs = [[0] * n for i in range(n)]
+    for t1 in range(n):
+        for t2 in range(t1 + 1, n):
+
+            def integrand(x):
+                indicesLeft = (
+                    list(range(t1)) + list(range(t1 + 1, t2)) + list(range(t2 + 1, n))
+                )
+                return (
+                    stats.norm.pdf(x, loc=polls[t1], scale=uncertainty)
+                    * stats.norm.pdf(x, loc=polls[t2], scale=uncertainty)
+                    * sum(
+                        product(
+                            (1 - stats.norm.cdf(x, loc=polls[j], scale=uncertainty))
+                            if i == j
+                            else stats.norm.cdf(x, loc=polls[j], scale=uncertainty)
+                            for j in indicesLeft
+                        )
+                        for i in indicesLeft
+                    )
+                )
+
+            tieProbs[t1][t2] = integrate.quad(integrand, 0, 1)[0]
+            tieProbs[t2][t1] = tieProbs[t1][t2]
+    unnormalizedProbs = [sum(l) for l in tieProbs]
+    normFactor = sum(unnormalizedProbs)
+    return [u / normFactor for u in unnormalizedProbs]
+
+
+def tieFor2Probs(polls, uncertainty=0.15):
+    if len(polls) < 3:
+        return [0] * len(polls)
+    return tieFor2NumIntegration(tuple(polls), uncertainty / 2)
+
+
+@functools.lru_cache(maxsize=1000)
+def tieFor2Estimate(probs):
+    """Estimates the probability of each candidate being in a tie for second place,
+    normalized such that they sum to 1.
+    >>> tieFor2Estimate((.49,.49,.02))
+    [0.29762918476626044, 0.29762918476626044, 0.404741630467479]
+    >>> tieFor2Estimate((.4999999999,.4999999999,.0000000002))
+    [0.2928932188619805, 0.2928932188619805, 0.41421356227603895]
+    >>> tieFor2Estimate((.99,.005,.005))
+    [0.4129948110638391, 0.2935025944680804, 0.2935025944680804]
+    >>> tieFor2Estimate((0,.5,.5))
+    [0.4142135623730952, 0.2928932188134523, 0.2928932188134523]
+    """
+    EXP = 2
+    np_probs = np.array(probs)
+    np.seterr(divide="ignore")
+    logprobs = np.log(np_probs)
+    logconv = np.log(1 - np_probs)
+    np.seterr(divide="warn")
+    logprobs[logprobs == -np.inf] = -1e9
+    logconv[logconv == -np.inf] = -1e9
+    unnormalized_log = np.array(
+        [
+            logprobs[i]
+            + logconv[i]
+            + (
+                logsumexp(
+                    np.array(
+                        [
+                            [
+                                (logprobs[j] + logprobs[k]) * EXP
+                                for k, z in enumerate(probs)
+                                if i != k != j
+                            ]
+                            for j, y in enumerate(probs)
+                            if i != j
+                        ]
+                    )
+                )
+                - logsumexp(
+                    np.array([logprobs[j] * EXP for j, y in enumerate(probs) if i != j])
+                )
+            )
+            / EXP
+            for i, x in enumerate(probs)
+        ]
+    )
+    unnormalized = np.exp(unnormalized_log - np.max(unnormalized_log))
+    normFactor = sum(unnormalized)
+    return [float(u / normFactor) for u in unnormalized]
+
+
+def adaptiveTieFor2(polls, uncertainty=0.15):
+    return tieFor2Estimate(tuple(pollsToProbs(polls, uncertainty)))
+
+
+def appendResults(filename, resultsList, globalComment=dict()):
+    """append list of results created by makeResults to a csv file.
+    for instance:
+
+    csvs.saveFile()
+    """
+    needsHeader = not os.path.isfile(baseName)
+    keys = resultsList[0].keys()  # important stuff first
+    # keys.extend(list(self.rows[0].keys()))  # any other stuff I missed; dedup later
+    keys = uniquify(keys)
+
+    globalComment(version=version)
+
+    with open(baseName + str(i) + ".csv", "a") as myFile:
+        if needsHeader:
+            print(f"# {str(globalComment)}", file=myFile)
+        dw = csv.DictWriter(myFile, keys, restval="NA")
+        dw.writeheader()
+        for r in resultsList:
+            dw.writerow(r)
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod()
+
+
 class CandidateWithCount:
-    def __init__(self, c = [], v = 0):
+    def __init__(self, c=None, v=0):
+        if c is None:
+            c = []
         self.candidate = c
         self.votes = v
