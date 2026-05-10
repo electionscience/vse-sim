@@ -1,7 +1,12 @@
 *.pyc
 python3
 __pycache__
+.pytest_cache/
 .venv/
+.coverage
+coverage.xml
+htmlcov/
+pytest-results.xml
 .pydevproject
 *.csv
 *.rtf

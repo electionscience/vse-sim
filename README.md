@@ -23,6 +23,15 @@ Or, using the development dependencies from the Pipfile:
     pipenv install --dev
     pipenv run python -m pytest --doctest-modules
 
+To generate local coverage artifacts:
+
+    pipenv install --dev
+    pipenv run coverage
+
+The GitHub Actions workflow runs the same coverage check on pushes, pull requests,
+and manual dispatches. It uploads the HTML coverage report plus machine-readable
+coverage and JUnit XML files as workflow artifacts.
+
 ## Running simulations
 
 Try

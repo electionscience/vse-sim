@@ -1,40 +1,76 @@
-# This workflow will install Python dependencies, run tests and lint with a single version of Python
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
-
 name: Test VSE
 
 on:
   push:
-    branches: ["main"]
   pull_request:
     branches: ["main"]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Set up Python 3.10
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v5
         with:
           python-version: "3.10"
-      - name: Install dependencies
+
+      - name: Install pipenv
         run: |
-          python -m pip install --upgrade pipenv wheel
-      - id: cache-pipenv
-        uses: actions/cache@v1
+          python -m pip install --upgrade pip pipenv wheel
+
+      - name: Cache pipenv virtualenv
+        uses: actions/cache@v4
         with:
           path: ~/.local/share/virtualenvs
           key: ${{ runner.os }}-pipenv-${{ hashFiles('**/Pipfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pipenv-
 
-      - name: Install dependencies
-        if: steps.cache-pipenv.outputs.cache-hit != 'true'
+      - name: Install project dependencies
         run: |
-          pipenv install --deploy --dev
-      - name: Run test suite
+          pipenv sync --dev
+
+      - name: Run tests with coverage
         run: |
-          pipenv run test -svvv
+          pipenv run coverage
+
+      - name: Write coverage summary
+        if: always()
+        run: |
+          if [ -f .coverage ]; then
+            {
+              echo "## Coverage"
+              echo
+              echo '```text'
+              pipenv run python -m coverage report
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload coverage HTML
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-html
+          path: htmlcov/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload machine-readable reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-and-coverage-reports
+          path: |
+            coverage.xml
+            pytest-results.xml
+          if-no-files-found: ignore
+          retention-days: 14
