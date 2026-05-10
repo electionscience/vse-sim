@@ -128,12 +128,16 @@ class ElectionCounts:
             mat += self.oneMatrix(self.prefs[i], self.delg[i])
         return mat
 
-    def beaters(self, loser, candidates, minwin=[None], rival=[None], private=False):
+    def beaters(self, loser, candidates, minwin=None, rival=None, private=False):
         """a generator which, using the matrix m, gives any members of candidates who loser doesn't majority beat.
 
         NOTE: THIS MODIFIES candidates AS A SIDE-EFFECT, AND NOTICES IF IT"S MODIFIED BY OTHERS.
         Also modifies `by` as a side effect
         """
+        if minwin is None:
+            minwin = [None]
+        if rival is None:
+            rival = [None]
         m = self.matrix
         best = np.argmax(m[loser])
         if private:
@@ -190,9 +194,13 @@ class ElectionCounts:
         self.rival = rival[0]
         return winners
 
-    def growFrom(self, seed, plant, soil, minwin=[None], rival=[None]):
+    def growFrom(self, seed, plant, soil, minwin=None, rival=None):
         # print(seed, plant, soil)
         """as a SIDE-EFFECT, recursively fill out the set of winners, starting from seed"""
+        if minwin is None:
+            minwin = [None]
+        if rival is None:
+            rival = [None]
         for w in self.beaters(seed, soil, minwin, rival, private=True):
             # print(w,"grows on",seed)
             plant.append(w)
