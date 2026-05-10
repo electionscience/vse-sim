@@ -3,11 +3,25 @@ import os
 import random
 from uuid import uuid4
 
-from debugDump import *
-from methods import *
+from debugDump import debug, setDebug
+from methods import (
+    IRNR,
+    V321,
+    Borda,
+    BulletyApprovalWith,
+    Irv,
+    IrvPrime,
+    Mav,
+    Mj,
+    Plurality,
+    Rp,
+    Schulze,
+    Score,
+    Srv,
+)
 from mydecorators import autoassign
-from stratFunctions import *
-from voterModels import truth
+from stratFunctions import LazyChooser, OssChooser, ProbChooser, beHon, beStrat, beX, truth
+from voterModels import PolyaModel  # noqa: F401 - used by doctests
 
 join = os.path.join
 

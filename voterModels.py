@@ -3,7 +3,6 @@ import random
 from scipy.stats import beta
 
 from compat import as_builtin_scalar, mean, sqrt, std  # noqa: F401
-from debugDump import *
 from mydecorators import autoassign, cached_property
 
 

@@ -1,10 +1,8 @@
 import random
 
 from compat import std
-from dataClasses import *
-from debugDump import *
+from dataClasses import SideTally
 from mydecorators import autoassign, cached_property
-from voterModels import *
 
 
 ###################Choosers

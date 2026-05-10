@@ -1,9 +1,7 @@
 import random
 
 from compat import isnum, mean
-import debugDump
 from mydecorators import autoassign, decorator
-from stratFunctions import *
 
 
 class VseOneRun:

@@ -5,7 +5,7 @@ import methods
 import stratFunctions
 import voterModels
 import vse
-from debugDump import *
+from debugDump import debug, setDebug
 
 debug("Hi")
 setDebug(False)

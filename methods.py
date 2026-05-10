@@ -3,9 +3,8 @@ import random
 from numpy import argsort, percentile, sign
 
 from compat import as_builtin_scalar, floor, mean
-from dataClasses import *
-from debugDump import *
-from stratFunctions import rememberBallot
+from dataClasses import CandidateWithCount, Method, rememberBallot, rememberBallots
+from voterModels import DeterministicModel, Voter  # noqa: F401 - used by doctests
 
 # def sign(x):
 #     if x>0:
