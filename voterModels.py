@@ -373,7 +373,7 @@ class KSModel(DimModel):  # Kitchen sink
         wcalpha=1,
         vccaring=(3, 1.5),
     ):
-        super().__init__()
+        DimModel.__init__(self)
 
     def __str__(self):
         return "_".join(

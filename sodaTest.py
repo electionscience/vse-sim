@@ -77,13 +77,15 @@ arrayType = type(np.array([1]))
 
 class ElectionCounts:
     @autoargs()
-    def __init__(self, delg, appr, prefs, order, cantWin=[], oldSmith=None):
+    def __init__(self, delg, appr, prefs, order, cantWin=None, oldSmith=None):
         """
         delg: A list of n delegation counts
         appr: A list of n approval counts
         prefs: A list of n preference lists counts
         order: delegation order
         """
+        if self.cantWin is None:
+            self.cantWin = set()
         self.n = len(delg)
         if type(self.appr) != arrayType:
             self.appr = np.matrix(self.appr)
