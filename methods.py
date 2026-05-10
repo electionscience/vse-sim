@@ -580,10 +580,13 @@ class Irv(Method):
             + alternates
         )
 
-    def getLeast(self, voteRanking, keep={}):
+    def getLeast(self, voteRanking, keep=None):
+        if keep is None:
+            keep = {}
         for candidate in reversed(voteRanking):
             if candidate.candidate not in keep:
                 return candidate
+        return None
 
     def runIrv(self, remaining, ncand):
         """IRV results."""
