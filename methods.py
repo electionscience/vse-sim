@@ -6,13 +6,6 @@ from compat import as_builtin_scalar, floor, mean
 from dataClasses import CandidateWithCount, Method, rememberBallot, rememberBallots
 from voterModels import DeterministicModel, Voter  # noqa: F401 - used by doctests
 
-# def sign(x):
-#     if x>0:
-#         return 1
-#     if x<0:
-#         return -1
-#     return 0
-
 
 ####EMs themselves
 class Borda(Method):
@@ -844,8 +837,6 @@ class V321(Mav):
         >>> Irv().stratBallotFor([3,2,1,0])(Irv,Voter([3,6,5,2]))
         [1, 2, 3, 0]
         """
-        ncand = len(polls)
-
         places = sorted(enumerate(polls), key=lambda x: -x[1])  # high to low
         top3 = [c for c, r in places[:3]]
 
@@ -879,7 +870,6 @@ class V321(Mav):
 
             @rememberBallots
             def stratBallo2(cls, voter):
-                stratGap = voter[top3[1]] - voter[top3[0]]
                 myprefs = sorted(enumerate(voter), key=lambda x: -x[1])  # high to low
                 rating = 2
                 ballot = [None] * len(voter)
@@ -1009,7 +999,6 @@ class Schulze(RankedMethod):
         else:  # cycle
             cycle = 1
             result = self.resolveCycle(cmat, n)
-            order = None
 
         if isHonest:
             self.__class__.extraEvents = {}

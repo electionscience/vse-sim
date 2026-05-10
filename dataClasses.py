@@ -30,22 +30,6 @@ class SideTally(defaultdict):
     def __init__(self):
         super().__init__(int)
 
-    # >>> tally = SideTally()
-    # >>> tally += {1:2,3:4}
-    # >>> tally
-    # {1: 2, 3: 4}
-    # >>> tally += {1:2,3:4,5:6}
-    # >>> tally
-    # {1: 4, 3: 8, 5: 6}
-    # """
-    # def __add__(self, other):
-    #    for (key, val) in other.items():
-    #        try:
-    #            self[key] += val
-    #        except KeyError:
-    #            self[key] = val
-    #    return self
-
     def initKeys(self, chooser):
         try:
             self.keyList = chooser.allTallyKeys()
@@ -53,9 +37,7 @@ class SideTally(defaultdict):
             try:
                 self.keyList = list(chooser)
             except TypeError:
-                pass
-                # TODO: Why does this happen?
-                # debug("Chooser has no tally keys:", str(chooser))
+                self.keyList = []
         self.initKeys = staticmethod(lambda x: x)  # don't do it again
 
     def serialize(self):
@@ -65,10 +47,9 @@ class SideTally(defaultdict):
             return []
 
     def fullSerialize(self):
-        try:
-            kl = self.keyList
-        except AttributeError:
+        if not hasattr(self, "keyList"):
             return [self[key] for key in self.keys()]
+        return [self[key] for key in self.keyList]
 
     def itemList(self):
         try:
@@ -97,17 +78,23 @@ class Tallies(list):
     """
 
     def __iter__(self):
-        try:
-            self.used
+        if getattr(self, "used", False):
             return super().__iter__()
-        except:
-            self.used = True
-            return self
+        self.used = True
+        return self._generated_tallies()
 
-    def __next__(self):
-        tally = SideTally()
-        self.append(tally)
-        return tally
+    def __eq__(self, other):
+        if not isinstance(other, Tallies):
+            return super().__eq__(other)
+        return super().__eq__(other) and getattr(self, "used", False) == getattr(
+            other, "used", False
+        )
+
+    def _generated_tallies(self):
+        while True:
+            tally = SideTally()
+            self.append(tally)
+            yield tally
 
 
 ##Election Methods
@@ -271,18 +258,6 @@ class Method:
                 row[f"tallyName{str(i)}"] = str(k)
                 row[f"tallyVal{str(i)}"] = str(v)
             rows.append(row)
-        # if len(multiResults[1]):
-        #     row = {
-        #         "eid":eid,
-        #         "emodel":emodel,
-        #         "method":self.__class__.__name__,
-        #         "chooser":"extraEvents",
-        #         "util":None
-        #     }
-        #     for (i, (k, v)) in enumerate(multiResults[1]):
-        #         row["tallyName"+str(i)] = str(k)
-        #         row["tallyVal"+str(i)] = str(v)
-        #     rows.append(row)
         return rows
 
     @staticmethod

@@ -100,8 +100,8 @@ class OssChooser(Chooser):
 class ProbChooser(Chooser):
     def __init__(self, probs):
         self.probs = probs
-        self.subChoosers = [chooser for (p, chooser) in probs]
-        super().__init__(subChoosers=self.subChoosers)
+        subChoosers = [chooser for (p, chooser) in probs]
+        super().__init__(subChoosers=subChoosers)
 
     def __call__(self, cls, voter, tally):
         r = random.random()
@@ -111,6 +111,7 @@ class ProbChooser(Chooser):
                 if i > 0:  # keep tally for all but first option
                     tally[f"{self.getName()}_{chooser.getName()}"] += 1
                 return chooser(cls, voter, tally)
+        return self.subChoosers[-1](cls, voter, tally) if self.subChoosers else None
 
     def getName(self):
         baseName = super(ProbChooser, self).getName()

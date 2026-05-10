@@ -71,7 +71,7 @@ class CsvBatch:
             if not force:
                 assert not repo.is_dirty()
             self.repo_version = repo.head.commit.hexsha
-        except:
+        except Exception:
             self.repo_version = "unknown repo version"
         for i in range(niter):
             eid = uuid4()
