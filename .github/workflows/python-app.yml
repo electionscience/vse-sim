@@ -50,7 +50,7 @@ jobs:
               echo "## Coverage"
               echo
               echo '```text'
-              pipenv run coverage report
+              pipenv run python -m coverage report
               echo '```'
             } >> "$GITHUB_STEP_SUMMARY"
           fi
