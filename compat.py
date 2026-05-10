@@ -41,6 +41,7 @@ def sqrt(*args, **kwargs):
 def std(*args, **kwargs):
     return as_builtin_scalar(numpy_std(*args, **kwargs))
 
+
 def isnum(x):
     """Return whether ``x`` is an instance of a numeric type."""
     return isinstance(x, Number)

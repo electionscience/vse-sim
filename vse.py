@@ -1,34 +1,54 @@
-
-from importlib import reload
-
-from mydecorators import autoassign, cached_property, setdefaultattr, timeit
+import csv
+import os
 import random
-from compat import floor, isnum, mean, median, sqrt, std
-from debugDump import *
-
-
-from voterModels import *
-from stratFunctions import *
-from methods import *
 from uuid import uuid4
-import csv, os
+
+from debugDump import debug, setDebug
+from methods import (
+    IRNR,
+    V321,
+    Borda,
+    BulletyApprovalWith,
+    Irv,
+    IrvPrime,
+    Mav,
+    Mj,
+    Plurality,
+    Rp,
+    Schulze,
+    Score,
+    Srv,
+)
+from mydecorators import autoassign
+from stratFunctions import LazyChooser, OssChooser, ProbChooser, beHon, beStrat, beX, truth
+from voterModels import PolyaModel  # noqa: F401 - used by doctests
+
 join = os.path.join
-
-
 
 
 def uniquify(seq):
     # order preserving
     checked = []
     for e in seq:
-       if e not in checked:
-           checked.append(e)
+        if e not in checked:
+            checked.append(e)
     return checked
+
 
 class CsvBatch:
     @autoassign
-    def __init__(self, model, methods, nvot, ncand, niter,
-            baseName = None, media=truth, seed=None, force=False):
+    def __init__(
+        self,
+        model,
+        methods,
+        nvot,
+        ncand,
+        niter,
+        baseName=None,
+        media=truth,
+        seed=None,
+        force=False,
+    ):
         """A harness function which creates niter elections from model and finds three kinds
         of utility for all methods given.
 
@@ -40,25 +60,28 @@ class CsvBatch:
         """
         rows = []
         emodel = str(model)
-        if (seed is None):
-            seed = (baseName or '') + str(niter)
+        if seed is None:
+            seed = (baseName or "") + str(niter)
             self.seed = seed
         random.seed(seed)
         try:
             from git import Repo
+
             repo = Repo(os.getcwd())
             if not force:
                 assert not repo.is_dirty()
             self.repo_version = repo.head.commit.hexsha
         except:
-            self.repo_version = 'unknown repo version'
+            self.repo_version = "unknown repo version"
         for i in range(niter):
             eid = uuid4()
             electorate = model(nvot, ncand)
             for method, chooserFuns in methods:
-                results = method.resultsTable(eid, emodel, ncand, electorate, chooserFuns, media=media)
+                results = method.resultsTable(
+                    eid, emodel, ncand, electorate, chooserFuns, media=media
+                )
                 rows.extend(results)
-            debug(i,results[1:3])
+            debug(i, results[1:3])
         self.rows = rows
         if baseName:
             self.saveFile(baseName)
@@ -82,81 +105,75 @@ class CsvBatch:
                 file=myFile,
             )
 
-            dw = csv.DictWriter(myFile, keys, restval = "NA")
+            dw = csv.DictWriter(myFile, keys, restval="NA")
             dw.writeheader()
             for r in self.rows:
                 dw.writerow(r)
 
 
-
 medianRuns = [
-               OssChooser([beHon,ProbChooser([(1/2, beStrat), (1/2, beHon)])]),
-
-
-               ProbChooser([(1/4, beX), (3/4, beHon)]),
-               ProbChooser([(1/2, beX), (1/2, beHon)]),
-               ProbChooser([(3/4, beX), (1/4, beHon)]),
-
-               ProbChooser([(0.5, beStrat), (0.5, beHon)]),
-               ProbChooser([(1/3, beStrat), (1/3, beHon), (1/3, beX)]),
-
-               LazyChooser(),
-               ProbChooser([(1/2, LazyChooser()), (1/2, beHon)]),
-
-               ]
+    OssChooser([beHon, ProbChooser([(1 / 2, beStrat), (1 / 2, beHon)])]),
+    ProbChooser([(1 / 4, beX), (3 / 4, beHon)]),
+    ProbChooser([(1 / 2, beX), (1 / 2, beHon)]),
+    ProbChooser([(3 / 4, beX), (1 / 4, beHon)]),
+    ProbChooser([(0.5, beStrat), (0.5, beHon)]),
+    ProbChooser([(1 / 3, beStrat), (1 / 3, beHon), (1 / 3, beX)]),
+    LazyChooser(),
+    ProbChooser([(1 / 2, LazyChooser()), (1 / 2, beHon)]),
+]
 
 baseRuns = [
-           OssChooser([beHon,ProbChooser([(1/2, beStrat), (1/2, beHon)])]),
+    OssChooser([beHon, ProbChooser([(1 / 2, beStrat), (1 / 2, beHon)])]),
+    ProbChooser([(1 / 4, beStrat), (3 / 4, beHon)]),
+    ProbChooser([(1 / 2, beStrat), (1 / 2, beHon)]),
+    ProbChooser([(3 / 4, beStrat), (1 / 4, beHon)]),
+]
 
-           ProbChooser([(1/4, beStrat), (3/4, beHon)]),
-           ProbChooser([(1/2, beStrat), (1/2, beHon)]),
-           ProbChooser([(3/4, beStrat), (1/4, beHon)]),
+allSystems = [
+    [Score(1000), baseRuns],
+    [Score(10), baseRuns],
+    [Score(2), baseRuns],
+    [Score(1), baseRuns],
+    [BulletyApprovalWith(0.6), baseRuns],
+    [Srv(10), baseRuns],
+    [Srv(2), baseRuns],
+    [Plurality(), baseRuns],
+    [Borda(), baseRuns],
+    [Irv(), baseRuns],
+    [IrvPrime(), baseRuns],
+    [Schulze(), baseRuns],
+    [Rp(), baseRuns],
+    [V321(), baseRuns],
+    [Mav(), medianRuns],
+    [Mj(), medianRuns],
+    [IRNR(), baseRuns],
+]
 
-           ]
-
-allSystems = [[Score(1000), baseRuns],
-                [Score(10), baseRuns],
-                [Score(2), baseRuns],
-                [Score(1), baseRuns],
-                [BulletyApprovalWith(.6), baseRuns],
-                [Srv(10), baseRuns],
-                [Srv(2), baseRuns],
-                [Plurality(), baseRuns],
-                [Borda(), baseRuns],
-                [Irv(), baseRuns],
-                [IrvPrime(), baseRuns],
-                [Schulze(), baseRuns],
-                [Rp(), baseRuns],
-                [V321(), baseRuns],
-                [Mav(), medianRuns],
-                [Mj(), medianRuns],
-                [IRNR(), baseRuns],
-                 ]
-
-#request from Mark: "SRV0-2, SRV0-3, SRV0-4, SRV0-5, SRV0-6, SRV0-7, SRV0-8, SRV0-9, SRV0-10, Score0-10, 321, Approval, IRV and plurality"
+# request from Mark: "SRV0-2, SRV0-3, SRV0-4, SRV0-5, SRV0-6, SRV0-7, SRV0-8, SRV0-9, SRV0-10, Score0-10, 321, Approval, IRV and plurality"
 markMethods = [
-                [Srv(2), baseRuns],
-                [Srv(3), baseRuns],
-                [Srv(4), baseRuns],
-                [Srv(5), baseRuns],
-                [Srv(6), baseRuns],
-                [Srv(7), baseRuns],
-                [Srv(8), baseRuns],
-                [Srv(9), baseRuns],
-                [Score(10), baseRuns],
-                [V321(), baseRuns],
-                [BulletyApprovalWith(.6), baseRuns],
-                [Irv(), baseRuns],
-                [Plurality(), baseRuns],
-                 ]
+    [Srv(2), baseRuns],
+    [Srv(3), baseRuns],
+    [Srv(4), baseRuns],
+    [Srv(5), baseRuns],
+    [Srv(6), baseRuns],
+    [Srv(7), baseRuns],
+    [Srv(8), baseRuns],
+    [Srv(9), baseRuns],
+    [Score(10), baseRuns],
+    [V321(), baseRuns],
+    [BulletyApprovalWith(0.6), baseRuns],
+    [Irv(), baseRuns],
+    [Plurality(), baseRuns],
+]
 
-#usage example:
-#>>> from vse import *
-#>>> vses = CsvBatch(KSModel(dcdecay=(1,3),wcdecay=(1.5,3), dccut = .2, wcalpha=1.5),
+# usage example:
+# >>> from vse import *
+# >>> vses = CsvBatch(KSModel(dcdecay=(1,3),wcdecay=(1.5,3), dccut = .2, wcalpha=1.5),
 #           allSystems, nvot=40, ncand=6, niter=15000, baseName="target",
 #           media=fuzzyMediaFor())
 
 if __name__ == "__main__":
     import doctest
-    setDebug( False)
+
+    setDebug(False)
     doctest.testmod()

@@ -28,9 +28,19 @@ To generate local coverage artifacts:
     pipenv install --dev
     pipenv run coverage
 
+To run lint and style checks locally:
+
+    pipenv run lint
+    pipenv run format-check
+
 The GitHub Actions workflow runs the same coverage check on pushes, pull requests,
 and manual dispatches. It uploads the HTML coverage report plus machine-readable
 coverage and JUnit XML files as workflow artifacts.
+
+The `Lint and Style` workflow runs Ruff formatting and lint checks on pushes,
+pull requests, and manual dispatches. To enforce it before merge, mark the
+`Lint and Style / Ruff` check as required in the repository branch protection or
+ruleset settings.
 
 ## Security automation
 

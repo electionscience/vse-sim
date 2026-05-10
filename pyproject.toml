@@ -1,0 +1,31 @@
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+extend-exclude = [
+    ".venv",
+    "docs",
+    "htmlcov",
+]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]
+
+# Keep the first enforced pass focused on mechanically safe checks. These legacy
+# patterns can be tightened gradually after the simulation code is less coupled to
+# wildcard imports and old helper idioms.
+ignore = [
+    "E402",  # module level import not at top of file
+    "E701",  # multiple statements on one line
+    "E721",  # direct type comparison
+    "E722",  # bare except
+    "E731",  # assigned lambda
+    "E741",  # ambiguous variable name
+    "F403",  # wildcard import
+    "F405",  # name may be undefined from wildcard import
+    "F841",  # assigned but unused local variable
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"

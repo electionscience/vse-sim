@@ -1,17 +1,14 @@
-
-from mydecorators import autoassign, cached_property, setdefaultattr, decorator
 import random
-from compat import floor, isnum, mean, median, sqrt, std
-from debugDump import *
-from uuid import uuid4
 
+from compat import isnum, mean
+from mydecorators import autoassign, decorator
 
-from stratFunctions import *
 
 class VseOneRun:
     @autoassign
     def __init__(self, result, tallyItems, strat):
         pass
+
 
 class VseMethodRun:
     @autoassign
@@ -21,23 +18,27 @@ class VseMethodRun:
 
 ####data holders for output
 from collections import defaultdict
+
+
 class SideTally(defaultdict):
     """Used for keeping track of how many voters are being strategic, etc.
 
     DO NOT use plain +; for this class, it is equivalent to +=, but less readable.
 
     """
+
     def __init__(self):
         super().__init__(int)
-    #>>> tally = SideTally()
-    #>>> tally += {1:2,3:4}
-    #>>> tally
-    #{1: 2, 3: 4}
-    #>>> tally += {1:2,3:4,5:6}
-    #>>> tally
-    #{1: 4, 3: 8, 5: 6}
-    #"""
-    #def __add__(self, other):
+
+    # >>> tally = SideTally()
+    # >>> tally += {1:2,3:4}
+    # >>> tally
+    # {1: 2, 3: 4}
+    # >>> tally += {1:2,3:4,5:6}
+    # >>> tally
+    # {1: 4, 3: 8, 5: 6}
+    # """
+    # def __add__(self, other):
     #    for (key, val) in other.items():
     #        try:
     #            self[key] += val
@@ -53,9 +54,9 @@ class SideTally(defaultdict):
                 self.keyList = list(chooser)
             except TypeError:
                 pass
-                #TODO: Why does this happen?
-                #debug("Chooser has no tally keys:", str(chooser))
-        self.initKeys = staticmethod(lambda x:x) #don't do it again
+                # TODO: Why does this happen?
+                # debug("Chooser has no tally keys:", str(chooser))
+        self.initKeys = staticmethod(lambda x: x)  # don't do it again
 
     def serialize(self):
         try:
@@ -72,10 +73,10 @@ class SideTally(defaultdict):
     def itemList(self):
         try:
             kl = self.keyList
-            return ([(k, self[k]) for k in kl] +
-                    [(k, self[k]) for k in self.keys() if k not in kl])
+            return [(k, self[k]) for k in kl] + [(k, self[k]) for k in self.keys() if k not in kl]
         except AttributeError:
             return list(self.items())
+
 
 class Tallies(list):
     """Used (ONCE) as an enumerator, gives an inexhaustible flow of SideTally objects.
@@ -94,6 +95,7 @@ class Tallies(list):
     >>> [t.serialize() for t in ts]
     [[0], [4], [3], []]
     """
+
     def __iter__(self):
         try:
             self.used
@@ -106,6 +108,7 @@ class Tallies(list):
         tally = SideTally()
         self.append(tally)
         return tally
+
 
 ##Election Methods
 class Method:
@@ -126,12 +129,11 @@ class Method:
         """
         if type(ballots) is not list:
             ballots = list(ballots)
-        return list(map(self.candScore,zip(*ballots)))
+        return list(map(self.candScore, zip(*ballots)))
 
-    @staticmethod #cls is provided explicitly, not through binding
+    @staticmethod  # cls is provided explicitly, not through binding
     def honBallot(cls, utils):
-        """Takes utilities and returns an honest ballot
-        """
+        """Takes utilities and returns an honest ballot"""
         raise NotImplementedError(f"{cls} needs honBallot")
 
     @staticmethod
@@ -146,7 +148,7 @@ class Method:
         True
         """
         winScore = max(result for result in results if isnum(result))
-        winners = [cand for (cand, score) in enumerate(results) if score==winScore]
+        winners = [cand for (cand, score) in enumerate(results) if score == winScore]
         return random.choice(winners)
 
     def honBallotFor(self, voters):
@@ -167,14 +169,15 @@ class Method:
         if tally is None:
             tally = SideTally()
         tally.initKeys(chooser)
-        return dict(results=self.results([chooser(self.__class__, voter, tally)
-                                  for voter in voters],
-                              **kwargs),
-                chooser=chooser.__name__,
-                tally=tally)
+        return dict(
+            results=self.results(
+                [chooser(self.__class__, voter, tally) for voter in voters], **kwargs
+            ),
+            chooser=chooser.__name__,
+            tally=tally,
+        )
 
-    def multiResults(self, voters, chooserFuns=(), media=(lambda x,t:x),
-                checkStrat = True):
+    def multiResults(self, voters, chooserFuns=(), media=(lambda x, t: x), checkStrat=True):
         """Runs two base elections: first with honest votes, then
         with strategic results based on the first results (filtered by
         the media). Then, runs a series of elections using each chooserFun
@@ -192,30 +195,29 @@ class Method:
         stratTally = SideTally()
 
         polls = media(hon["results"], stratTally)
-        winner, _w, target, _t = self.stratTargetFor(sorted(enumerate(polls),key=lambda x:-x[1]))
+        winner, _w, target, _t = self.stratTargetFor(sorted(enumerate(polls), key=lambda x: -x[1]))
 
         strat = self.resultsFor(voters, self.stratBallotFor(polls), stratTally)
 
         ossTally = SideTally()
         oss = self.resultsFor(voters, self.ballotChooserFor(OssChooser()), ossTally)
         ossWinner = oss["results"].index(max(oss["results"]))
-        ossTally["worked"] += (1 if ossWinner==target else
-                                    (0 if ossWinner==winner else -1))
+        ossTally["worked"] += 1 if ossWinner == target else (0 if ossWinner == winner else -1)
 
-        smart = dict(results=(hon["results"]
-                                    if ossTally["worked"] == 1
-                                else oss["results"]),
-                chooser="smartOss",
-                tally=SideTally())
+        smart = dict(
+            results=(hon["results"] if ossTally["worked"] == 1 else oss["results"]),
+            chooser="smartOss",
+            tally=SideTally(),
+        )
 
         extraTallies = Tallies()
-        results = ([strat, oss, smart] +
-                [self.resultsFor(voters, self.ballotChooserFor(chooserFun), aTally)
-                    for (chooserFun, aTally) in zip(chooserFuns, extraTallies)]
-                  )
-        return ([(hon["results"], hon["chooser"],
-                        list(self.__class__.extraEvents.items()))]  +
-                [(r["results"], r["chooser"], r["tally"].itemList()) for r in results])
+        results = [strat, oss, smart] + [
+            self.resultsFor(voters, self.ballotChooserFor(chooserFun), aTally)
+            for (chooserFun, aTally) in zip(chooserFuns, extraTallies)
+        ]
+        return [(hon["results"], hon["chooser"], list(self.__class__.extraEvents.items()))] + [
+            (r["results"], r["chooser"], r["tally"].itemList()) for r in results
+        ]
 
     def vseOn(self, voters, chooserFuns=(), **args):
         """Finds honest and strategic voter satisfaction efficiency (VSE)
@@ -226,12 +228,21 @@ class Method:
         best = max(utils)
         rand = mean(utils)
 
-        #import pprint
-        #pprint.pprint(multiResults)
-        vses = VseMethodRun(self.__class__, chooserFuns,
-                    [VseOneRun([(utils[self.winner(result)] - rand) / (best - rand)],tally,chooser)
-                        for (result, chooser, tally) in multiResults[0]])
-        vses.extraEvents=multiResults[1]
+        # import pprint
+        # pprint.pprint(multiResults)
+        vses = VseMethodRun(
+            self.__class__,
+            chooserFuns,
+            [
+                VseOneRun(
+                    [(utils[self.winner(result)] - rand) / (best - rand)],
+                    tally,
+                    chooser,
+                )
+                for (result, chooser, tally) in multiResults[0]
+            ],
+        )
+        vses.extraEvents = multiResults[1]
         return vses
 
     def resultsTable(self, eid, emodel, cands, voters, chooserFuns=(), **args):
@@ -240,23 +251,23 @@ class Method:
         best = max(utils)
         rand = mean(utils)
         rows = []
-        nvot=len(voters)
-        for (result, chooser, tallyItems) in multiResults:
+        nvot = len(voters)
+        for result, chooser, tallyItems in multiResults:
             row = {
-                "eid":eid,
-                "emodel":emodel,
-                "ncand":cands,
-                "nvot":nvot,
-                "best":best,
-                "rand":rand,
-                "method":str(self),
-                "chooser":chooser,#.getName(),
-                "util":utils[self.winner(result)],
-                "vse":(utils[self.winner(result)] - rand) / (best - rand)
+                "eid": eid,
+                "emodel": emodel,
+                "ncand": cands,
+                "nvot": nvot,
+                "best": best,
+                "rand": rand,
+                "method": str(self),
+                "chooser": chooser,  # .getName(),
+                "util": utils[self.winner(result)],
+                "vse": (utils[self.winner(result)] - rand) / (best - rand),
             }
-            #print(tallyItems)
-            for (i, (k, v)) in enumerate(tallyItems):
-                #print("Result: tally ",i,k,v)
+            # print(tallyItems)
+            for i, (k, v) in enumerate(tallyItems):
+                # print("Result: tally ",i,k,v)
                 row[f"tallyName{str(i)}"] = str(k)
                 row[f"tallyVal{str(i)}"] = str(v)
             rows.append(row)
@@ -272,82 +283,97 @@ class Method:
         #         row["tallyName"+str(i)] = str(k)
         #         row["tallyVal"+str(i)] = str(v)
         #     rows.append(row)
-        return(rows)
-
+        return rows
 
     @staticmethod
     def ballotChooserFor(chooserFun):
-        """Takes a chooserFun; returns a ballot chooser using that chooserFun
-        """
+        """Takes a chooserFun; returns a ballot chooser using that chooserFun"""
+
         def ballotChooser(cls, voter, tally):
             return getattr(voter, f"{cls.__name__}_{chooserFun(cls, voter, tally)}")
 
         ballotChooser.__name__ = chooserFun.getName()
         return ballotChooser
 
-    def stratTarget2(self,places):
-        ((frontId,frontResult), (targId, targResult)) = places[:2]
+    def stratTarget2(self, places):
+        ((frontId, frontResult), (targId, targResult)) = places[:2]
         return (frontId, frontResult, targId, targResult)
 
-    def stratTarget3(self,places):
-        ((frontId,frontResult), (targId, targResult)) = places[:3:2]
+    def stratTarget3(self, places):
+        ((frontId, frontResult), (targId, targResult)) = places[:3:2]
         return (frontId, frontResult, targId, targResult)
 
     stratTargetFor = stratTarget2
 
-    def stratBallotFor(self,polls):
+    def stratBallotFor(self, polls):
         """Returns a (function which takes utilities and returns a strategic ballot)
         for the given "polling" info."""
 
-        places = sorted(enumerate(polls),key=lambda x:-x[1]) #from high to low
-        #print("places",places)
+        places = sorted(enumerate(polls), key=lambda x: -x[1])  # from high to low
+        # print("places",places)
         (frontId, frontResult, targId, targResult) = self.stratTargetFor(places)
         n = len(polls)
+
         @rememberBallots
         def stratBallot(cls, voter):
             stratGap = voter[targId] - voter[frontId]
             ballot = [0] * len(voter)
             isStrat = stratGap > 0
-            extras = cls.fillStratBallot(voter, polls, places, n, stratGap, ballot,
-                                frontId, frontResult, targId, targResult)
-            result =  dict(strat=ballot, isStrat=isStrat, stratGap=stratGap)
+            extras = cls.fillStratBallot(
+                voter,
+                polls,
+                places,
+                n,
+                stratGap,
+                ballot,
+                frontId,
+                frontResult,
+                targId,
+                targResult,
+            )
+            result = dict(strat=ballot, isStrat=isStrat, stratGap=stratGap)
             if extras:
                 result.update(extras)
             return result
+
         return stratBallot
+
 
 @decorator
 def rememberBallot(fun):
     """A decorator for a function of the form xxxBallot(cls, voter)
     which memoizes the vote onto the voter in an attribute named <methName>_xxx
     """
+
     def getAndRemember(cls, voter, tally=None):
         ballot = fun(cls, voter)
         setattr(voter, f"{cls.__name__}_{fun.__name__[:-6]}", ballot)
         return ballot
 
     getAndRemember.__name__ = fun.__name__
-    getAndRemember.allTallyKeys = lambda:[]
+    getAndRemember.allTallyKeys = lambda: []
     return getAndRemember
+
 
 @decorator
 def rememberBallots(fun):
     """A decorator for a function of the form xxxBallot(cls, voter)
     which memoizes the vote onto the voter in an attribute named <methName>_xxx
     """
+
     def getAndRemember(cls, voter, tally=None):
         ballots = fun(cls, voter)
         for bType, ballot in ballots.items():
-
             setattr(voter, f"{cls.__name__}_{bType}", ballot)
 
-        return ballots[fun.__name__[:-6]] #leave off the "...Ballot"
+        return ballots[fun.__name__[:-6]]  # leave off the "...Ballot"
 
     getAndRemember.__name__ = fun.__name__
-    getAndRemember.allTallyKeys = lambda:[]
+    getAndRemember.allTallyKeys = lambda: []
     return getAndRemember
 
+
 class CandidateWithCount:
-    def __init__(self, c = [], v = 0):
+    def __init__(self, c=[], v=0):
         self.candidate = c
         self.votes = v
