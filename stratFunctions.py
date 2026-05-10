@@ -1,7 +1,7 @@
 import random
+from collections import defaultdict
 
 from compat import std
-from dataClasses import SideTally
 from mydecorators import autoassign, cached_property
 
 
@@ -148,8 +148,8 @@ def orderOf(standings):
 
 def fuzzyMediaFor(biaser=biaserAround(1)):
     def fuzzyMedia(standings, tally=None):
-        if not tally:
-            tally = SideTally()
+        if tally is None:
+            tally = defaultdict(int)
         bias = biaser(standings) if callable(biaser) else biaser
         result = [s + random.gauss(0, bias) for s in standings]
         tally["changed"] += 0 if orderOf(result)[:2] == orderOf(standings)[:2] else 1
@@ -170,8 +170,8 @@ def biasedMediaFor(biaser=biaserAround(1), numerator=1):
     """
 
     def biasedMedia(standings, tally=None):
-        if not tally:
-            tally = SideTally()
+        if tally is None:
+            tally = defaultdict(int)
         bias = biaser(standings) if callable(biaser) else biaser
         result = standings[:2] + [
             (standing - bias + numerator * (bias / max(i + 2, 1)))
@@ -191,8 +191,8 @@ def skewedMediaFor(biaser):
     """
 
     def skewedMedia(standings, tally=None):
-        if not tally:
-            tally = SideTally()
+        if tally is None:
+            tally = defaultdict(int)
         bias = biaser(standings) if callable(biaser) else biaser
         result = [
             (standing - bias * i / (len(standings) - 1)) for i, standing in enumerate(standings)
