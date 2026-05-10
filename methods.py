@@ -888,7 +888,6 @@ class V321(Mav):
                     ballot[c] = rating
                     if rating and (c in top3):
                         if c == top3[2]:
-                            isStrat = rating == 2
                             rating = 0
                         else:
                             rating -= 1
