@@ -6,7 +6,13 @@ import random
 #from stackexchange...
 def autoargs(*include,**kwargs):   
     def _autoargs(func):
-        attrs,varargs,varkw,defaults=inspect.getargspec(func)
+        spec = inspect.getfullargspec(func)
+        attrs, varargs, varkw, defaults = (
+            spec.args,
+            spec.varargs,
+            spec.varkw,
+            spec.defaults,
+        )
         def sieve(attr):
             if kwargs and attr in kwargs['exclude']: return False
             return not include or attr in include
@@ -353,5 +359,4 @@ def monteCarlo(n):
             print(w,re.majSmith)
             print("funny, huh?")
     return funky
-     
      

@@ -1,6 +1,7 @@
 *.pyc
 python3
 __pycache__
+.venv/
 .pydevproject
 *.csv
 *.rtf

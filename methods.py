@@ -1,12 +1,8 @@
 
 from mydecorators import autoassign, cached_property, setdefaultattr, decorator
 import random
-from numpy.lib.scimath import sqrt
-from numpy.core.fromnumeric import mean, std
-from numpy.lib.function_base import median
-from numpy.ma.core import floor, ceil
-from numpy import percentile, argsort, sign
-from test.test_binop import isnum
+from numpy import argsort, percentile, sign
+from compat import as_builtin_scalar, ceil, floor, isnum, mean, median, sqrt, std
 from debugDump import *
 from math import log
 
@@ -349,7 +345,7 @@ class Mav(Method):
         nGrades = (len(self.baseCuts) + 1)
         i = int((nvot - 1) / 2)
         base = scores[i]
-        while i < nvot and base == base:
+        while i < nvot and scores[i] == base:
             i += 1
         upper =  (base + 0.5) - (i - nvot/2) * nGrades / nvot
         lower = (base) - (i - nvot/2) / nvot
@@ -414,7 +410,7 @@ class Mav(Method):
         def stratBallot(cls, voter):
             frontUtils = [voter[frontId], voter[targId]] #utils of frontrunners
             stratGap = frontUtils[1] - frontUtils[0]
-            if stratGap is 0:
+            if stratGap == 0:
                 strat = extraStrat = [(4 if (util >= frontUtils[0]) else 0)
                                      for util in voter]
                 isStrat = True
@@ -791,7 +787,7 @@ class V321(Mav):
                                 > 0)
                 self.__class__.extraEvents["4beats1"] = fourthWin
 
-        return r2s
+        return [as_builtin_scalar(score) for score in r2s]
 
     def stratBallotFor(self, polls):
         """Returns a function which takes utilities and returns a dict(

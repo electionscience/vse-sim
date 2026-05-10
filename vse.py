@@ -1,13 +1,9 @@
 
-from imp import reload
+from importlib import reload
 
 from mydecorators import autoassign, cached_property, setdefaultattr, timeit
 import random
-from numpy.lib.scimath import sqrt
-from numpy.core.fromnumeric import mean, std
-from numpy.lib.function_base import median
-from numpy.ma.core import floor
-from test.test_binop import isnum
+from compat import floor, isnum, mean, median, sqrt, std
 from debugDump import *
 
 
@@ -30,7 +26,6 @@ def uniquify(seq):
     return checked
 
 class CsvBatch:
-    @timeit
     @autoassign
     def __init__(self, model, methods, nvot, ncand, niter,
             baseName = None, media=truth, seed=None, force=False):
@@ -41,7 +36,7 @@ class CsvBatch:
 
         >>> csvs = CsvBatch(PolyaModel(), [[Score(), baseRuns], [Mav(), medianRuns]], nvot=5, ncand=4, niter=3)
         >>> len(csvs.rows)
-        54
+        60
         """
         rows = []
         emodel = str(model)

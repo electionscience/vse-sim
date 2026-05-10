@@ -7,9 +7,9 @@ See [Voter Satisfaction Efficiency FAQ](http://electionscience.github.io/vse-sim
 
 ## Installing the code
 
-Requirements: python3, scipy, pydoc
+Requirements: Python 3.10+, NumPy, SciPy.
 
-Testing uses pydoc, which should make most things pretty self-documenting.
+Testing uses doctests, which should make most things pretty self-documenting.
 
 E.g.:
 
@@ -17,6 +17,11 @@ E.g.:
     python3 -m doctest voterModels.py
     python3 -m doctest dataClasses.py
     python3 vse.py
+
+Or, using the development dependencies from the Pipfile:
+
+    pipenv install --dev
+    pipenv run python -m pytest --doctest-modules
 
 ## Running simulations
 

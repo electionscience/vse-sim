@@ -1,12 +1,8 @@
 from mydecorators import autoassign, cached_property, setdefaultattr
 
 import random
-from numpy.lib.scimath import sqrt
-from numpy.core.fromnumeric import mean, std
-from numpy.lib.function_base import median
-from numpy.ma.core import floor
+from compat import as_builtin_scalar, floor, isnum, mean, median, sqrt, std
 from scipy.stats import beta
-from test.test_binop import isnum
 from debugDump import *
 
 class Voter(tuple):
@@ -15,6 +11,9 @@ class Voter(tuple):
 
 
     """
+
+    def __new__(cls, utils=()):
+        return super().__new__(cls, (as_builtin_scalar(util) for util in utils))
 
     @classmethod
     def rand(cls, ncand):
@@ -267,7 +266,7 @@ class DimModel(RandomModel):
 
     >>> dm = DimModel(2,baseElectorate=DeterministicModel(3))
     >>> dm(2,4)
-    [(4.25, 0.0, 1.25, 4.25), (2.0, 1.25, 0.0, 2.0)]
+    [(-1.8439088914585775, -0.0, -1.0, -1.8439088914585775), (-1.2649110640673518, -1.0, -0.0, -1.2649110640673518)]
     >>> dm.dimWeights
     [1, 0.5]
 

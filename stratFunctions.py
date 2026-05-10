@@ -2,12 +2,7 @@
 from mydecorators import autoassign, cached_property, setdefaultattr
 from voterModels import *
 import random
-from numpy.lib.scimath import sqrt
-from numpy.core.fromnumeric import mean, std
-from numpy.lib.function_base import median
-from numpy.ma.core import floor
-from numpy import std
-from test.test_binop import isnum
+from compat import floor, isnum, mean, median, sqrt, std
 from debugDump import *
 from dataClasses import *
 
