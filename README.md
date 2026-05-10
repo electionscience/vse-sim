@@ -25,8 +25,8 @@ Or, using the development dependencies from the Pipfile:
 
 To generate local coverage artifacts:
 
-    pipenv run python -m pip install pytest-cov
-    pipenv run python -m pytest --doctest-modules --cov=. --cov-report=term-missing:skip-covered --cov-report=xml:coverage.xml --cov-report=html:htmlcov --junitxml=pytest-results.xml
+    pipenv install --dev
+    pipenv run coverage
 
 The GitHub Actions workflow runs the same coverage check on pushes, pull requests,
 and manual dispatches. It uploads the HTML coverage report plus machine-readable

@@ -37,17 +37,10 @@ jobs:
       - name: Install project dependencies
         run: |
           pipenv sync --dev
-          pipenv run python -m pip install pytest-cov
 
       - name: Run tests with coverage
         run: |
-          pipenv run python -m pytest \
-            --doctest-modules \
-            --cov=. \
-            --cov-report=term-missing:skip-covered \
-            --cov-report=xml:coverage.xml \
-            --cov-report=html:htmlcov \
-            --junitxml=pytest-results.xml
+          pipenv run coverage
 
       - name: Write coverage summary
         if: always()
