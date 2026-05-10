@@ -32,6 +32,14 @@ The GitHub Actions workflow runs the same coverage check on pushes, pull request
 and manual dispatches. It uploads the HTML coverage report plus machine-readable
 coverage and JUnit XML files as workflow artifacts.
 
+## Security automation
+
+GitHub Actions also runs CodeQL code scanning for Python on pushes, pull
+requests, a weekly schedule, and manual dispatches. Dependabot checks Python and
+GitHub Actions dependencies weekly. The dependency review workflow reports pull
+request dependency vulnerabilities; enable the repository Dependency graph in
+GitHub's security settings before making that check required.
+
 ## Running simulations
 
 Try
