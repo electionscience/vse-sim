@@ -1,18 +1,23 @@
-from functools import wraps, update_wrapper
+import time
 from collections.abc import Hashable
+from functools import update_wrapper, wraps
 from inspect import getfullargspec, isfunction
 from itertools import starmap
-import time
 
 _missing = object()
 
 
 def decorator(d):
     "Make function d a decorator: d wraps a function fn."
+
     def _d(fn):
         return update_wrapper(d(fn), fn)
+
     return _d
+
+
 decorator = decorator(decorator)(decorator)
+
 
 def setdefaultattr(obj, name, value):
     try:
@@ -20,6 +25,7 @@ def setdefaultattr(obj, name, value):
     except AttributeError:
         setattr(obj, name, value)
     return value
+
 
 @decorator
 def autoassign(*names, **kwargs):
@@ -50,42 +56,50 @@ def autoassign(*names, **kwargs):
         def method(self, foo, bar, baz): ...
     """
     if kwargs:
-        exclude, f = set(kwargs['exclude']), None
+        exclude, f = set(kwargs["exclude"]), None
         sieve = lambda l: filter(lambda nv: nv[0] not in exclude, l)
     elif len(names) == 1 and isfunction(names[0]):
         f = names[0]
-        sieve = lambda l:l
+        sieve = lambda l: l
     else:
         names, f = set(names), None
         sieve = lambda l: [nv for nv in l if nv[0] in names]
+
     def decorator(f):
         spec = getfullargspec(f)
         fargnames, fdefaults = spec.args, spec.defaults
         # Remove self from fargnames and make sure fdefault is a tuple
         fargnames, fdefaults = fargnames[1:], fdefaults or ()
         defaults = list(sieve(zip(reversed(fargnames), reversed(fdefaults))))
+
         @wraps(f)
         def decorated(self, *args, **kwargs):
             assigned = dict(sieve(zip(fargnames, args)))
             assigned.update(sieve(kwargs.items()))
-            for _ in starmap(assigned.setdefault, defaults): pass
+            for _ in starmap(assigned.setdefault, defaults):
+                pass
             self.__dict__.update(assigned)
             return f(self, *args, **kwargs)
+
         return decorated
+
     return f and decorator(f) or decorator
 
 
 import functools
 
+
 @decorator
 class memoized(object):
-    '''Decorator. Caches a function's return value each time it is called.
+    """Decorator. Caches a function's return value each time it is called.
     If called later with the same arguments, the cached value is returned
     (not reevaluated).
-    '''
+    """
+
     def __init__(self, func):
         self.func = func
         self.cache = {}
+
     def __call__(self, *args):
         if not isinstance(args, Hashable):
             # uncacheable. a list, for instance.
@@ -96,11 +110,13 @@ class memoized(object):
         value = self.func(*args)
         self.cache[args] = value
         return value
+
     def __repr__(self):
-        '''Return the function's docstring.'''
+        """Return the function's docstring."""
         return self.func.__doc__
+
     def __get__(self, obj, objtype):
-        '''Support instance methods.'''
+        """Support instance methods."""
         return functools.partial(self.__call__, obj)
 
 
@@ -148,11 +164,11 @@ class cached_property(object):
 
 @decorator
 class curried(object):
-    '''
+    """
     Decorator that returns a function that keeps returning functions
     until all arguments are supplied; then the original function is
     evaluated.
-    '''
+    """
 
     def __init__(self, func, *a):
         self.func = func
@@ -165,6 +181,7 @@ class curried(object):
         else:
             return self.func(*args)
 
+
 @decorator
 def timeit(method):
 
@@ -173,8 +190,7 @@ def timeit(method):
         result = method(*args, **kw)
         te = time.time()
 
-        print('%r (%r, %r) %2.2f sec' %
-              (method.__name__, args, kw, te-ts))
+        print("%r (%r, %r) %2.2f sec" % (method.__name__, args, kw, te - ts))
         return result
 
     return timed
