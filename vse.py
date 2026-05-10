@@ -7,7 +7,7 @@ from debugDump import *
 from methods import *
 from mydecorators import autoassign
 from stratFunctions import *
-from voterModels import *
+from voterModels import truth
 
 join = os.path.join
 
