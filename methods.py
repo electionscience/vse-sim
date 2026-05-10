@@ -5,7 +5,7 @@ from numpy import argsort, percentile, sign
 from compat import as_builtin_scalar, floor, mean
 from dataClasses import *
 from debugDump import *
-from stratFunctions import *
+from stratFunctions import rememberBallot
 
 # def sign(x):
 #     if x>0:
