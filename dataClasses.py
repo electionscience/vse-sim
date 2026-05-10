@@ -1,7 +1,7 @@
 import random
 
 from compat import isnum, mean
-from debugDump import *
+import debugDump
 from mydecorators import autoassign, decorator
 from stratFunctions import *
 
