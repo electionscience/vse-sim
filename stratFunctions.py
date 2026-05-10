@@ -2,18 +2,19 @@ import random
 from collections import defaultdict
 
 from compat import std
-from mydecorators import autoassign, cached_property
+from mydecorators import cached_property
 
 
 ###################Choosers
 class Chooser:
     tallyKeys = []
 
-    @autoassign
-    def __init__(self, choice, subChoosers=[]):
+    def __init__(self, choice=None, subChoosers=None):
         """Subclasses should just copy/paste this logic because
         each will have its own parameters and so that's easiest."""
-        pass
+        if choice is not None:
+            self.choice = choice
+        self.subChoosers = [] if subChoosers is None else subChoosers
 
     def getName(self):
         if hasattr(self, "choice"):  # only true for base class
@@ -59,9 +60,8 @@ class LazyChooser(Chooser):
 
     tallyKeys = [""]
 
-    @autoassign
-    def __init__(self, subChoosers=[beHon, beX]):
-        pass
+    def __init__(self, subChoosers=None):
+        super().__init__(subChoosers=[beHon, beX] if subChoosers is None else subChoosers)
 
     def __call__(self, cls, voter, tally):
         if getattr(voter, f"{cls.__name__}_hon") == getattr(voter, f"{cls.__name__}_strat"):
@@ -81,9 +81,8 @@ class OssChooser(Chooser):
 
     """
 
-    @autoassign
-    def __init__(self, subChoosers=[beHon, beStrat]):
-        pass
+    def __init__(self, subChoosers=None):
+        super().__init__(subChoosers=[beHon, beStrat] if subChoosers is None else subChoosers)
 
     def __call__(self, cls, voter, tally):
         hon, strat = self.subChoosers
@@ -99,9 +98,10 @@ class OssChooser(Chooser):
 
 
 class ProbChooser(Chooser):
-    @autoassign
     def __init__(self, probs):
+        self.probs = probs
         self.subChoosers = [chooser for (p, chooser) in probs]
+        super().__init__(subChoosers=self.subChoosers)
 
     def __call__(self, cls, voter, tally):
         r = random.random()

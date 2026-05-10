@@ -90,11 +90,6 @@ class PersonalityVoter(Voter):
         self.personality = random.gauss(0, 1)  # probably to be used for strategic propensity
         # but in future, could be other clustering voter variability, such as media awareness
 
-    # @classmethod
-    # def rand(cls, ncand):
-    #    voter = super().rand(ncand)
-    #    return voter
-
     @classmethod
     def resetClusters(cls):
         cls.cluster_count = 0

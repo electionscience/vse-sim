@@ -933,14 +933,18 @@ class Schulze(RankedMethod):
             for j in range(n):
                 if i != j:
                     beatStrength[i][j] = cmat[i][j] if cmat[i][j] > cmat[j][i] else 0
-                for i in range(n):
-                    for j in range(n):
-                        if i != j:
-                            for k in range(n):
-                                if i != k and j != k:
-                                    beatStrength[j][k] = max(
-                                        beatStrength[j][k],
-                                        min(beatStrength[j][i], beatStrength[i][k]),
+
+                for pivot in range(n):
+                    for source in range(n):
+                        if pivot != source:
+                            for target in range(n):
+                                if pivot != target and source != target:
+                                    beatStrength[source][target] = max(
+                                        beatStrength[source][target],
+                                        min(
+                                            beatStrength[source][pivot],
+                                            beatStrength[pivot][target],
+                                        ),
                                     )
 
         for i in range(n):
