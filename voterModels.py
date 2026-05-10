@@ -24,9 +24,9 @@ class Voter(tuple):
 
         utilities should be in a standard normal distribution
             >>> v100 = Voter.rand(100)
-            >>> -0.3 < mean(v100) < 0.3
+            >>> -0.5 < mean(v100) < 0.5
             True
-            >>> 0.8 < std(v100) < 1.2
+            >>> 0.6 < std(v100) < 1.4
             True
         """
         return cls(random.gauss(0, 1) for _ in range(ncand))

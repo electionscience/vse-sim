@@ -889,7 +889,7 @@ class V321(Mav):
             return stratBallo2
 
         if self.extraEvents["4beats1"]:
-            fourth = places[3][1]
+            fourth = places[3][0]
             first = top3[1]
 
             @rememberBallots
@@ -904,7 +904,7 @@ class V321(Mav):
                         ballot[c] = rating
                         if rating and (c == fourth):
                             rating -= 2
-                        return dict(strat=ballot, isStrat=True, stratGap=stratGap)
+                    return dict(strat=ballot, isStrat=True, stratGap=stratGap)
 
                 return stratBallot(cls, voter)
 
@@ -1006,8 +1006,6 @@ class Schulze(RankedMethod):
             plurTally = [0] * n
             plur3Tally = [0] * 3
             cond3 = [c for c, v in condOrder[:3]]
-            if condOrder is None:
-                condOrder = sorted(enumerate(result), key=lambda x: -x[1])
             for b in ballots:
                 b3 = [b[c] for c in cond3]
                 plurTally[b.index(max(b))] += 1

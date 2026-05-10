@@ -17,7 +17,7 @@ python_version = "3.10"
 
 [scripts]
 test = "python -m pytest --doctest-modules"
-coverage = "python -m pytest --doctest-modules --cov=. --cov-report=term-missing:skip-covered --cov-report=xml:coverage.xml --cov-report=html:htmlcov --junitxml=pytest-results.xml"
+coverage = "python -m pytest --doctest-modules --cov=. --cov-fail-under=100 --cov-report=term-missing:skip-covered --cov-report=xml:coverage.xml --cov-report=html:htmlcov --junitxml=pytest-results.xml"
 lint = "ruff check ."
 format = "ruff format ."
 format-check = "ruff format --check ."

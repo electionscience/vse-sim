@@ -1,5 +1,4 @@
 import time
-from collections.abc import Hashable
 from functools import update_wrapper, wraps
 from inspect import getfullargspec, isfunction
 from itertools import starmap
@@ -27,7 +26,6 @@ def setdefaultattr(obj, name, value):
     return value
 
 
-@decorator
 def autoassign(*names, **kwargs):
     """
     autoassign(function) -> method
@@ -101,12 +99,12 @@ class memoized(object):
         self.cache = {}
 
     def __call__(self, *args):
-        if not isinstance(args, Hashable):
-            # uncacheable. a list, for instance.
-            # better to not cache than blow up.
-            return self.func(*args)
-        if args in self.cache:
+        try:
             return self.cache[args]
+        except KeyError:
+            pass
+        except TypeError:
+            return self.func(*args)
         value = self.func(*args)
         self.cache[args] = value
         return value
@@ -162,7 +160,6 @@ class cached_property(object):
         return value
 
 
-@decorator
 class curried(object):
     """
     Decorator that returns a function that keeps returning functions
