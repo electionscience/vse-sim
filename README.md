@@ -36,8 +36,9 @@ coverage and JUnit XML files as workflow artifacts.
 
 GitHub Actions also runs CodeQL code scanning for Python on pushes, pull
 requests, a weekly schedule, and manual dispatches. Dependabot checks Python and
-GitHub Actions dependencies weekly, and the dependency review workflow blocks
-pull requests that introduce dependencies with moderate or higher vulnerabilities.
+GitHub Actions dependencies weekly. The dependency review workflow reports pull
+request dependency vulnerabilities; enable the repository Dependency graph in
+GitHub's security settings before making that check required.
 
 ## Running simulations
 
