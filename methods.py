@@ -804,7 +804,6 @@ class V321(Mav):
         # print([semifinalists[o] for o in o1s]) #[third, second, first] by above-bottom
         # print("r2s",r2s)
         r2s[semifinalists[o1s[0]]] -= (o1s[0] + 1) * 0.75  # non-finalist below finalists
-        semiupset = o1s[1] < o1s[2]  # semifinalist and finalist order are different
 
         (runnerUp, top) = semifinalists[o1s[1]], semifinalists[o1s[2]]
         upset = sum(sign(ballot[runnerUp] - ballot[top]) for ballot in ballots)
