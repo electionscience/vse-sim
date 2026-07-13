@@ -114,6 +114,8 @@ Click to go to interactive versions of the following graphs:
 
 [![Effectiveness of strategies](./vsestrat.png)](./stratstuff.html)
 
+The IRV/RCV points in these legacy charts were calculated before a simulator correction. Use the [corrected IRV/RCV recalculation](./irv-recalculation) for IRV comparisons.
+
 Or, broken down by scenario type:
 
 [VSE](./vsebreakdown.html)
