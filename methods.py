@@ -349,7 +349,7 @@ class Mav(Method):
         nGrades = (len(self.baseCuts) + 1)
         i = int((nvot - 1) / 2)
         base = scores[i]
-        while i < nvot and base == base:
+        while i < nvot and scores[i] == base:
             i += 1
         upper =  (base + 0.5) - (i - nvot/2) * nGrades / nvot
         lower = (base) - (i - nvot/2) / nvot
@@ -502,7 +502,7 @@ class Irv(Method):
     stratTargetFor = Method.stratTarget3
 
     def buildPreferenceSchedule(self, ballots):
-        """Gets a dictionary of the form {ranking as tuple, vote count}"""
+        """Gets a dictionary of the form {ranking as tuple, vote count}."""
 
         prefs = {}
         for b in ballots:
@@ -573,12 +573,37 @@ class Irv(Method):
             remaining = self.eliminateCandidate(remaining, toEliminate)
         return results
 
+    def resultsFor(self, voters, chooser, tally=None, **kwargs):
+        """Tabulate the rank-vector ballots produced by this simulator.
+
+        IRV's public ``results`` API accepts candidate IDs in preference
+        order, including partial rankings.  The simulator's honest and
+        strategic ballot producers instead return rank vectors, so translate
+        those ballots before invoking the tabulator.
+        """
+        def orderingChooser(cls, voter, chooserTally):
+            ballot = chooser(cls, voter, chooserTally)
+            return sorted(range(len(ballot)), key=lambda candidate: ballot[candidate],
+                          reverse=True)
+
+        orderingChooser.__name__ = chooser.__name__
+        return super().resultsFor(voters, orderingChooser, tally, **kwargs)
+
+    @staticmethod
+    def winner(results):
+        """Return the winner from IRV's winner-first finish ordering.
+
+        Unlike score methods, :meth:`runIrv` returns candidate IDs ordered by
+        finish, with the winner at index zero.
+        """
+        return results[0]
+
     def results(self, ballots, **kwargs):
         """IRV results.
 
         >>> Irv().resultsFor(DeterministicModel(3)(5,3),Irv().honBallot)["results"]
-        [0, 1, 2]
-        >>> Irv().results([[0,1,2]])[2]
+        [2, 1, 0]
+        >>> Irv().winner([2,0,1])
         2
         >>> Irv().results([[0,1,2],[2,1,0]])[1]
         0

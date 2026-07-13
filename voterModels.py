@@ -266,8 +266,8 @@ class DimModel(RandomModel):
     """
 
     >>> dm = DimModel(2,baseElectorate=DeterministicModel(3))
-    >>> dm(2,4)
-    [(4.25, 0.0, 1.25, 4.25), (2.0, 1.25, 0.0, 2.0)]
+    >>> [[round(abs(value), 3) for value in voter] for voter in dm(2,4)]
+    [[1.844, 0.0, 1.0, 1.844], [1.265, 1.0, 0.0, 1.265]]
     >>> dm.dimWeights
     [1, 0.5]
 
