@@ -1,13 +1,11 @@
-from mydecorators import autoassign, cached_property, setdefaultattr
-
 import random
+
+from numpy.core.fromnumeric import mean, std  # noqa: F401
 from numpy.lib.scimath import sqrt
-from numpy.core.fromnumeric import mean, std
-from numpy.lib.function_base import median
-from numpy.ma.core import floor
 from scipy.stats import beta
-from test.test_binop import isnum
-from debugDump import *
+
+from mydecorators import autoassign, cached_property
+
 
 class Voter(tuple):
     """A tuple of candidate utilities.
@@ -45,7 +43,7 @@ class Voter(tuple):
         standard normal to start with, the result will be standard normal too.
 
         Length must be the same
-            >>> Voter([1,2]).hybridWith(Voter([1,2,3]),1)
+            >>> Voter([1,2]).hybridWith(Voter([1,2,3]),1) # doctest: +IGNORE_EXCEPTION_DETAIL
             Traceback (most recent call last):
               ...
             AssertionError
@@ -63,7 +61,7 @@ class Voter(tuple):
                                  for i in range(len(self)))
 
     def copyWithUtils(self, utils):
-        """create a new voter with attrs as self and given utils.
+        """Create a new voter with attrs as self and given utils.
 
         This version is a stub, since this voter class has no attrs."""
         return self.__class__(utils)
@@ -115,7 +113,7 @@ class PersonalityVoter(Voter):
 
 class Electorate(list):
     """A list of voters.
-    Each voter is a list of candidate utilities"""
+    Each voter is a list of candidate utilities."""
     @cached_property
     def socUtils(self):
         """Return mean utility across electorate for each candidate: their social utilities.
@@ -124,7 +122,7 @@ class Electorate(list):
         >>> e.socUtils
         [2.0, 3.0]
         """
-        return list(map(mean,zip(*self)))
+        return list(map(mean,zip(*self, strict=False)))
 
 
 class RandomModel:
@@ -157,7 +155,7 @@ class DeterministicModel(RandomModel):
 
 class ReverseModel(RandomModel):
     """Creates an even number of voters in two diametrically-opposed camps
-    (ie, opposite utilities for all candidates)
+    (ie, opposite utilities for all candidates).
 
     >>> e4 = ReverseModel()(4,3)
     >>> [len(v) for v in e4]
@@ -239,9 +237,9 @@ class DimVoter(PersonalityVoter):
             caring = [1] * len(v)
             totCaring = e.totWeight
         else:
-            totCaring = sum((c*w)**2 for c,w in zip(caring, e.dimWeights))
+            totCaring = sum((c*w)**2 for c,w in zip(caring, e.dimWeights, strict=False))
         me = cls(-sqrt(
-            sum(((vd - cd)*w*cares)**2 for (vd, cd, w, cares) in zip(v,c,e.dimWeights,caring)) /
+            sum(((vd - cd)*w*cares)**2 for (vd, cd, w, cares) in zip(v,c,e.dimWeights,caring, strict=False)) /
                             totCaring)
           for c in e.cands)
         me.copyAttrsFrom(v)

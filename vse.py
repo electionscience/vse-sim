@@ -1,22 +1,112 @@
 
-from importlib import reload
-
-from mydecorators import autoassign, cached_property, setdefaultattr, timeit
+import csv
+import os
 import random
-from numpy.lib.scimath import sqrt
-from numpy.core.fromnumeric import mean, std
-from numpy.lib.function_base import median
-from numpy.ma.core import floor
-from test.test_binop import isnum
-from debugDump import *
-
-
-from voterModels import *
-from stratFunctions import *
-from methods import *
 from uuid import uuid4
-import csv, os
+
+from debugDump import debug, setDebug
+from methods import (
+    IRNR,
+    V321,
+    Borda,
+    BulletyApprovalWith,
+    Irv,
+    IrvPrime,
+    Mav,
+    Mj,
+    Plurality,
+    Rp,
+    Schulze,
+    Score,
+    Srv,
+)
+from mydecorators import autoassign, timeit
+from stratFunctions import (
+    Chooser,
+    LazyChooser,
+    OssChooser,
+    ProbChooser,
+    beHon,
+    beStrat,
+    beX,
+    biasedMediaFor,
+    biaserAround,
+    fuzzyMediaFor,
+    orderOf,
+    skewedMediaFor,
+    topNMediaFor,
+    truth,
+)
+from voterModels import (
+    DeterministicModel,
+    DimElectorate,
+    DimModel,
+    DimVoter,
+    Electorate,
+    KSElectorate,
+    KSModel,
+    PersonalityVoter,
+    PolyaModel,
+    QModel,
+    RandomModel,
+    ReverseModel,
+    Voter,
+    rbeta,
+)
+
 join = os.path.join
+
+__all__ = [
+    "Borda",
+    "BulletyApprovalWith",
+    "Chooser",
+    "CsvBatch",
+    "DeterministicModel",
+    "DimElectorate",
+    "DimModel",
+    "DimVoter",
+    "Electorate",
+    "IRNR",
+    "Irv",
+    "IrvPrime",
+    "KSElectorate",
+    "KSModel",
+    "LazyChooser",
+    "Mav",
+    "Mj",
+    "OssChooser",
+    "PersonalityVoter",
+    "Plurality",
+    "PolyaModel",
+    "ProbChooser",
+    "QModel",
+    "RandomModel",
+    "ReverseModel",
+    "Rp",
+    "Schulze",
+    "Score",
+    "Srv",
+    "V321",
+    "Voter",
+    "allSystems",
+    "baseRuns",
+    "beHon",
+    "beStrat",
+    "beX",
+    "biasedMediaFor",
+    "biaserAround",
+    "debug",
+    "fuzzyMediaFor",
+    "markMethods",
+    "medianRuns",
+    "orderOf",
+    "rbeta",
+    "setDebug",
+    "skewedMediaFor",
+    "topNMediaFor",
+    "truth",
+    "uniquify",
+]
 
 
 
@@ -56,7 +146,7 @@ class CsvBatch:
             if not force:
                 assert not repo.is_dirty()
             self.repo_version = repo.head.commit.hexsha
-        except:
+        except Exception:
             self.repo_version = 'unknown repo version'
         for i in range(niter):
             eid = uuid4()
@@ -70,7 +160,7 @@ class CsvBatch:
             self.saveFile(baseName)
 
     def saveFile(self, baseName="SimResults"):
-        """print the result of doVse in an accessible format.
+        """Print the result of doVse in an accessible format.
         for instance:
 
         csvs.saveFile()

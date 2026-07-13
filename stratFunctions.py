@@ -1,25 +1,20 @@
 
-from mydecorators import autoassign, cached_property, setdefaultattr
-from voterModels import *
 import random
-from numpy.lib.scimath import sqrt
-from numpy.core.fromnumeric import mean, std
-from numpy.lib.function_base import median
-from numpy.ma.core import floor
-from numpy import std
-from test.test_binop import isnum
-from debugDump import *
-from dataClasses import *
+
+from numpy.core.fromnumeric import std
+
+from dataClasses import SideTally
+from mydecorators import autoassign, cached_property
 
 
-
-
-###################Choosers
 class Chooser:
+    """
+    Choosers are used to choose the winner of an election.
+    """
     tallyKeys = []
 
     @autoassign
-    def __init__(self, choice, subChoosers=[]):
+    def __init__(self, choice, subChoosers=None):
         """Subclasses should just copy/paste this logic because
         each will have its own parameters and so that's easiest."""
         pass
@@ -66,8 +61,9 @@ class LazyChooser(Chooser):
 
     tallyKeys = [""]
     @autoassign
-    def __init__(self, subChoosers=[beHon, beX]):
-        pass
+    def __init__(self, subChoosers=None):
+        if self.subChoosers is None:
+            self.subChoosers = [beHon, beX]
 
 
     def __call__(self, cls, voter, tally):
@@ -89,8 +85,9 @@ class OssChooser(Chooser):
 
     """
     @autoassign
-    def __init__(self, subChoosers = [beHon, beStrat]):
-        pass
+    def __init__(self, subChoosers = None):
+        if self.subChoosers is None:
+            self.subChoosers = [beHon, beStrat]
 
     def __call__(self, cls, voter, tally):
         hon, strat = self.subChoosers
@@ -160,7 +157,7 @@ def fuzzyMediaFor(biaser = biaserAround(1)):
 
 def biasedMediaFor(biaser=biaserAround(1),numerator=1):
     """
-    if numerator is 1:
+    If numerator is 1:
     0, 0, -1/2, -2/3, -3/4....
     if numerator is 1.5:
         0,0,-.25, -.5, -.625, -.7
@@ -185,7 +182,7 @@ def biasedMediaFor(biaser=biaserAround(1),numerator=1):
 def skewedMediaFor(biaser):
     """
 
-    [0, -1/3, -2/3, -1]
+    [0, -1/3, -2/3, -1].
     """
     def skewedMedia(standings, tally=None):
         if not tally:
