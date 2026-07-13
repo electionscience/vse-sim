@@ -17,9 +17,7 @@ from matplotlib.lines import Line2D
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from scripts.recalculate_irv_pages import recalculate
-from scripts.recalculate_irv_pages import DEFAULT_WORKERS
-
+from scripts.recalculate_irv_pages import DEFAULT_WORKERS, recalculate  # noqa: E402
 
 STRATEGIES = [
     "a.100% honest",
@@ -95,7 +93,7 @@ def method_number(label):
 def refreshed_vse_data(results):
     """Load VSE points and replace the complete IRV strategy series."""
     data = embedded_data(ROOT / "docs" / "vse-graph.html")
-    for index, (method, strategy) in enumerate(zip(data["y"], data["col_var"])):
+    for index, (method, strategy) in enumerate(zip(data["y"], data["col_var"], strict=False)):
         if "IRV/RCV" in method:
             data["x"][index] = results[IRV_CHOOSERS[strategy]]
     return data
@@ -149,7 +147,7 @@ def refresh_interactive_charts(results, outcomes, scenario_results, scenario_out
 
 
 def render_vse(data, output, size, selected=False):
-    points = list(zip(data["x"], data["y"], data["col_var"]))
+    points = list(zip(data["x"], data["y"], data["col_var"], strict=False))
     if selected:
         points = [point for point in points if point[1] in SMALL_METHODS]
         labels = list(SMALL_METHODS)
@@ -181,7 +179,7 @@ def render_vse(data, output, size, selected=False):
         frameon=False,
         fontsize=8,
     )
-    figure.subplots_adjust(left=0.14 if selected else 0.14, right=0.80, bottom=0.12, top=0.96)
+    figure.subplots_adjust(left=0.14, right=0.80, bottom=0.12, top=0.96)
     figure.savefig(output, dpi=100)
     plt.close(figure)
 
@@ -194,7 +192,7 @@ def render_strategy(results, outcomes, output):
 
     figure, axis = plt.subplots(figsize=(9.5, 6.77), dpi=100)
     palette = plt.get_cmap("tab20")
-    for index, (x, y, label) in enumerate(zip(data["x"], data["y"], data["lab"])):
+    for index, (x, y, label) in enumerate(zip(data["x"], data["y"], data["lab"], strict=False)):
         axis.scatter(x, y, s=65, color=palette(index), zorder=3)
         axis.annotate(label, (x, y), xytext=(5, 5), textcoords="offset points", fontsize=8)
     axis.set(xlim=(0, 1), ylim=(0, 1), xlabel="stratWorks", ylabel="stratBackfire")

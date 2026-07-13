@@ -38,4 +38,4 @@ Other assumptions about _approval voting_:
 
 - The issue is that in approval voting, it's not entirely clear what constitutes an "honest vote"; how many candidates should a voter approve? This has led some people to criticize the method, suggesting that it leads to too many "bullet votes" for just one candidate. However, when I tested the method with realistic clusters of voters and issues, I found that including up to 70% of bullet voters actually improved the outcome by a tiny amount, making it slightly more robust against strategy (whether or not the strategic voters bullet voted). Thus, I find this criticism to be without merit.
 
-If you want to see a figure which includes all of the above methods, see [here](./).
+If you want to see a figure which includes all of the above methods, see the [full VSE FAQ](./).

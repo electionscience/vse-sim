@@ -1,8 +1,11 @@
-import unittest
 import doctest
-import vse, voterModels, stratFunctions, methods, dataClasses
 
-from debugDump import *
+import dataClasses
+import methods
+import stratFunctions
+import voterModels
+import vse
+from debugDump import debug, setDebug
 
 debug("Hi")
 setDebug(False)

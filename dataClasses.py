@@ -1,16 +1,16 @@
 
-from mydecorators import autoassign, cached_property, setdefaultattr, decorator
 import random
-from numpy.lib.scimath import sqrt
-from numpy.core.fromnumeric import mean, std
-from numpy.lib.function_base import median
-from numpy.ma.core import floor
-from test.test_binop import isnum
-from debugDump import *
-from uuid import uuid4
+from collections import defaultdict
+
+from numpy.core.fromnumeric import mean
+
+from mydecorators import autoassign, decorator
 
 
-from stratFunctions import *
+def isnum(x):
+    """Test whether an object is an instance of a built-in numeric type."""
+    return next((1 for T in (int, float, complex) if isinstance(x, T)), 0)
+
 
 class VseOneRun:
     @autoassign
@@ -23,8 +23,6 @@ class VseMethodRun:
         pass
 
 
-####data holders for output
-from collections import defaultdict
 class SideTally(defaultdict):
     """Used for keeping track of how many voters are being strategic, etc.
 
@@ -69,7 +67,8 @@ class SideTally(defaultdict):
 
     def fullSerialize(self):
         try:
-            kl = self.keyList
+            return ([self[key] for key in self.keyList] +
+                    [self[key] for key in self.keys() if key not in self.keyList])
         except AttributeError:
             return [self[key] for key in self.keys()]
 
@@ -99,12 +98,10 @@ class Tallies(list):
     [[0], [4], [3], []]
     """
     def __iter__(self):
-        try:
-            self.used
+        if hasattr(self, "used"):
             return super().__iter__()
-        except:
-            self.used = True
-            return self
+        self.used = True
+        return self
 
     def __next__(self):
         tally = SideTally()
@@ -130,11 +127,11 @@ class Method:
         """
         if type(ballots) is not list:
             ballots = list(ballots)
-        return list(map(self.candScore,zip(*ballots)))
+        return list(map(self.candScore,zip(*ballots, strict=False)))
 
     @staticmethod #cls is provided explicitly, not through binding
     def honBallot(cls, utils):
-        """Takes utilities and returns an honest ballot
+        """Takes utilities and returns an honest ballot.
         """
         raise NotImplementedError(f"{cls} needs honBallot")
 
@@ -164,7 +161,7 @@ class Method:
         return lambda cls, utilities, stratTally: utilities
 
     def resultsFor(self, voters, chooser, tally=None, **kwargs):
-        """create ballots and get results.
+        """Create ballots and get results.
 
         Again, test on subclasses.
         """
@@ -215,7 +212,7 @@ class Method:
         extraTallies = Tallies()
         results = ([strat, oss, smart] +
                 [self.resultsFor(voters, self.ballotChooserFor(chooserFun), aTally)
-                    for (chooserFun, aTally) in zip(chooserFuns, extraTallies)]
+                    for (chooserFun, aTally) in zip(chooserFuns, extraTallies, strict=False)]
                   )
         return ([(hon["results"], hon["chooser"],
                         list(self.__class__.extraEvents.items()))]  +
@@ -281,7 +278,7 @@ class Method:
 
     @staticmethod
     def ballotChooserFor(chooserFun):
-        """Takes a chooserFun; returns a ballot chooser using that chooserFun
+        """Takes a chooserFun; returns a ballot chooser using that chooserFun.
         """
         def ballotChooser(cls, voter, tally):
             return getattr(voter, f"{cls.__name__}_{chooserFun(cls, voter, tally)}")
@@ -323,7 +320,7 @@ class Method:
 @decorator
 def rememberBallot(fun):
     """A decorator for a function of the form xxxBallot(cls, voter)
-    which memoizes the vote onto the voter in an attribute named <methName>_xxx
+    which memoizes the vote onto the voter in an attribute named <methName>_xxx.
     """
     def getAndRemember(cls, voter, tally=None):
         ballot = fun(cls, voter)
@@ -337,7 +334,7 @@ def rememberBallot(fun):
 @decorator
 def rememberBallots(fun):
     """A decorator for a function of the form xxxBallot(cls, voter)
-    which memoizes the vote onto the voter in an attribute named <methName>_xxx
+    which memoizes the vote onto the voter in an attribute named <methName>_xxx.
     """
     def getAndRemember(cls, voter, tally=None):
         ballots = fun(cls, voter)

@@ -1,25 +1,12 @@
 
 import random
-from math import log
-from test.test_binop import isnum
 
-from numpy import argsort, percentile, sign
-from numpy.core.fromnumeric import mean, std
-from numpy.lib.function_base import median
-from numpy.lib.scimath import sqrt
-from numpy.ma.core import ceil, floor
+from numpy import argsort, mean, percentile, sign
+from numpy.ma.core import floor
 
-from dataClasses import *
-from debugDump import *
-from mydecorators import autoassign, cached_property, decorator, setdefaultattr
-from stratFunctions import *
+from dataClasses import CandidateWithCount, Method, rememberBallot, rememberBallots
+from voterModels import DeterministicModel, Voter  # noqa: F401
 
-# def sign(x):
-#     if x>0:
-#         return 1
-#     if x<0:
-#         return -1
-#     return 0
 
 ####EMs themselves
 class Borda(Method):
@@ -105,7 +92,7 @@ class Plurality(RankedMethod):
     @staticmethod #cls is provided explicitly, not through binding
     @rememberBallot
     def honBallot(cls, utils):
-        """Takes utilities and returns an honest ballot
+        """Takes utilities and returns an honest ballot.
 
         >>> Plurality.honBallot(Plurality, Voter([-3,-2,-1]))
         [0, 0, 1]
@@ -192,7 +179,7 @@ def Score(topRank=10, asClass=False):
         @staticmethod #cls is provided explicitly, not through binding
         @rememberBallot
         def honBallot(cls, utils):
-            """Takes utilities and returns an honest ballot (on 0..10)
+            """Takes utilities and returns an honest ballot (on 0..10).
 
 
             honest ballots work as expected
@@ -245,7 +232,7 @@ def BulletyApprovalWith(bullets=0.5, asClass=False):
         @staticmethod #cls is provided explicitly, not through binding
         @rememberBallot
         def honBallot(cls, utils):
-            """Takes utilities and returns an honest ballot (on 0..10)
+            """Takes utilities and returns an honest ballot (on 0..10).
 
 
             honest ballots work as expected
@@ -299,7 +286,7 @@ def Srv(topRank=10):
 
 
 def toVote(cutoffs, util):
-    """maps one util to a vote, using cutoffs.
+    """Maps one util to a vote, using cutoffs.
 
     Used by Mav, but declared outside to avoid method binding overhead."""
     for vote in range(len(cutoffs)):
@@ -309,7 +296,7 @@ def toVote(cutoffs, util):
 
 
 class Mav(Method):
-    """Majority Approval Voting
+    """Majority Approval Voting.
     """
 
 
@@ -329,7 +316,7 @@ class Mav(Method):
     specificPercentiles = [25,50,75,90]
 
     def candScore(self, scores):
-        """For now, only works correctly for odd nvot
+        """For now, only works correctly for odd nvot.
 
         Basic tests
             >>> Mav().candScore([1,2,3,4,5])
@@ -364,9 +351,10 @@ class Mav(Method):
     @staticmethod #cls is provided explicitly, not through binding
     @rememberBallot
     def honBallot(cls, voter):
-        """Takes utilities and returns an honest ballot (on 0..4)
+        """Takes utilities and returns an honest ballot (on 0..4).
 
         honest ballot works as intended, gives highest grade to highest utility:
+            >>> Mav.specificCuts = None
             >>> Mav().honBallot(Mav, Voter([-1,-0.5,0.5,1,1.1]))
             [0, 1, 2, 3, 4]
 
@@ -515,7 +503,7 @@ class Irv(Method):
         return prefs
 
     def eliminateCandidate(self, inputPrefs, toEliminate):
-        """Gets a dictionary of the form {ranking as tuple, vote count} with toEliminate removed"""
+        """Gets a dictionary of the form {ranking as tuple, vote count} with toEliminate removed."""
 
         if not isinstance(toEliminate, CandidateWithCount):
             return inputPrefs
@@ -538,7 +526,7 @@ class Irv(Method):
         return prefs
 
     def candidateVotes(self, prefSchedule):
-        """Gets a list of CandidateWithCount, from highest to lowest"""
+        """Gets a list of CandidateWithCount, from highest to lowest."""
         candidates = {}
         for ranking, votes in prefSchedule.items():
             candidate = ranking[0]
@@ -551,7 +539,7 @@ class Irv(Method):
         # care
         alternates = []
         trackedalt = set()
-        for ranking, votes in prefSchedule.items():
+        for ranking, _votes in prefSchedule.items():
             for alternate in ranking[1:]:
                 if (alternate not in candidates) and alternate not in trackedalt:
                     alternates.append(CandidateWithCount(alternate, 0))
@@ -618,7 +606,7 @@ class Irv(Method):
     @staticmethod #cls is provided explicitly, not through binding
     @rememberBallot
     def honBallot(cls, voter):
-        """Takes utilities and returns an honest ballot
+        """Takes utilities and returns an honest ballot.
 
         >>> Irv.honBallot(Irv,Voter([4,1,6,3]))
         [2, 0, 3, 1]
@@ -660,11 +648,11 @@ class Irv(Method):
                 i -= 1
         #assert list(range(n)) == sorted(ballot)
         assert i == -1
-        
+
 class IrvPrime(Irv):
     """
     IRV Prime.
-    
+
     See https://electowiki.org/wiki/IRV_Prime
     """
 
@@ -758,6 +746,7 @@ class IrvPrime(Irv):
 
 class V321(Mav):
     baseCuts = [-.1,.8]
+    specificCuts = None
     specificPercentiles = [45, 75]
 
     stratTargetFor = Method.stratTarget3
@@ -778,7 +767,7 @@ class V321(Mav):
         >>> V321().results([[1,0,2,1]]*29 + [[0,2,1,1]]*30 + [[2,1,0,1]]*31 + [[1,1,1,2]]*10)
         [3.375, 2.875, 0.25, 0]
         """
-        candScores = list(zip(*ballots))
+        candScores = list(zip(*ballots, strict=False))
         n2s = [sum(1 if s>1 else 0 for s in c) for c in candScores]
         o2s = argsort(n2s) #order
         r2s = [-1] * len(n2s) #ranks
@@ -793,10 +782,6 @@ class V321(Mav):
         #print([semifinalists[o] for o in o1s]) #[third, second, first] by above-bottom
         #print("r2s",r2s)
         r2s[semifinalists[o1s[0]]] -= (o1s[0] +1) * .75 #non-finalist below finalists
-        semiupset = o1s[1] < o1s[2] #semifinalist and finalist order are different
-
-
-
         (runnerUp,top) = semifinalists[o1s[1]], semifinalists[o1s[2]]
         upset = sum(sign(ballot[runnerUp] - ballot[top]) for ballot in ballots)
         if upset > 0:
@@ -828,7 +813,7 @@ class V321(Mav):
         >>> Irv().stratBallotFor([3,2,1,0])(Irv,Voter([3,6,5,2]))
         [1, 2, 3, 0]
         """
-        ncand = len(polls)
+        len(polls)
 
         places = sorted(enumerate(polls),key=lambda x:-x[1]) #high to low
         top3 = [c for c,r in places[:3]]
@@ -867,7 +852,7 @@ class V321(Mav):
                 ballot = [None] * len(voter)
                 isStrat=False
                 stratGap = 0
-                for c, util in myprefs:
+                for c, _util in myprefs:
                     ballot[c] = rating
                     if rating and (c in top3):
                         if (c == top3[2]):
@@ -892,7 +877,7 @@ class V321(Mav):
                 ballot = [None] * len(voter)
                 if voter[fourth] > voter[first]:
 
-                    for c, util in myprefs:
+                    for c, _util in myprefs:
                         ballot[c] = rating
                         if rating and (c == fourth):
                             rating -= 2
@@ -982,7 +967,6 @@ class Schulze(RankedMethod):
         else: #cycle
             cycle = 1
             result = self.resolveCycle(cmat, n)
-            order = None
 
         if isHonest:
             self.__class__.extraEvents = {}
@@ -1087,14 +1071,14 @@ class IRNR(RankedMethod):
                         tsum[i] += v / vsum
             mini = None
             minv = None
-            for i, v in enumerate(tsum):
+            for i, _v in enumerate(tsum):
                 if enabled[i] and ((minv is None) or (tsum[i] < minv)):
                     minv = tsum[i]
                     mini = i
             enabled[mini] = False
             results[mini] = minv
             numEnabled -= 1
-        for i, v in enumerate(tsum):
+        for i, _v in enumerate(tsum):
             if enabled[i]:
                 results[i] = tsum[i]
         return results
@@ -1102,7 +1086,7 @@ class IRNR(RankedMethod):
     @staticmethod #cls is provided explicitly, not through binding
     @rememberBallot
     def honBallot(cls, utils):
-        """Takes utilities and returns an honest ballot
+        """Takes utilities and returns an honest ballot.
         """
         return utils
 

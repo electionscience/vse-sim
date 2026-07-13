@@ -5,7 +5,7 @@ layout: default
 
 ## This document looks long. Is there a shorter version?
 
-See [here](./VSEbasic).
+See the [shorter VSE overview](./VSEbasic).
 
 ## What is Voter Satisfaction Efficiency?
 
@@ -143,4 +143,4 @@ The types are:
 
 ## Can you summarize the outcomes?
 
-See [here](./VSEbasic).
+See the [summary of VSE outcomes](./VSEbasic).
