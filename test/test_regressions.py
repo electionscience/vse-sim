@@ -1,3 +1,4 @@
+import csv
 import random
 from pathlib import Path
 
@@ -52,7 +53,12 @@ def test_vse_on_returns_every_simulation_run():
 
     result = Score().vseOn(voters)
 
-    assert len(result.results) == 4
+    assert {run.strat for run in result.results} == {
+        "honBallot",
+        "stratBallot",
+        "Oss.hon_strat.",
+        "smartOss",
+    }
     assert all(run.result == [1.0] for run in result.results)
     assert result.extraEvents == {}
 
@@ -89,12 +95,30 @@ def test_prob_chooser_falls_back_to_last_choice(monkeypatch):
     assert chooser(object, object(), SideTally()) == "strat"
 
 
+def test_prob_chooser_selects_both_choices_and_tracks_non_default_choice():
+    seedRandomGenerators("prob-chooser")
+    chooser = ProbChooser([(0.3, beHon), (0.7, beStrat)])
+    tally = SideTally()
+
+    choices = [chooser(object, object(), tally) for _ in range(500)]
+
+    assert set(choices) == {"hon", "strat"}
+    assert tally[f"{chooser.getName()}_strat"] == choices.count("strat")
+
+
 def test_seed_random_generators_is_reproducible():
     seedRandomGenerators("same-seed")
     first = (random.random(), np.random.random())
     seedRandomGenerators("same-seed")
 
     assert (random.random(), np.random.random()) == first
+
+    seedRandomGenerators("seed-a")
+    sequence_a = (random.random(), np.random.random())
+    seedRandomGenerators("seed-b")
+    sequence_b = (random.random(), np.random.random())
+
+    assert sequence_a != sequence_b
 
 
 def test_csv_batch_can_stream_without_retaining_rows(tmp_path):
@@ -112,8 +136,22 @@ def test_csv_batch_can_stream_without_retaining_rows(tmp_path):
     )
 
     assert batch.rows == []
-    assert Path(batch.output_file).exists()
-    assert len(Path(batch.output_file).read_text().splitlines()) == 10
+    output_path = Path(batch.output_file)
+    assert output_path.exists()
+
+    with output_path.open(newline="") as output:
+        assert output.readline().startswith("# {")
+        rows = list(csv.DictReader(output))
+
+    expected_choosers = {
+        "honBallot",
+        "stratBallot",
+        "Oss.hon_strat.",
+        "smartOss",
+    }
+    assert len(rows) == batch.niter * len(expected_choosers)
+    assert {row["chooser"] for row in rows} == expected_choosers
+    assert {"eid", "util", "vse"} <= rows[0].keys()
 
 
 def test_irv_recalculation_smoke():

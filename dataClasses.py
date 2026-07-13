@@ -204,8 +204,11 @@ class Method:
         the media). Then, runs a series of elections using each chooserFun
         in chooserFuns to select the votes for each voter.
 
-        Returns a tuple of (honResults, stratResults, ...). The stratresults
-        are based on common polling information, which is given by media(honresults).
+        Returns a flat list of ``(result, chooser, tally_items)`` tuples for
+        the honest, strategic, one-sided strategic, smart one-sided, and
+        caller-provided chooser runs. Honest-run ``tally_items`` contain the
+        election's extra event metadata. Strategic results use common polling
+        information produced by ``media(honest_results)``.
         """
         from stratFunctions import OssChooser
 

@@ -147,6 +147,10 @@ class CsvBatch:
         >>> csvs = CsvBatch(PolyaModel(), [[Score(), baseRuns], [Mav(), medianRuns]], nvot=5, ncand=4, niter=3) # doctest: +ELLIPSIS
         >>> len(csvs.rows)
         60
+
+        ``force=True`` permits provenance collection from a dirty Git working
+        tree. It does not control output-file replacement; ``saveFile`` always
+        chooses the next available numbered filename.
         """
         if (seed is None):
             seed = (baseName or '') + str(niter)
