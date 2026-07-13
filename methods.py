@@ -1,17 +1,18 @@
 
-from mydecorators import autoassign, cached_property, setdefaultattr, decorator
 import random
-from numpy.lib.scimath import sqrt
+from math import log
+from test.test_binop import isnum
+
+from numpy import argsort, percentile, sign
 from numpy.core.fromnumeric import mean, std
 from numpy.lib.function_base import median
-from numpy.ma.core import floor, ceil
-from numpy import percentile, argsort, sign
-from test.test_binop import isnum
-from debugDump import *
-from math import log
+from numpy.lib.scimath import sqrt
+from numpy.ma.core import ceil, floor
 
-from stratFunctions import *
 from dataClasses import *
+from debugDump import *
+from mydecorators import autoassign, cached_property, decorator, setdefaultattr
+from stratFunctions import *
 
 # def sign(x):
 #     if x>0:
@@ -414,7 +415,7 @@ class Mav(Method):
         def stratBallot(cls, voter):
             frontUtils = [voter[frontId], voter[targId]] #utils of frontrunners
             stratGap = frontUtils[1] - frontUtils[0]
-            if stratGap is 0:
+            if stratGap == 0:
                 strat = extraStrat = [(4 if (util >= frontUtils[0]) else 0)
                                      for util in voter]
                 isStrat = True

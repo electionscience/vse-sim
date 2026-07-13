@@ -1,11 +1,11 @@
-"""Regenerate the static GitHub Pages charts after the IRV recalculation.
+"""Regenerate the GitHub Pages charts from the IRV simulation results.
 
-The non-IRV points are retained from the legacy chart data embedded in
-``docs/vse-graph.html`` and ``docs/stratstuff.html``.  The IRV points are
-recalculated with the corrected tabulator and the seeded configuration in
-``recalculate_irv_pages.py``.
+The non-IRV points are retained from the published chart data. The IRV points,
+including the scenario breakdowns, are generated with the seeded configuration
+in ``recalculate_irv_pages.py``.
 """
 
+import argparse
 import json
 import re
 import sys
@@ -18,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from scripts.recalculate_irv_pages import recalculate
+from scripts.recalculate_irv_pages import DEFAULT_WORKERS
 
 
 STRATEGIES = [
@@ -64,17 +65,87 @@ def embedded_data(path):
     return json.loads(match.group(1))["x"]["data"]
 
 
+def replace_embedded_data(path, data):
+    """Replace the first widget's data while preserving its HTML wrapper."""
+    text = path.read_text()
+    match = re.search(
+        r'<script type="application/json"[^>]*>(.*?)</script>', text, re.DOTALL
+    )
+    if match is None:
+        raise ValueError(f"No chart data found in {path}")
+    payload = json.loads(match.group(1))
+    payload["x"]["data"] = data
+    replacement = json.dumps(payload, separators=(",", ":"))
+    updated, replacements = re.subn(
+        r'(<script type="application/json"[^>]*>).*?(</script>)',
+        lambda match: f"{match.group(1)}{replacement}{match.group(2)}",
+        text,
+        count=1,
+        flags=re.DOTALL,
+    )
+    if replacements != 1:
+        raise ValueError(f"No chart data found in {path}")
+    path.write_text(updated)
+
+
 def method_number(label):
     return int(label.strip().split(".", maxsplit=1)[0])
 
 
-def corrected_vse_data(results):
-    """Load legacy VSE points and replace the complete IRV strategy series."""
+def refreshed_vse_data(results):
+    """Load VSE points and replace the complete IRV strategy series."""
     data = embedded_data(ROOT / "docs" / "vse-graph.html")
     for index, (method, strategy) in enumerate(zip(data["y"], data["col_var"])):
         if "IRV/RCV" in method:
             data["x"][index] = results[IRV_CHOOSERS[strategy]]
     return data
+
+
+def scenario_for_label(label):
+    labels = {
+        "1.Cond.": "cycle",
+        "2.Easy": "easy",
+        "3.Spoiler": "spoiler",
+        "4.Ctr.": "squeeze",
+        "5.Chicken": "chicken",
+        "6.Other": "other",
+    }
+    return next(scenario for prefix, scenario in labels.items() if label.startswith(prefix))
+
+
+def refresh_interactive_charts(results, outcomes, scenario_results, scenario_outcomes):
+    """Update the IRV points stored in the four interactive chart files."""
+    docs = ROOT / "docs"
+
+    vse = refreshed_vse_data(results)
+    replace_embedded_data(docs / "vse-graph.html", vse)
+
+    breakdown_path = docs / "vsebreakdown.html"
+    breakdown = embedded_data(breakdown_path)
+    for index, method in enumerate(breakdown["y"]):
+        if "IRV/RCV" in method:
+            scenario = scenario_for_label(breakdown["symbol_var"][index])
+            breakdown["x"][index] = scenario_results[scenario][
+                IRV_CHOOSERS[breakdown["col_var"][index]]
+            ]
+    replace_embedded_data(breakdown_path, breakdown)
+
+    strategy_path = docs / "stratstuff.html"
+    strategy = embedded_data(strategy_path)
+    index = strategy["lab"].index("IRV/RCV")
+    strategy["x"][index] = outcomes["successes"] / outcomes["attempts"]
+    strategy["y"][index] = outcomes["backfires"] / outcomes["attempts"]
+    replace_embedded_data(strategy_path, strategy)
+
+    strategy_breakdown_path = docs / "stratbreakdown.html"
+    strategy_breakdown = embedded_data(strategy_breakdown_path)
+    for index, method in enumerate(strategy_breakdown["col_var"]):
+        if method == "IRV/RCV":
+            scenario = scenario_for_label(strategy_breakdown["symbol_var"][index])
+            outcome = scenario_outcomes[scenario]
+            strategy_breakdown["x"][index] = outcome["successes"] / outcome["attempts"]
+            strategy_breakdown["y"][index] = outcome["backfires"] / outcome["attempts"]
+    replace_embedded_data(strategy_breakdown_path, strategy_breakdown)
 
 
 def render_vse(data, output, size, selected=False):
@@ -134,9 +205,25 @@ def render_strategy(results, outcomes, output):
 
 
 def main():
-    results, outcomes = recalculate(15_000, "target15000")
-    data = corrected_vse_data(results)
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--elections",
+        type=int,
+        default=15_000,
+        help="Number of elections to simulate (use a smaller value while developing charts).",
+    )
+    parser.add_argument("--seed", default="target15000")
+    parser.add_argument(
+        "--workers", type=int, default=DEFAULT_WORKERS,
+        help="Deterministic simulation chunks (default: 10).",
+    )
+    args = parser.parse_args()
+    results, outcomes, scenario_results, scenario_outcomes = recalculate(
+        args.elections, args.seed, args.workers
+    )
+    data = refreshed_vse_data(results)
     docs = ROOT / "docs"
+    refresh_interactive_charts(results, outcomes, scenario_results, scenario_outcomes)
     render_vse(data, docs / "vse.png", (970, 681))
     render_vse(data, docs / "5vse.png", (952, 567), selected=True)
     render_vse(data, docs / "5vse_small.png", (656, 271), selected=True)
