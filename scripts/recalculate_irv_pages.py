@@ -9,22 +9,18 @@ run, use:
 
 import argparse
 import csv
-import hashlib
 import os
-import random
 import sys
 from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
-
-import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from debugDump import setDebug
 from methods import Irv, Schulze
 from voterModels import KSModel
-from vse import baseRuns, fuzzyMediaFor
+from vse import baseRuns, fuzzyMediaFor, seedRandomGenerators
 
 DEFAULT_WORKERS = 10
 
@@ -32,11 +28,7 @@ DEFAULT_WORKERS = 10
 def _recalculate_chunk(elections, seed):
     """Simulate one independently seeded chunk of elections."""
     setDebug(False)
-    random.seed(seed)
-    numpy_seed = int.from_bytes(
-        hashlib.sha256(str(seed).encode()).digest()[:4], byteorder="little"
-    )
-    np.random.seed(numpy_seed)
+    seedRandomGenerators(seed)
     model = KSModel(dcdecay=(1, 3), wcdecay=(1.5, 3), dccut=.2, wcalpha=1.5)
     method = Irv()
     scenario_method = Schulze()

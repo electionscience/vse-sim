@@ -5,6 +5,8 @@ from functools import update_wrapper, wraps
 from inspect import getfullargspec, isfunction
 from itertools import starmap
 
+from debugDump import trace
+
 _missing = object()
 
 
@@ -176,8 +178,10 @@ def timeit(method):
         result = method(*args, **kw)
         te = time.time()
 
-        print('%r (%r, %r) %2.2f sec' %
-              (method.__name__, args, kw, te-ts))
+        trace(
+            "%r (%r, %r) %2.2f sec"
+            % (method.__name__, args, kw, te - ts)
+        )
         return result
 
     return timed

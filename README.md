@@ -1,31 +1,81 @@
 # Voter Satisfaction Efficiency
 
-These are some methods for running VSE (Voter Satisfaction Efficiency)
-simulations for various voting systems.
+This repository runs Voter Satisfaction Efficiency (VSE) simulations for
+different voting systems, electorate models, and strategic behaviors.
 
-See [Voter Satisfaction Efficiency FAQ](http://electionscience.github.io/vse-sim/) for an explanation of the methods and results.
+See the [VSE FAQ](https://electionscience.github.io/vse-sim/) for an explanation
+of the methods and published results.
 
-## Installing the code
+## Setup
 
-Requirements: python3, scipy, pydoc
+The project supports Python 3.10 through 3.12 and uses
+[uv](https://docs.astral.sh/uv/) with a committed lockfile.
 
-Testing uses pydoc, which should make most things pretty self-documenting.
+```sh
+uv sync --locked
+```
 
-E.g.:
+The repository has a flat module layout, so run commands from its root.
 
-    python3 -m doctest methods.py
-    python3 -m doctest voterModels.py
-    python3 -m doctest dataClasses.py
-    python3 vse.py
+## Validation
+
+Doctests are part of the pytest suite:
+
+```sh
+uv run python -m pytest
+trunk check
+```
 
 ## Running simulations
 
-Try
+```python
+from voterModels import PolyaModel
+from vse import CsvBatch, Mav, Score, baseRuns, medianRuns
 
-    $ python3
-    >>> from vse import CsvBatch, baseRuns, Mav, medianRuns, Score
-    >>> from voterModels import PolyaModel
-    >>> csvs = CsvBatch(PolyaModel(), [[Score(), baseRuns], [Mav(), medianRuns]], nvot=5, ncand=4, niter=3)
-    >>> csvs.saveFile()
+batch = CsvBatch(
+    PolyaModel(),
+    [[Score(), baseRuns], [Mav(), medianRuns]],
+    nvot=5,
+    ncand=4,
+    niter=3,
+)
+batch.saveFile()
+```
 
-and look for the results in `SimResults1.csv`
+This writes the next available `SimResultsN.csv`.
+
+Large runs can write rows directly instead of retaining every row in memory:
+
+```python
+CsvBatch(
+    PolyaModel(),
+    [[Score(), baseRuns]],
+    nvot=40,
+    ncand=6,
+    niter=15_000,
+    baseName="SimResults",
+    retain_rows=False,
+)
+```
+
+## Reproducing published IRV results
+
+Use a small deterministic run while developing:
+
+```sh
+uv run python scripts/recalculate_irv_pages.py \
+  --elections 50 \
+  --workers 1 \
+  --seed smoke
+```
+
+The full published configuration and seed are the script defaults:
+
+```sh
+uv run python scripts/recalculate_irv_pages.py
+uv run python scripts/regenerate_pages_images.py
+```
+
+Changes to voter generation, strategies, tabulation, tie-breaking, random
+seeding, or VSE normalization can change published results. See `AGENTS.md` for
+the required regeneration workflow.

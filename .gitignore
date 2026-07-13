@@ -1,8 +1,13 @@
 *.pyc
-python3
 __pycache__
+.venv/
+.pytest_cache/
+*.egg-info/
 .pydevproject
 *.csv
+SimResults*.csv
+newResults.txt
+tenK.txt
 *.rtf
 *.bak
 .Rhistory

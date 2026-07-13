@@ -1,7 +1,8 @@
 
 import random
+from math import isclose
 
-from numpy.core.fromnumeric import std
+from numpy import std
 
 from dataClasses import SideTally
 from mydecorators import autoassign, cached_property
@@ -21,12 +22,9 @@ class Chooser:
 
     def getName(self):
         if hasattr(self, "choice"): #only true for base class
-            #print("base")
             return self.choice
         if not hasattr(self, "name") or not self.name:
-            #print("generic")
             self.name = self.__class__.__name__[:-7] #drop the "Chooser"
-        #print("specific")
         return self.name
 
     def __call__(self, cls, voter, tally):
@@ -104,13 +102,19 @@ class OssChooser(Chooser):
 class ProbChooser(Chooser):
     @autoassign
     def __init__(self, probs):
+        if not probs:
+            raise ValueError("ProbChooser requires at least one choice")
+        if any(probability < 0 for probability, _chooser in probs):
+            raise ValueError("ProbChooser probabilities cannot be negative")
+        if not isclose(sum(probability for probability, _chooser in probs), 1.0):
+            raise ValueError("ProbChooser probabilities must sum to 1")
         self.subChoosers = [chooser for (p, chooser) in probs]
 
     def __call__(self, cls, voter, tally):
         r = random.random()
         for (i, (p, chooser)) in enumerate(self.probs):
             r -= p
-            if r < 0:
+            if r < 0 or i == len(self.probs) - 1:
                 if i > 0: #keep tally for all but first option
                     tally[f"{self.getName()}_{chooser.getName()}"] += 1
                 return chooser(cls, voter, tally)
@@ -126,7 +130,7 @@ class ProbChooser(Chooser):
 
 
 
-###media
+# Media models
 
 def truth(standings, tally=None):
     return standings

@@ -1,6 +1,6 @@
 import random
 
-from numpy.core.fromnumeric import mean, std  # noqa: F401
+from numpy import mean, std  # noqa: F401
 from numpy.lib.scimath import sqrt
 from scipy.stats import beta
 
@@ -90,13 +90,7 @@ class PersonalityVoter(Voter):
         super().__init__()#*args, **kw) #WTF, python?
         self.cluster = self.__class__.cluster_count
         self.__class__.cluster_count += 1
-        self.personality = random.gauss(0,1) #probably to be used for strategic propensity
-        #but in future, could be other clustering voter variability, such as media awareness
-
-    #@classmethod
-    #def rand(cls, ncand):
-    #    voter = super().rand(ncand)
-    #    return voter
+        self.personality = random.gauss(0,1)
 
     @classmethod
     def resetClusters(cls):
@@ -352,7 +346,7 @@ class KSModel(DimModel): #Kitchen sink
     baseElectorate = RandomModel()
 
     @autoassign
-    #dc = dimensional cluster; vc = voter cluster
+    # dc = dimensional cluster; wc = within-cluster dimension
     def __init__(self, dcdecay=(1,1), dccut = .2,
             wcdecay=(1,1), wccut = .2,
             wcalpha=1, vccaring=(3,1.5)):
