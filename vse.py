@@ -1,8 +1,11 @@
 
 import csv
+import hashlib
 import os
 import random
 from uuid import uuid4
+
+import numpy as np
 
 from debugDump import debug, setDebug
 from methods import (
@@ -101,6 +104,7 @@ __all__ = [
     "medianRuns",
     "orderOf",
     "rbeta",
+    "seedRandomGenerators",
     "setDebug",
     "skewedMediaFor",
     "topNMediaFor",
@@ -119,27 +123,39 @@ def uniquify(seq):
            checked.append(e)
     return checked
 
+
+def seedRandomGenerators(seed):
+    """Seed the Python and NumPy global generators deterministically."""
+    random.seed(seed)
+    numpy_seed = int.from_bytes(
+        hashlib.sha256(str(seed).encode()).digest()[:4], byteorder="little"
+    )
+    np.random.seed(numpy_seed)
+
+
 class CsvBatch:
     @timeit
     @autoassign
     def __init__(self, model, methods, nvot, ncand, niter,
-            baseName = None, media=truth, seed=None, force=False):
+            baseName = None, media=truth, seed=None, force=False,
+            retain_rows=True):
         """A harness function which creates niter elections from model and finds three kinds
         of utility for all methods given.
 
         for instance:
 
         >>> csvs = CsvBatch(PolyaModel(), [[Score(), baseRuns], [Mav(), medianRuns]], nvot=5, ncand=4, niter=3) # doctest: +ELLIPSIS
-        '__init__' (...) ... sec
         >>> len(csvs.rows)
         60
+
+        ``force=True`` permits provenance collection from a dirty Git working
+        tree. It does not control output-file replacement; ``saveFile`` always
+        chooses the next available numbered filename.
         """
-        rows = []
-        emodel = str(model)
         if (seed is None):
             seed = (baseName or '') + str(niter)
             self.seed = seed
-        random.seed(seed)
+        seedRandomGenerators(seed)
         try:
             from git import Repo
             repo = Repo(os.getcwd())
@@ -148,18 +164,36 @@ class CsvBatch:
             self.repo_version = repo.head.commit.hexsha
         except Exception:
             self.repo_version = 'unknown repo version'
-        for i in range(niter):
-            eid = uuid4()
-            electorate = model(nvot, ncand)
-            for method, chooserFuns in methods:
-                results = method.resultsTable(eid, emodel, ncand, electorate, chooserFuns, media=media)
-                rows.extend(results)
-            debug(i,results[1:3])
-        self.rows = rows
-        if baseName:
-            self.saveFile(baseName)
+        generated_rows = self._generateRows()
+        if baseName and not retain_rows:
+            self.rows = []
+            self.saveFile(baseName, generated_rows)
+        else:
+            self.rows = list(generated_rows)
+            if baseName:
+                self.saveFile(baseName)
 
-    def saveFile(self, baseName="SimResults"):
+    def _generateRows(self):
+        emodel = str(self.model)
+        for i in range(self.niter):
+            eid = uuid4()
+            electorate = self.model(self.nvot, self.ncand)
+            last_results = None
+            for method, chooserFuns in self.methods:
+                results = method.resultsTable(
+                    eid,
+                    emodel,
+                    self.ncand,
+                    electorate,
+                    chooserFuns,
+                    media=self.media,
+                )
+                yield from results
+                last_results = results
+            if last_results is not None:
+                debug(i, last_results[1:3])
+
+    def saveFile(self, baseName="SimResults", rows=None):
         """Print the result of doVse in an accessible format.
         for instance:
 
@@ -168,11 +202,16 @@ class CsvBatch:
         i = 1
         while os.path.isfile(baseName + str(i) + ".csv"):
             i += 1
-        keys = ["vse", "method", "chooser", *list(self.rows[0].keys())]
+        rows = iter(self.rows if rows is None else rows)
+        first_row = next(rows, None)
+        if first_row is None:
+            raise ValueError("Cannot save a CSV batch with no result rows")
+        keys = ["vse", "method", "chooser", *list(first_row.keys())]
         for n in range(4):
             keys.extend([f"tallyName{str(n)}", f"tallyVal{str(n)}"])
         keys = uniquify(keys)
-        with open(baseName + str(i) + ".csv", "w") as myFile:
+        output_file = baseName + str(i) + ".csv"
+        with open(output_file, "w", newline="") as myFile:
             print(
                 f"# {dict(media=self.media.__name__, version=self.repo_version, seed=self.seed, model=self.model, methods=self.methods, nvot=self.nvot, ncand=self.ncand, niter=self.niter)}",
                 file=myFile,
@@ -180,8 +219,11 @@ class CsvBatch:
 
             dw = csv.DictWriter(myFile, keys, restval = "NA")
             dw.writeheader()
-            for r in self.rows:
+            dw.writerow(first_row)
+            for r in rows:
                 dw.writerow(r)
+        self.output_file = output_file
+        return output_file
 
 
 
@@ -229,7 +271,6 @@ allSystems = [[Score(1000), baseRuns],
                 [IRNR(), baseRuns],
                  ]
 
-#request from Mark: "SRV0-2, SRV0-3, SRV0-4, SRV0-5, SRV0-6, SRV0-7, SRV0-8, SRV0-9, SRV0-10, Score0-10, 321, Approval, IRV and plurality"
 markMethods = [
                 [Srv(2), baseRuns],
                 [Srv(3), baseRuns],
@@ -245,12 +286,6 @@ markMethods = [
                 [Irv(), baseRuns],
                 [Plurality(), baseRuns],
                  ]
-
-#usage example:
-#>>> from vse import *
-#>>> vses = CsvBatch(KSModel(dcdecay=(1,3),wcdecay=(1.5,3), dccut = .2, wcalpha=1.5),
-#           allSystems, nvot=40, ncand=6, niter=15000, baseName="target",
-#           media=fuzzyMediaFor())
 
 if __name__ == "__main__":
     import doctest

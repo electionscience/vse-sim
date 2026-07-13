@@ -1,20 +1,26 @@
-name: Annotate PR with trunk issues
+name: Trunk Check
 
 on:
-  workflow_run:
-    workflows: ["Pull Request"]
-    types:
-      - completed
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
 
 jobs:
   trunk_check:
-    name: Trunk Check Annotate
+    name: Trunk Check
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
       - name: Trunk Check
-        uses: trunk-io/trunk-action@v1
+        uses: trunk-io/trunk-action@75699af9e26881e564e9d832ef7dc3af25ec031b # v1.2.4
         with:
           post-annotations: true

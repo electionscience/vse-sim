@@ -4,8 +4,9 @@ import random
 
 import numpy as np
 
+from debugDump import trace
 
-#from stackexchange...
+
 def autoargs(*include,**kwargs):
     def _autoargs(func):
         spec = inspect.getfullargspec(func)
@@ -43,7 +44,7 @@ def autoargs(*include,**kwargs):
 
     return _autoargs
 
-#Hah: http://www.pydanny.com/cached-property.html
+# Adapted from http://www.pydanny.com/cached-property.html.
 class cached_property(object):
     """ A property that is only computed once per instance and then replaces
         itself with an ordinary attribute. Deleting the attribute resets the
@@ -67,7 +68,7 @@ class cached_property(object):
 
 
 
-##actual code
+# Election implementation
 DEBUG = True
 arrayType = type(np.array([1]))
 
@@ -141,7 +142,6 @@ class ElectionCounts():
             if private and (c not in outer):
                 continue
             if (m[best,loser] > m[c,loser]) and (m[best,c] > m[loser,c]):
-                #print("a",c,loser)
                 if rival[0] is not None:
                     toWin = max((m[best,loser] - m[c,loser]), (m[best,c] - m[loser,c]))
                     if rival[0][0] < toWin:
@@ -151,7 +151,6 @@ class ElectionCounts():
                     outer.remove(c)
                 yield c
             elif m[loser,c] >= m[c,loser]:
-                    #print("b",c,loser)
                 if minwin[0] and minwin[0][0] > m[loser, c]:
                     minwin[0] = (m[loser,c],loser,c)
                 if private:
@@ -162,7 +161,6 @@ class ElectionCounts():
         start = np.argmax(m[0])
         theRest = list(range(self.n))
         theRest.remove(start)
-        #print(theRest)
         return self.climbFrom(start, theRest)
 
     def climbFrom(self, start, theRest):
@@ -188,10 +186,8 @@ class ElectionCounts():
         return winners
 
     def growFrom(self, seed, plant, soil, minwin = [None], rival = [None]):
-        #print(seed, plant, soil)
         """As a SIDE-EFFECT, recursively fill out the set of winners, starting from seed."""
         for w in self.beaters(seed,soil, minwin, rival, private=True):
-            #print(w,"grows on",seed)
             plant.append(w)
             self.growFrom(w, plant, soil, minwin, rival)
 
@@ -199,13 +195,11 @@ class ElectionCounts():
         delegator = self.order[0]
         appr = np.matrix(np.zeros(self.n))
         dprefs = self.prefs[delegator]
-        #print(dprefs)
         appr[:,dprefs] = amounts
         if DEBUG:
             for i in range(self.n-1):
                 assert appr[0,dprefs[i]] >= appr[0,dprefs[i+1]],"bullshit %i %i %s ... %s" % (appr[0,dprefs[i]],appr[0,dprefs[i+1]],appr,dprefs)
 
-        #print(appr)
         delg = list(self.delg)
         delg[delegator] = 0
         result = ElectionCounts(delg,appr + self.appr,self.prefs,self.order[1:],
@@ -216,26 +210,23 @@ class ElectionCounts():
 
     def winner(self, verbose = 0):
         if not len(self.order): #delegation tree leaf
-            #print(self.matrix)
             if verbose > 2:
-                print("leafed out", self.matrix)
+                trace("leafed out", self.matrix)
             return np.argmax(self.matrix[0])
         smith = self.majSmith
         if len(smith) <= 1: #Clear winner, not worth finishing
-            #print(self.matrix)
             if verbose > 2:
-                print("crystal ball", smith[0], self.matrix)
+                trace("crystal ball", smith[0], self.matrix)
             return smith[0]
         if self.oldSmith and verbose and len(smith) > len(self.oldSmith):
-            print("Smith set expanded!")#,self.oldSmith, smith, self.matrix)
+            trace("Smith set expanded!")
         if self.cantWin:
             badWinners = True
             for possibility in smith:
                 badWinners = badWinners and (possibility in self.cantWin)
             if badWinners:
-                #print("badwinners", smith, self.cantWin)
                 if verbose > 2:
-                    print("giving up", self.matrix)
+                    trace("giving up", self.matrix)
                 return None #This is a shortcut. We don't know that this cand will win, but it will be ignored anyway.
 
         #figure out reasonable bounds for whom to approve, who might win.
@@ -253,29 +244,24 @@ class ElectionCounts():
 
         cantWin = self.cantWin or set()
 
-        #print("looping",len(self.order))
         for amounts in self.possibleDelegations(worstWinnerIndex, idealWinnerIndex):
-            #print(".")
-            #print(self.delegated(np.array([10,10,0,0,0])))
             dec =  self.delegated(amounts,cantWin)
             w = dec.winner(verbose)
             if verbose and len(self.order) > 2:
-                print(w,len(self.order),"amounts",amounts,bestHope, bestHopeIndex,"and",worstWinnerIndex, idealWinnerIndex,"with",np.trace(dec.matrix))
-            #print("    " * (5 - len(self.order)), "winner?", w, bestHope, curPrefs )
+                trace(w, len(self.order), "amounts", amounts, bestHope,
+                      bestHopeIndex, "and", worstWinnerIndex, idealWinnerIndex,
+                      "with", np.trace(dec.matrix))
             if w == idealWinner:
                 if verbose > 1.5:
-                    print("love it", w, dec.matrix)
+                    trace("love it", w, dec.matrix)
                 return(w)
             if w is None:
-                #print("nothing for",amounts)
                 continue
             i = curPrefs.index(w)
-            #if len(self.order) == 3: #print(i)
             if i < bestHopeIndex:
                 if verbose > 2-len(self.order)*1.0/10:
-                    print("updating w,len(self.order),amounts",w,i,len(self.order),amounts,curPrefs,bestHopeIndex)
-                    #print(,amounts)
-                    print()
+                    trace("updating w,len(self.order),amounts", w, i,
+                          len(self.order), amounts, curPrefs, bestHopeIndex)
                 bestHopeIndex = i
                 bestHope = w
                 for rank in range(i+1,self.n):
@@ -291,12 +277,9 @@ class ElectionCounts():
         for i in range(start_index):
             delegations[i] = size
         dcopy = np.array(delegations)
-        #print("hi",i,worstWinnerIndex + 1)
         for i in range(start_index - 1,worstWinnerIndex + 1):
             delegations[i] = size
             yield np.array(delegations)
-            #print("there")
-        #print("you")
 
         #Now, try to be clever
         if self.minWin:
@@ -308,10 +291,6 @@ class ElectionCounts():
                 for j in range(idealWinnerIndex + 1, i + 1):
                     delegations[j] = needed
                 yield np.array(delegations)
-
-
-        #self.appMatrixcurPrefs[idealWinnerIndex]
-
 
     def scores(self):
         scores = np.zeros(self.n)
@@ -350,15 +329,15 @@ def monteCarlo(n):
     funky = []
     for i in range(n):
         if i % 50 == 0:
-            print("tick",i)
+            trace("tick", i)
         re = randomElection(4 + random.randrange(4))
         w = re.winner()
         if w not in re.majSmith:
-            print("Unsmith!!!",i)
+            trace("Unsmith!!!", i)
             funky.append(re)
-            print(re.delg,re.appr)
-            print(re.prefs)
-            print(re.matrix)
-            print(w,re.majSmith)
-            print("funny, huh?")
+            trace(re.delg, re.appr)
+            trace(re.prefs)
+            trace(re.matrix)
+            trace(w, re.majSmith)
+            trace("funny, huh?")
     return funky

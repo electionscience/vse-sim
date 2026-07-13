@@ -1,8 +1,9 @@
 
 import random
 from collections import defaultdict
+from dataclasses import dataclass, field
 
-from numpy.core.fromnumeric import mean
+from numpy import isclose, mean
 
 from mydecorators import autoassign, decorator
 
@@ -23,6 +24,30 @@ class VseMethodRun:
         pass
 
 
+@dataclass
+class ElectionContext:
+    """Mutable metadata scoped to one method instance and election."""
+
+    extra_events: dict = field(default_factory=dict)
+
+
+def normalized_vse(utility, best, random_baseline):
+    """Normalize utility to VSE, including a tied-utility electorate.
+
+    When every candidate has the same social utility there is no possible
+    improvement over random selection, so every method receives neutral VSE.
+
+    >>> normalized_vse(2, 2, 2)
+    0.0
+    >>> normalized_vse(3, 3, 1)
+    1.0
+    """
+    denominator = best - random_baseline
+    if isclose(denominator, 0):
+        return 0.0
+    return (utility - random_baseline) / denominator
+
+
 class SideTally(defaultdict):
     """Used for keeping track of how many voters are being strategic, etc.
 
@@ -31,23 +56,11 @@ class SideTally(defaultdict):
     """
     def __init__(self):
         super().__init__(int)
-    #>>> tally = SideTally()
-    #>>> tally += {1:2,3:4}
-    #>>> tally
-    #{1: 2, 3: 4}
-    #>>> tally += {1:2,3:4,5:6}
-    #>>> tally
-    #{1: 4, 3: 8, 5: 6}
-    #"""
-    #def __add__(self, other):
-    #    for (key, val) in other.items():
-    #        try:
-    #            self[key] += val
-    #        except KeyError:
-    #            self[key] = val
-    #    return self
+        self._keys_initialized = False
 
     def initKeys(self, chooser):
+        if self._keys_initialized:
+            return
         try:
             self.keyList = chooser.allTallyKeys()
         except AttributeError:
@@ -55,9 +68,7 @@ class SideTally(defaultdict):
                 self.keyList = list(chooser)
             except TypeError:
                 pass
-                #TODO: Why does this happen?
-                #debug("Chooser has no tally keys:", str(chooser))
-        self.initKeys = staticmethod(lambda x:x) #don't do it again
+        self._keys_initialized = True
 
     def serialize(self):
         try:
@@ -108,9 +119,21 @@ class Tallies(list):
         self.append(tally)
         return tally
 
-##Election Methods
+# Election methods
 class Method:
     """Base class for election methods. Holds some of the duct tape."""
+
+    def __init__(self):
+        self.context = ElectionContext()
+
+    @property
+    def extraEvents(self):
+        """Compatibility view of metadata for this method's current election."""
+        return self.context.extra_events
+
+    @extraEvents.setter
+    def extraEvents(self, value):
+        self.context.extra_events = value
 
     def __str__(self):
         return self.__class__.__name__
@@ -181,13 +204,16 @@ class Method:
         the media). Then, runs a series of elections using each chooserFun
         in chooserFuns to select the votes for each voter.
 
-        Returns a tuple of (honResults, stratResults, ...). The stratresults
-        are based on common polling information, which is given by media(honresults).
+        Returns a flat list of ``(result, chooser, tally_items)`` tuples for
+        the honest, strategic, one-sided strategic, smart one-sided, and
+        caller-provided chooser runs. Honest-run ``tally_items`` contain the
+        election's extra event metadata. Strategic results use common polling
+        information produced by ``media(honest_results)``.
         """
         from stratFunctions import OssChooser
 
         honTally = SideTally()
-        self.__class__.extraEvents = {}
+        self.context = ElectionContext()
         hon = self.resultsFor(voters, self.honBallotFor(voters), honTally, isHonest=True)
 
         stratTally = SideTally()
@@ -215,7 +241,7 @@ class Method:
                     for (chooserFun, aTally) in zip(chooserFuns, extraTallies, strict=False)]
                   )
         return ([(hon["results"], hon["chooser"],
-                        list(self.__class__.extraEvents.items()))]  +
+                        list(self.extraEvents.items()))]  +
                 [(r["results"], r["chooser"], r["tally"].itemList()) for r in results])
 
     def vseOn(self, voters, chooserFuns=(), **args):
@@ -227,12 +253,19 @@ class Method:
         best = max(utils)
         rand = mean(utils)
 
-        #import pprint
-        #pprint.pprint(multiResults)
-        vses = VseMethodRun(self.__class__, chooserFuns,
-                    [VseOneRun([(utils[self.winner(result)] - rand) / (best - rand)],tally,chooser)
-                        for (result, chooser, tally) in multiResults[0]])
-        vses.extraEvents=multiResults[1]
+        vses = VseMethodRun(
+            self.__class__,
+            chooserFuns,
+            [
+                VseOneRun(
+                    [normalized_vse(utils[self.winner(result)], best, rand)],
+                    tally,
+                    chooser,
+                )
+                for result, chooser, tally in multiResults
+            ],
+        )
+        vses.extraEvents = dict(self.extraEvents)
         return vses
 
     def resultsTable(self, eid, emodel, cands, voters, chooserFuns=(), **args):
@@ -243,6 +276,8 @@ class Method:
         rows = []
         nvot=len(voters)
         for (result, chooser, tallyItems) in multiResults:
+            winner = self.winner(result)
+            utility = utils[winner]
             row = {
                 "eid":eid,
                 "emodel":emodel,
@@ -252,27 +287,13 @@ class Method:
                 "rand":rand,
                 "method":str(self),
                 "chooser":chooser,#.getName(),
-                "util":utils[self.winner(result)],
-                "vse":(utils[self.winner(result)] - rand) / (best - rand)
+                "util":utility,
+                "vse":normalized_vse(utility, best, rand)
             }
-            #print(tallyItems)
             for (i, (k, v)) in enumerate(tallyItems):
-                #print("Result: tally ",i,k,v)
                 row[f"tallyName{str(i)}"] = str(k)
                 row[f"tallyVal{str(i)}"] = str(v)
             rows.append(row)
-        # if len(multiResults[1]):
-        #     row = {
-        #         "eid":eid,
-        #         "emodel":emodel,
-        #         "method":self.__class__.__name__,
-        #         "chooser":"extraEvents",
-        #         "util":None
-        #     }
-        #     for (i, (k, v)) in enumerate(multiResults[1]):
-        #         row["tallyName"+str(i)] = str(k)
-        #         row["tallyVal"+str(i)] = str(v)
-        #     rows.append(row)
         return(rows)
 
 
@@ -301,7 +322,6 @@ class Method:
         for the given "polling" info."""
 
         places = sorted(enumerate(polls),key=lambda x:-x[1]) #from high to low
-        #print("places",places)
         (frontId, frontResult, targId, targResult) = self.stratTargetFor(places)
         n = len(polls)
         @rememberBallots

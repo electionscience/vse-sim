@@ -1,10 +1,20 @@
+import logging
 
-DEBUG = True
+TRACE = 5
+logging.addLevelName(TRACE, "TRACE")
 
-def debug(*args):
-    if DEBUG:
-        print(*args)
-        
+logger = logging.getLogger("vse_sim")
+logger.setLevel(TRACE)
+
+
+def trace(*args):
+    """Log low-level diagnostic values at the TRACE level."""
+    logger.log(TRACE, " ".join(str(arg) for arg in args))
+
+
+debug = trace
+
+
 def setDebug(state):
-    global DEBUG
-    DEBUG = state
+    """Backward-compatible switch for trace diagnostics."""
+    logger.setLevel(TRACE if state else logging.CRITICAL + 1)
