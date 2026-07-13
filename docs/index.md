@@ -108,16 +108,21 @@ The strategy models include various mixes of the following possibilities:
 
 ## OK, can I see some results?
 
-Click to go to interactive versions of the following graphs:
+Interactive versions:
 
-[![VSE](./vse.png)](./vse-graph.html)
+- [VSE by method and strategy](./vse-graph.html)
+- [Effectiveness of strategies](./stratstuff.html)
 
-[![Effectiveness of strategies](./vsestrat.png)](./stratstuff.html)
+![VSE](./vse.png)
 
-Or, broken down by scenario type:
+![Effectiveness of strategies](./vsestrat.png)
 
-[VSE](./vsebreakdown.html)
-[Effectiveness of strategies](./stratbreakdown.html)
+See [IRV/RCV simulation details](./irv-simulation) for the run configuration and values used in these images.
+
+Scenario breakdowns:
+
+- [VSE by scenario type](./vsebreakdown.html)
+- [Strategy effectiveness by scenario type](./stratbreakdown.html)
 
 ## Those results are broken down by “Scenario type”. Why?
 

@@ -12,6 +12,8 @@ I've run VSE simulations for a number of methods. Here's a chart with only the b
 
 [![VSE](/5vse.png)](http://rpubs.com/Jameson-Quinn/VSE5key)
 
+See [IRV/RCV simulation details](./irv-simulation) for the run configuration and values used in this figure.
+
 - _Plurality voting_, also known as choose-one plurality or first past the post: This is the most common election method in the English-speaking world. It's also in most situations the _worst_ out of all the methods I've tested, with a VSE of only around _75%_. It often gets "spoiled" results, where a weaker candidate wins due to vote-splitting; it encourages strategy; and it leads to uncompetitive politics, dominated by big parties (and their big donors) who get their votes as much through fear as through hope.
 
 - _Approval voting_ is a voting method where you can "approve" (support) as many candidates as you want, and the candidate approved by the most voters wins. Its VSE is around _89-95%_ for most levels of voter strategy. That's not the best of the methods I tested, but it certainly is the _best "bang for the buck"_; a simple reform, with basically no downsides, which improves outcomes hugely.
@@ -26,7 +28,7 @@ Some other methods I've tested, but (aside from IRV/RCV) left out of the figure 
 
 - _Condorcet methods_ such as Schulze and Ranked Pairs. In these methods, voters rank candidates in preference order, and any candidate who can beat all the others pairwise is the winner. These methods also topped out at 98% VSE, though they seem slightly more vulnerable to strategy than STAR; Ranked Pairs, the best Condorcet method I tested, can have a VSE as low as 86% under strategy. However, the complexity of vote-counting and of presenting results in these methods makes them, I feel, more theoretical than practical.
 
-- _Instant Runoff/Ranked Choice Voting_ (IRV/RCV). In this method, voters rank candidates in preference order and the favorites are tallied. Then, there's a process of eliminating the last-place candidate and re-tallying their votes for the voters' next preference (if any), until one candidate tallies more than half of the remaining votes. This method's VSE runs from 92% with honest voters down to 79% with all strategic voters. That's better than plurality, but worse than all the other methods above. Still, this method is notable, because it has the _strongest track record_ of any of these methods except plurality; it's been used in thousands of political elections in multiple countries and jurisdictions.
+- _Instant Runoff/Ranked Choice Voting_ (IRV/RCV). In this method, voters rank candidates in preference order and the favorites are tallied. Then, there's a process of eliminating the last-place candidate and re-tallying their votes for the voters' next preference (if any), until one candidate tallies more than half of the remaining votes. In this simulation, this method's VSE runs from about 87% with honest voters down to about 60% with all strategic voters. That's better than plurality, but worse than all the other methods above. Still, this method is notable, because it has the _strongest track record_ of any of these methods except plurality; it's been used in thousands of political elections in multiple countries and jurisdictions.
 
 - _Median-based (Bucklin) methods_ such as Majority Judgment or Majority Approval Voting. These methods are the only ones whose practical strategy resistance is significantly better than 3-2-1 voting; but unfortunately, their VSE tops out at 92%.
 

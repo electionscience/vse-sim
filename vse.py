@@ -1,5 +1,5 @@
 
-from imp import reload
+from importlib import reload
 
 from mydecorators import autoassign, cached_property, setdefaultattr, timeit
 import random
@@ -39,9 +39,10 @@ class CsvBatch:
 
         for instance:
 
-        >>> csvs = CsvBatch(PolyaModel(), [[Score(), baseRuns], [Mav(), medianRuns]], nvot=5, ncand=4, niter=3)
+        >>> csvs = CsvBatch(PolyaModel(), [[Score(), baseRuns], [Mav(), medianRuns]], nvot=5, ncand=4, niter=3) # doctest: +ELLIPSIS
+        '__init__' (...) ... sec
         >>> len(csvs.rows)
-        54
+        60
         """
         rows = []
         emodel = str(model)

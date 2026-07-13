@@ -1,5 +1,5 @@
 from functools import wraps, update_wrapper
-from inspect import getargspec, isfunction
+from inspect import getfullargspec, isfunction
 from itertools import starmap
 import time
 
@@ -58,7 +58,8 @@ def autoassign(*names, **kwargs):
         names, f = set(names), None
         sieve = lambda l: [nv for nv in l if nv[0] in names]
     def decorator(f):
-        fargnames, _, _, fdefaults = getargspec(f)
+        spec = getfullargspec(f)
+        fargnames, fdefaults = spec.args, spec.defaults
         # Remove self from fargnames and make sure fdefault is a tuple
         fargnames, fdefaults = fargnames[1:], fdefaults or ()
         defaults = list(sieve(zip(reversed(fargnames), reversed(fdefaults))))
@@ -73,7 +74,7 @@ def autoassign(*names, **kwargs):
     return f and decorator(f) or decorator
 
 
-import collections
+from collections.abc import Hashable
 import functools
 
 @decorator
@@ -86,7 +87,7 @@ class memoized(object):
         self.func = func
         self.cache = {}
     def __call__(self, *args):
-        if not isinstance(args, collections.Hashable):
+        if not isinstance(args, Hashable):
             # uncacheable. a list, for instance.
             # better to not cache than blow up.
             return self.func(*args)
