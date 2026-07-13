@@ -12,7 +12,7 @@ I've run VSE simulations for a number of methods. Here's a chart with only the b
 
 [![VSE](/5vse.png)](http://rpubs.com/Jameson-Quinn/VSE5key)
 
-The IRV/RCV points in this legacy figure predate a correction to the simulator. See the [corrected IRV/RCV recalculation](./irv-recalculation) before using them for comparison.
+The IRV/RCV points in this figure were regenerated after a correction to the simulator. See the [IRV/RCV recalculation](./irv-recalculation) for the run configuration and values.
 
 - _Plurality voting_, also known as choose-one plurality or first past the post: This is the most common election method in the English-speaking world. It's also in most situations the _worst_ out of all the methods I've tested, with a VSE of only around _75%_. It often gets "spoiled" results, where a weaker candidate wins due to vote-splitting; it encourages strategy; and it leads to uncompetitive politics, dominated by big parties (and their big donors) who get their votes as much through fear as through hope.
 

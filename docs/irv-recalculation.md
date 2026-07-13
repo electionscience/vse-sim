@@ -14,10 +14,10 @@ uv run python scripts/recalculate_irv_pages.py
 
 | Ballot strategy | VSE |
 | --- | ---: |
-| 100% honest | 87.31% |
-| 25% strategic / 75% honest | 82.96% |
-| 50% strategic / 50% honest | 72.92% |
-| 75% strategic / 25% honest | 66.14% |
-| 100% strategic | 60.99% |
+| 100% honest | 87.17% |
+| 25% strategic / 75% honest | 82.71% |
+| 50% strategic / 50% honest | 73.08% |
+| 75% strategic / 25% honest | 65.30% |
+| 100% strategic | 60.73% |
 
-The historic chart assets contain the pre-correction IRV points and should not be used for IRV comparisons until they are regenerated from this corrected data.
+The embedded PNG charts have been regenerated from this corrected data. The interactive legacy charts still contain pre-correction IRV points and should not be used for IRV comparisons until they are regenerated.
