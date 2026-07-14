@@ -23,3 +23,7 @@ The runner divides the work into ten fixed, seeded chunks and executes the chunk
 | 100% strategic             | 60.50% |
 
 The embedded PNG charts on this site use these values.
+
+The static VSE charts show 95% normal-approximation confidence intervals for
+the IRV/RCV points. The calculation is based on the election-level VSE values
+from the same seeded run; the CSV output includes each interval's half-width.
