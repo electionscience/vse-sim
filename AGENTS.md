@@ -6,12 +6,12 @@ This repository runs Monte Carlo simulations of Voter Satisfaction Efficiency
 (VSE) for voting methods under different electorate and strategy models. The
 published explanation and results live in `docs/`.
 
-The code currently uses a flat module layout. Run commands from the repository
-root; do not assume the project is installed as a Python package.
+Production code uses an installable `src/vse_sim` package. Run development
+commands from the repository root after `uv sync --locked`.
 
 ## Environment and validation
 
-- Supported Python: 3.10 through 3.12; local and CI default to Python 3.12.
+- Supported Python: 3.14; local and CI default to Python 3.14.
 - Dependency manager: `uv`; keep `uv.lock` in sync with `pyproject.toml`.
 - Install dependencies with `uv sync --locked`.
 - Run the test suite with `uv run python -m pytest`.
@@ -25,23 +25,27 @@ module and NumPy.
 
 ## Code map
 
-- `vse.py`: simulation orchestration, method presets, and CSV output.
-- `dataClasses.py`: core method API, tallies, ballot caching, and VSE rows.
-- `methods.py`: voting method and ballot implementations.
-- `voterModels.py`: voter, electorate, and spatial/clustered voter models.
-- `stratFunctions.py`: strategic ballot choosers and media models.
-- `mydecorators.py`: local decorators used throughout the simulation.
+- `src/vse_sim/simulation.py`: orchestration, method presets, and CSV output.
+- `src/vse_sim/core.py`: core method API, tallies, ballot caching, and VSE rows.
+- `src/vse_sim/methods.py`: voting method and ballot implementations.
+- `src/vse_sim/voter_models.py`: voter and electorate models.
+- `src/vse_sim/strategies.py`: strategic ballot choosers and media models.
+- `src/vse_sim/decorators.py`: local decorators used by the package.
+- `src/vse_sim/diagnostics.py`: TRACE-level diagnostics.
+- `tests/`: pytest regression tests; package doctests are also collected.
 - `scripts/recalculate_irv_pages.py`: reproducible, parallel IRV calculations.
 - `scripts/regenerate_pages_images.py`: generated HTML and chart updates.
 - `docs/`: GitHub Pages source plus committed generated charts.
-- `sodaTest.py`: experimental legacy code; do not make production code depend
-  on it.
+- `experiments/soda.py`: legacy SODA experiment; production code must not
+  depend on it.
+- `artifacts/`: retained historical simulation outputs.
+- `analysis/`: ancillary analysis code.
 
 ## Change guidance
 
 ### Voting methods
 
-Voting methods derive from `dataClasses.Method`. Preserve the existing ballot
+Voting methods derive from `vse_sim.core.Method`. Preserve the existing ballot
 and result conventions unless a deliberate migration updates all callers:
 
 - candidate results are index-aligned sequences;
@@ -75,8 +79,7 @@ utility range. Handle zero ranges explicitly. Define and test the intended
 result rather than allowing `ZeroDivisionError`, NaN, or infinity.
 
 Avoid private NumPy import paths such as `numpy.core.*`; use public `numpy`
-APIs. NumPy 2.x remains unsupported until behavioral compatibility has been
-validated and the dependency bounds are deliberately updated.
+APIs.
 
 ### Published results
 
@@ -102,8 +105,8 @@ When touching nearby code, prefer small staged changes in this order:
 2. Extend the explicit election context instead of introducing shared state.
 3. Use `retain_rows=False` for large CSV batches and preserve the streaming
    path when changing persistence.
-4. Introduce a package layout only as a deliberate migration; update scripts,
-   doctests, CI, and imports together.
+4. Keep import paths package-relative within `src/vse_sim`; scripts and tests
+   should import the installed `vse_sim` package.
 
 Do not combine algorithm changes with broad formatting or module moves. Voting
 method changes should remain reviewable against the prior mathematical

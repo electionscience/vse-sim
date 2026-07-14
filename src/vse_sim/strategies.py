@@ -4,8 +4,8 @@ from math import isclose
 
 from numpy import std
 
-from dataClasses import SideTally
-from mydecorators import autoassign, cached_property
+from .core import SideTally
+from .decorators import autoassign, cached_property
 
 
 class Chooser:

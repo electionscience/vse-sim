@@ -4,7 +4,7 @@ import random
 
 import numpy as np
 
-from debugDump import trace
+from vse_sim.diagnostics import trace
 
 
 def autoargs(*include,**kwargs):

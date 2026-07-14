@@ -34,7 +34,6 @@ runtimes:
   enabled:
     - go@1.21.0
     - node@22.16.0
-    - python@3.12.10
 actions:
   enabled:
     - trunk-announce

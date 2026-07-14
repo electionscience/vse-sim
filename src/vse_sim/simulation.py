@@ -7,8 +7,9 @@ from uuid import uuid4
 
 import numpy as np
 
-from debugDump import debug, setDebug
-from methods import (
+from .decorators import autoassign, timeit
+from .diagnostics import debug, setDebug
+from .methods import (
     IRNR,
     V321,
     Borda,
@@ -23,8 +24,7 @@ from methods import (
     Score,
     Srv,
 )
-from mydecorators import autoassign, timeit
-from stratFunctions import (
+from .strategies import (
     Chooser,
     LazyChooser,
     OssChooser,
@@ -40,7 +40,7 @@ from stratFunctions import (
     topNMediaFor,
     truth,
 )
-from voterModels import (
+from .voter_models import (
     DeterministicModel,
     DimElectorate,
     DimModel,

@@ -3,8 +3,8 @@ import random
 
 from numpy import argsort, floor, mean, percentile, sign
 
-from dataClasses import CandidateWithCount, Method, rememberBallot, rememberBallots
-from voterModels import DeterministicModel, Voter  # noqa: F401
+from .core import CandidateWithCount, Method, rememberBallot, rememberBallots
+from .voter_models import DeterministicModel, Voter  # noqa: F401
 
 
 # Election methods
@@ -247,7 +247,7 @@ def Srv(topRank=10):
             upset = sum(sign(ballot[runnerUp] - ballot[top]) for ballot in ballots)
             if upset > 0:
                 baseResults[runnerUp] = baseResults[top] + 0.01
-            return baseResults
+            return [result.item() if hasattr(result, "item") else result for result in baseResults]
     return Srv0to()
 
 
@@ -758,7 +758,7 @@ class V321(Mav):
                                 > 0)
                 self.extraEvents["4beats1"] = fourthWin
 
-        return r2s
+        return [result.item() if hasattr(result, "item") else result for result in r2s]
 
     def stratBallotFor(self, polls):
         """Returns a function which takes utilities and returns a dict(

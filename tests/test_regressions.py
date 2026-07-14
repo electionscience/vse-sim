@@ -5,13 +5,13 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from dataClasses import SideTally
-from debugDump import TRACE, setDebug, trace
-from methods import Mav, Schulze, Score
 from scripts.recalculate_irv_pages import recalculate
-from stratFunctions import ProbChooser, beHon, beStrat
-from voterModels import Electorate, Voter
-from vse import CsvBatch, seedRandomGenerators
+from vse_sim.core import SideTally
+from vse_sim.diagnostics import TRACE, setDebug, trace
+from vse_sim.methods import Mav, Schulze, Score
+from vse_sim.simulation import CsvBatch, seedRandomGenerators
+from vse_sim.strategies import ProbChooser, beHon, beStrat
+from vse_sim.voter_models import Electorate, Voter
 
 
 def test_schulze_uses_independent_strongest_path_rows():

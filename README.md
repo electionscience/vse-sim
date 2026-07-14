@@ -11,14 +11,15 @@ full simulation CSV used by the chart analysis.
 
 ## Setup
 
-The project supports Python 3.10 through 3.12 and uses
+The project supports Python 3.14 and uses
 [uv](https://docs.astral.sh/uv/) with a committed lockfile.
 
 ```sh
 uv sync --locked
 ```
 
-The repository has a flat module layout, so run commands from its root.
+`uv sync` installs the `vse_sim` package from `src/`. Run development commands
+from the repository root.
 
 ## Validation
 
@@ -32,8 +33,9 @@ trunk check
 ## Running simulations
 
 ```python
-from voterModels import PolyaModel
-from vse import CsvBatch, Mav, Score, baseRuns, medianRuns
+from vse_sim.methods import Mav, Score
+from vse_sim.simulation import CsvBatch, baseRuns, medianRuns
+from vse_sim.voter_models import PolyaModel
 
 batch = CsvBatch(
     PolyaModel(),
@@ -66,7 +68,7 @@ CsvBatch(
 Use a small deterministic run while developing:
 
 ```sh
-uv run python scripts/recalculate_irv_pages.py \
+uv run python -m scripts.recalculate_irv_pages \
   --elections 50 \
   --workers 1 \
   --seed smoke
@@ -75,8 +77,8 @@ uv run python scripts/recalculate_irv_pages.py \
 The full published configuration and seed are the script defaults:
 
 ```sh
-uv run python scripts/recalculate_irv_pages.py
-uv run python scripts/regenerate_pages_images.py
+uv run python -m scripts.recalculate_irv_pages
+uv run python -m scripts.regenerate_pages_images
 ```
 
 Changes to voter generation, strategies, tabulation, tie-breaking, random
