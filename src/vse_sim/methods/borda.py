@@ -5,6 +5,13 @@ from ..voter_models import Voter  # noqa: F401
 
 
 class Borda(Method):
+    """Implement Borda count with larger rank values representing preference.
+
+    Honest ballots assign consecutive scores from least to most preferred.
+    Ranked methods also inherit this class's ballot construction and strategy
+    helpers.
+    """
+
     candScore = staticmethod(mean)
 
     nRanks = 999 # infinity

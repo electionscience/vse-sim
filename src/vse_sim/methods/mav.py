@@ -15,7 +15,11 @@ def toVote(cutoffs, util):
 
 
 class Mav(Method):
-    """Majority Approval Voting.
+    """Implement Majority Approval Voting with five ordered grades.
+
+    Honest ballots map utilities through election-scoped percentile cutoffs.
+    Candidates are ordered by their median grade with a fractional tiebreak
+    derived from support above that grade.
     """
 
     bias5 = 1.0970202515275356

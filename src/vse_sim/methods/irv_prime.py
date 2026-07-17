@@ -3,10 +3,11 @@ from .irv import Irv
 
 
 class IrvPrime(Irv):
-    """
-    IRV Prime.
+    """Implement IRV Prime, preserving pairwise challengers during elimination.
 
-    See https://electowiki.org/wiki/IRV_Prime
+    The classic IRV winner and candidates that defeat it pairwise are protected
+    until all other candidates have been eliminated. See
+    https://electowiki.org/wiki/IRV_Prime.
     """
 
     stratTargetFor = Method.stratTarget3

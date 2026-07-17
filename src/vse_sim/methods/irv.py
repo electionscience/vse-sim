@@ -3,10 +3,12 @@ from ..voter_models import DeterministicModel, Voter  # noqa: F401
 
 
 class Irv(Method):
-    """
-    IRV.
+    """Implement Instant-Runoff Voting over complete ranked ballots.
 
-    High numbers are good for both results and votes (pretty sure).
+    Ballots are candidate-aligned rank vectors where larger values indicate
+    stronger preference. Tabulation repeatedly eliminates the candidate with
+    the fewest active first preferences and returns candidate-aligned finish
+    scores, again with larger values preferred.
     """
 
     stratTargetFor = Method.stratTarget3

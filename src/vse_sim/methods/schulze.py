@@ -5,6 +5,13 @@ from .borda import RankedMethod
 
 
 class Schulze(RankedMethod):
+    """Implement the Schulze strongest-path Condorcet method.
+
+    Candidate pairs are compared by ballot rank, then cycles are resolved by
+    comparing the strongest paths through the pairwise preference graph.
+    Deterministic candidate-index tiebreaks produce candidate-aligned scores.
+    """
+
     def resolveCycle(self, cmat, n):
 
         beatStrength = [[0] * n for _ in range(n)]

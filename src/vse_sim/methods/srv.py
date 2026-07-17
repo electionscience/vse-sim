@@ -7,7 +7,12 @@ from .score import Score
 
 
 def Srv(topRank=10):
-    """Score Runoff Voting
+    """Create Score Runoff Voting on a zero-through-``topRank`` scale.
+
+    The two highest score totals advance to a pairwise runoff. Candidate
+    results remain candidate-aligned scores, with a runoff upset represented
+    by placing the pairwise winner just above the score winner.
+
         >>> Srv().resultsFor(DeterministicModel(3)(5,3),Irv().honBallot)["results"]
         [0.8, 1.2, 1.21]
         >>> Srv().results([[0,1,2]])[2]
@@ -27,6 +32,7 @@ def Srv(topRank=10):
     score0to = Score(topRank,True)
 
     class Srv0to(score0to):
+        """Implement Score Runoff Voting on the factory's configured scale."""
 
         stratTargetFor = Method.stratTarget3
 

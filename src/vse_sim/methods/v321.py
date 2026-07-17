@@ -7,6 +7,14 @@ from .mav import Mav
 
 
 class V321(Mav):
+    """Implement 3-2-1 Voting with three-level candidate ratings.
+
+    The three candidates with the most top ratings advance, the candidate with
+    the most bottom ratings is removed, and the remaining pair is compared
+    head-to-head. Result values encode the complete candidate ordering used by
+    the simulator.
+    """
+
     baseCuts = [-.1,.8]
     specificPercentiles = [45, 75]
 

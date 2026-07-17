@@ -6,10 +6,15 @@ from .score import Score
 
 
 def BulletyApprovalWith(bullets=0.5, asClass=False):
+    """Create approval voting with a configurable share of bullet voters.
 
-
+    Each honest ballot is either ordinary normalized approval or a bullet vote
+    for all utility-maximizing candidates. ``bullets`` is the probability of
+    bullet voting.
+    """
 
     class BulletyApproval((Score(1,True))):
+        """Implement the configured mixture of approval and bullet voting."""
 
         bulletiness = bullets
 
