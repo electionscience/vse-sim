@@ -35,7 +35,11 @@ library(scatterD3)
 # 
 # fvse = rbind(fvse,fread("wtf2.csv"))
 
-fvse = fread("target3.csv")
+args = commandArgs(trailingOnly = TRUE)
+if (length(args) != 1) {
+  stop("Usage: Rscript vseCheck.R PATH_TO_RESULTS.csv")
+}
+fvse = fread(args[[1]])
 fuzVses = fvse[,mean(util-rand)/mean(best-rand),by=list(method,chooser)]
 etype = fvse[method=="Schulze" & chooser=="honBallot",tallyVal0,by=eid]
 names(etype) = c("eid","scenario")

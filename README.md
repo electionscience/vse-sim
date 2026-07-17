@@ -6,6 +6,9 @@ different voting systems, electorate models, and strategic behaviors.
 See the [VSE FAQ](https://electionscience.github.io/vse-sim/) for an explanation
 of the methods and published results.
 
+See the [chart reproduction guide](docs/chart-reproduction.md) to generate the
+full simulation CSV used by the chart analysis.
+
 ## Setup
 
 The project supports Python 3.10 through 3.12 and uses
