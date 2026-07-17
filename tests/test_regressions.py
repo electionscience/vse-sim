@@ -150,7 +150,12 @@ def test_irv_tabulation_helpers_are_stateless():
     ]
     assert least_candidate(votes).candidate == 2
     assert least_candidate(votes, keep={2}).candidate == 1
-    assert eliminate_candidate(schedule, CandidateWithCount(1)) == {(0, 2): 3}
+    assert eliminate_candidate(schedule, 1) == {(0, 2): 3}
+
+    with pytest.raises(TypeError):
+        eliminate_candidate(schedule, CandidateWithCount(1))
+    with pytest.raises(TypeError, match="set-like"):
+        least_candidate(votes, keep=[2])
 
 
 @pytest.mark.parametrize(

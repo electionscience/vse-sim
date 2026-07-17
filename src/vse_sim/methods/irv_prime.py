@@ -1,4 +1,4 @@
-from ..core import CandidateWithCount, Method
+from ..core import Method
 from .irv import Irv
 
 
@@ -89,11 +89,11 @@ class IrvPrime(Irv):
         for i in range(ncand):
             votes = self.candidateVotes(remaining)
             toEliminate = self.getLeast(votes, keepers)
-            if not isinstance(toEliminate, CandidateWithCount):
+            if toEliminate is None:
                 # Begin "step 4", i.e. continue elimination without preserving anyone
-                keepers = {}
+                keepers = set()
                 toEliminate = self.getLeast(votes)
             results[ncand - i - 1] = toEliminate.candidate
-            remaining = self.eliminateCandidate(remaining, toEliminate)
+            remaining = self.eliminateCandidate(remaining, toEliminate.candidate)
 
         return results

@@ -1,3 +1,6 @@
+from collections.abc import Set
+from operator import index
+
 from ..core import CandidateWithCount, Method, rememberBallot
 from ..voter_models import DeterministicModel, Voter  # noqa: F401
 
@@ -11,17 +14,16 @@ def build_preference_schedule(ballots):
     return preferences
 
 
-def eliminate_candidate(preferences, candidate_to_eliminate):
-    """Return a schedule with one candidate removed from every ranking."""
-    if not isinstance(candidate_to_eliminate, CandidateWithCount):
-        return preferences
+def eliminate_candidate(preferences, candidate_id):
+    """Return a schedule with the indexed candidate removed from every ranking."""
+    candidate_id = index(candidate_id)
 
     updated_preferences = {}
     for ranking, votes in preferences.items():
         updated_ranking = tuple(
             candidate
             for candidate in ranking
-            if candidate != candidate_to_eliminate.candidate
+            if candidate != candidate_id
         )
         if updated_ranking:
             updated_preferences[updated_ranking] = (
@@ -59,8 +61,11 @@ def candidate_votes(preference_schedule):
 
 
 def least_candidate(vote_ranking, keep=None):
-    """Return the lowest-ranked candidate not present in ``keep``."""
-    keep = () if keep is None else keep
+    """Return the lowest-ranked candidate not in the set-like ``keep``."""
+    if keep is None:
+        keep = frozenset()
+    elif not isinstance(keep, Set):
+        raise TypeError("keep must be a set-like collection")
     for candidate in reversed(vote_ranking):
         if candidate.candidate not in keep:
             return candidate
@@ -109,7 +114,7 @@ class Irv(Method):
             votes = self.candidateVotes(remaining)
             toEliminate = self.getLeast(votes)
             results[ncand - i - 1] = toEliminate.candidate
-            remaining = self.eliminateCandidate(remaining, toEliminate)
+            remaining = self.eliminateCandidate(remaining, toEliminate.candidate)
         return results
 
     def results(self, ballots, **kwargs):
