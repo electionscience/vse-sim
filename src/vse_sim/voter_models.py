@@ -4,7 +4,7 @@ from numpy import mean, std  # noqa: F401
 from numpy.lib.scimath import sqrt
 from scipy.stats import beta
 
-from mydecorators import autoassign, cached_property
+from .decorators import autoassign, cached_property
 
 
 class Voter(tuple):
@@ -13,6 +13,11 @@ class Voter(tuple):
 
 
     """
+
+    def __new__(cls, utilities=()):
+        return super().__new__(
+            cls, (utility.item() if hasattr(utility, "item") else utility for utility in utilities)
+        )
 
     @classmethod
     def rand(cls, ncand):
@@ -26,9 +31,9 @@ class Voter(tuple):
 
         utilities should be in a standard normal distribution
             >>> v100 = Voter.rand(100)
-            >>> -0.3 < mean(v100) < 0.3
+            >>> bool(-0.3 < mean(v100) < 0.3)
             True
-            >>> 0.8 < std(v100) < 1.2
+            >>> bool(0.8 < std(v100) < 1.2)
             True
         """
         return cls(random.gauss(0,1) for _ in range(ncand))
@@ -74,9 +79,9 @@ class Voter(tuple):
             >>> for i in range(30):
             ...     v100 = v100.mutantChild(random.random())
             ...
-            >>> -0.3 < mean(v100) < 0.3 #3 sigma
+            >>> bool(-0.3 < mean(v100) < 0.3) #3 sigma
             True
-            >>> 0.8 < std(v100) < 1.2 #meh that's roughly 3 sigma
+            >>> bool(0.8 < std(v100) < 1.2) #meh that's roughly 3 sigma
             True
 
         """
@@ -116,7 +121,7 @@ class Electorate(list):
         >>> e.socUtils
         [2.0, 3.0]
         """
-        return list(map(mean,zip(*self, strict=False)))
+        return [value.item() for value in map(mean, zip(*self, strict=False))]
 
 
 class RandomModel:
@@ -180,7 +185,7 @@ class QModel(RandomModel):
         1
 
     Reduces the standard deviation
-        >>> 0.4 < std(list(zip(e4))) < 0.6
+        >>> bool(0.4 < std(list(zip(e4))) < 0.6)
         True
 
     """

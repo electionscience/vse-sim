@@ -5,7 +5,7 @@ from functools import update_wrapper, wraps
 from inspect import getfullargspec, isfunction
 from itertools import starmap
 
-from debugDump import trace
+from .diagnostics import trace
 
 _missing = object()
 

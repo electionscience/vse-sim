@@ -1,8 +1,8 @@
 """Generate the IRV/RCV VSE values cited by the GitHub Pages site.
 
-This reproduces the historical run configuration documented in vse.py without
-retaining every election result in memory.  For the published 15,000-election
-run, use:
+This reproduces the historical run configuration in
+``vse_sim.simulation`` without retaining every election result in memory. For
+the published 15,000-election run, use:
 
     uv run python scripts/recalculate_irv_pages.py
 """
@@ -10,17 +10,14 @@ run, use:
 import argparse
 import csv
 import os
-import sys
 from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
-from debugDump import setDebug
-from methods import Irv, Schulze
-from voterModels import KSModel
-from vse import baseRuns, fuzzyMediaFor, seedRandomGenerators
+from vse_sim.diagnostics import setDebug
+from vse_sim.methods import Irv, Schulze
+from vse_sim.simulation import baseRuns, fuzzyMediaFor, seedRandomGenerators
+from vse_sim.voter_models import KSModel
 
 DEFAULT_WORKERS = 10
 

@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 
 from numpy import isclose, mean
 
-from mydecorators import autoassign, decorator
+from .decorators import autoassign, decorator
 
 
 def isnum(x):
@@ -210,7 +210,7 @@ class Method:
         election's extra event metadata. Strategic results use common polling
         information produced by ``media(honest_results)``.
         """
-        from stratFunctions import OssChooser
+        from .strategies import OssChooser
 
         honTally = SideTally()
         self.context = ElectionContext()

@@ -8,16 +8,14 @@ in ``recalculate_irv_pages.py``.
 import argparse
 import json
 import re
-import sys
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
+from scripts.recalculate_irv_pages import DEFAULT_WORKERS, recalculate
 
-from scripts.recalculate_irv_pages import DEFAULT_WORKERS, recalculate  # noqa: E402
+ROOT = Path(__file__).resolve().parents[1]
 
 STRATEGIES = [
     "a.100% honest",
