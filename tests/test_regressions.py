@@ -155,7 +155,7 @@ def test_csv_batch_can_stream_without_retaining_rows(tmp_path):
 
 
 def test_irv_recalculation_smoke():
-    results, outcomes, scenarios, scenario_outcomes = recalculate(
+    results, outcomes, scenarios, scenario_outcomes, intervals = recalculate(
         elections=2,
         seed="test-irv",
         workers=1,
@@ -163,6 +163,7 @@ def test_irv_recalculation_smoke():
 
     assert "honBallot" in results
     assert outcomes["attempts"] == 2
+    assert intervals["honBallot"] >= 0
     assert sum(data["attempts"] for data in scenario_outcomes.values()) == 2
     assert set(scenarios).issubset(
         {"cycle", "easy", "spoiler", "squeeze", "chicken", "other"}

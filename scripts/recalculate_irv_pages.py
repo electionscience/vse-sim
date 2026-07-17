@@ -9,6 +9,7 @@ the published 15,000-election run, use:
 
 import argparse
 import csv
+import math
 import os
 from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor
@@ -30,8 +31,8 @@ def _recalculate_chunk(elections, seed):
     method = Irv()
     scenario_method = Schulze()
     media = fuzzyMediaFor()
-    summary = defaultdict(lambda: [0, 0.0])
-    scenario_summary = defaultdict(lambda: defaultdict(lambda: [0, 0.0]))
+    summary = defaultdict(lambda: [0, 0.0, 0.0])
+    scenario_summary = defaultdict(lambda: defaultdict(lambda: [0, 0.0, 0.0]))
     scenario_outcomes = defaultdict(
         lambda: {"attempts": 0, "successes": 0, "backfires": 0}
     )
@@ -51,9 +52,11 @@ def _recalculate_chunk(elections, seed):
             count_and_total = summary[row["chooser"]]
             count_and_total[0] += 1
             count_and_total[1] += row["vse"]
+            count_and_total[2] += row["vse"] ** 2
             scenario_count_and_total = scenario_summary[scenario][row["chooser"]]
             scenario_count_and_total[0] += 1
             scenario_count_and_total[1] += row["vse"]
+            scenario_count_and_total[2] += row["vse"] ** 2
             if row["chooser"] == "Oss.hon_strat.":
                 one_sided_strategy["attempts"] += 1
                 scenario_outcomes[scenario]["attempts"] += 1
@@ -90,37 +93,49 @@ def recalculate(elections, seed, workers=DEFAULT_WORKERS):
         with ProcessPoolExecutor(max_workers=min(os.cpu_count() or 1, chunks)) as executor:
             chunks = list(executor.map(_recalculate_chunk, chunk_sizes, chunk_seeds))
 
-    summary = defaultdict(lambda: [0, 0.0])
-    scenario_summary = defaultdict(lambda: defaultdict(lambda: [0, 0.0]))
+    summary = defaultdict(lambda: [0, 0.0, 0.0])
+    scenario_summary = defaultdict(lambda: defaultdict(lambda: [0, 0.0, 0.0]))
     one_sided_strategy = {"attempts": 0, "successes": 0, "backfires": 0}
     scenario_outcomes = defaultdict(
         lambda: {"attempts": 0, "successes": 0, "backfires": 0}
     )
     for chunk_summary, chunk_outcomes, chunk_scenarios, chunk_scenario_outcomes in chunks:
-        for chooser, (count, total) in chunk_summary.items():
+        for chooser, (count, total, total_squared) in chunk_summary.items():
             summary[chooser][0] += count
             summary[chooser][1] += total
+            summary[chooser][2] += total_squared
         for key in one_sided_strategy:
             one_sided_strategy[key] += chunk_outcomes[key]
         for scenario, strategies in chunk_scenarios.items():
-            for chooser, (count, total) in strategies.items():
+            for chooser, (count, total, total_squared) in strategies.items():
                 scenario_summary[scenario][chooser][0] += count
                 scenario_summary[scenario][chooser][1] += total
+                scenario_summary[scenario][chooser][2] += total_squared
         for scenario, outcomes in chunk_scenario_outcomes.items():
             for key in outcomes:
                 scenario_outcomes[scenario][key] += outcomes[key]
 
+    results = {chooser: total / count for chooser, (count, total, _sum_sq) in summary.items()}
+    confidence_intervals = {}
+    for chooser, (count, total, total_squared) in summary.items():
+        if count < 2:
+            confidence_intervals[chooser] = 0.0
+            continue
+        variance = max(0.0, (total_squared - total ** 2 / count) / (count - 1))
+        confidence_intervals[chooser] = 1.96 * math.sqrt(variance / count)
+
     return (
-        {chooser: total / count for chooser, (count, total) in summary.items()},
+        results,
         one_sided_strategy,
         {
             scenario: {
                 chooser: total / count
-                for chooser, (count, total) in strategy_results.items()
+                for chooser, (count, total, _sum_sq) in strategy_results.items()
             }
             for scenario, strategy_results in scenario_summary.items()
         },
         scenario_outcomes,
+        confidence_intervals,
     )
 
 
@@ -135,17 +150,19 @@ def main():
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
 
-    results, one_sided_strategy, scenario_results, scenario_outcomes = recalculate(
+    results, one_sided_strategy, scenario_results, scenario_outcomes, confidence_intervals = recalculate(
         args.elections, args.seed, args.workers
     )
     rows = [
-        (chooser, args.elections, value, 100 * value)
+        (chooser, args.elections, value, confidence_intervals[chooser], 100 * value,
+         100 * (value - confidence_intervals[chooser]),
+         100 * (value + confidence_intervals[chooser]))
         for chooser, value in sorted(results.items())
     ]
     if args.output:
         with args.output.open("w", newline="") as output:
             writer = csv.writer(output)
-            writer.writerow(["chooser", "elections", "mean_vse", "percent_vse"])
+            writer.writerow(["chooser", "elections", "mean_vse", "ci95_half_width", "percent_vse", "ci95_low_percent", "ci95_high_percent"])
             writer.writerows(rows)
             writer.writerow([])
             writer.writerow(["strategy", "attempts", "success_rate", "backfire_rate"])

@@ -144,7 +144,7 @@ def refresh_interactive_charts(results, outcomes, scenario_results, scenario_out
     replace_embedded_data(strategy_breakdown_path, strategy_breakdown)
 
 
-def render_vse(data, output, size, selected=False):
+def render_vse(data, output, size, intervals, selected=False):
     points = list(zip(data["x"], data["y"], data["col_var"], strict=False))
     if selected:
         points = [point for point in points if point[1] in SMALL_METHODS]
@@ -157,6 +157,16 @@ def render_vse(data, output, size, selected=False):
     positions = {label: index + 1 for index, label in enumerate(labels)}
     figure, axis = plt.subplots(figsize=(size[0] / 100, size[1] / 100), dpi=100)
     for value, method, strategy in points:
+        if "IRV/RCV" in method:
+            axis.errorbar(
+                value,
+                positions[method],
+                xerr=intervals[IRV_CHOOSERS[strategy]],
+                color=COLORS[strategy],
+                capsize=2,
+                linewidth=1,
+                zorder=2,
+            )
         axis.scatter(value, positions[method], color=COLORS[strategy], s=34, zorder=3)
 
     axis.set_xlim(0.55 if selected else -0.2, 1.0)
@@ -214,15 +224,15 @@ def main():
         help="Deterministic simulation chunks (default: 10).",
     )
     args = parser.parse_args()
-    results, outcomes, scenario_results, scenario_outcomes = recalculate(
+    results, outcomes, scenario_results, scenario_outcomes, intervals = recalculate(
         args.elections, args.seed, args.workers
     )
     data = refreshed_vse_data(results)
     docs = ROOT / "docs"
     refresh_interactive_charts(results, outcomes, scenario_results, scenario_outcomes)
-    render_vse(data, docs / "vse.png", (970, 681))
-    render_vse(data, docs / "5vse.png", (952, 567), selected=True)
-    render_vse(data, docs / "5vse_small.png", (656, 271), selected=True)
+    render_vse(data, docs / "vse.png", (970, 681), intervals)
+    render_vse(data, docs / "5vse.png", (952, 567), intervals, selected=True)
+    render_vse(data, docs / "5vse_small.png", (656, 271), intervals, selected=True)
     render_strategy(results, outcomes, docs / "vsestrat.png")
 
 
