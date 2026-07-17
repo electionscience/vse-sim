@@ -27,7 +27,8 @@ module and NumPy.
 
 - `src/vse_sim/simulation.py`: orchestration, method presets, and CSV output.
 - `src/vse_sim/core.py`: core method API, tallies, ballot caching, and VSE rows.
-- `src/vse_sim/methods.py`: voting method and ballot implementations.
+- `src/vse_sim/methods/`: voting method and ballot implementations, one module
+  per method.
 - `src/vse_sim/voter_models.py`: voter and electorate models.
 - `src/vse_sim/strategies.py`: strategic ballot choosers and media models.
 - `src/vse_sim/decorators.py`: local decorators used by the package.
