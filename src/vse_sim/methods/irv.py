@@ -2,6 +2,88 @@ from ..core import CandidateWithCount, Method, rememberBallot
 from ..voter_models import DeterministicModel, Voter  # noqa: F401
 
 
+def build_preference_schedule(ballots):
+    """Count identical candidate rankings."""
+    preferences = {}
+    for ballot in ballots:
+        ranking = tuple(ballot)
+        preferences[ranking] = preferences.get(ranking, 0) + 1
+    return preferences
+
+
+def eliminate_candidate(preferences, candidate_to_eliminate):
+    """Return a schedule with one candidate removed from every ranking."""
+    if not isinstance(candidate_to_eliminate, CandidateWithCount):
+        return preferences
+
+    updated_preferences = {}
+    for ranking, votes in preferences.items():
+        updated_ranking = tuple(
+            candidate
+            for candidate in ranking
+            if candidate != candidate_to_eliminate.candidate
+        )
+        if updated_ranking:
+            updated_preferences[updated_ranking] = (
+                updated_preferences.get(updated_ranking, 0) + votes
+            )
+    return updated_preferences
+
+
+def candidate_votes(preference_schedule):
+    """Return active candidates ordered from most to fewest first choices."""
+    candidates = {}
+    for ranking, votes in preference_schedule.items():
+        candidate = ranking[0]
+        if candidate in candidates:
+            candidates[candidate].votes += votes
+        else:
+            candidates[candidate] = CandidateWithCount(candidate, votes)
+
+    # VSE needs a complete ranking even for candidates with no active first
+    # choices.
+    alternates = []
+    tracked_alternates = set()
+    for ranking in preference_schedule:
+        for alternate in ranking[1:]:
+            if alternate not in candidates and alternate not in tracked_alternates:
+                alternates.append(CandidateWithCount(alternate, 0))
+                tracked_alternates.add(alternate)
+
+    active = sorted(
+        candidates.values(),
+        key=lambda candidate: (candidate.votes, candidate.candidate),
+        reverse=True,
+    )
+    return active + alternates
+
+
+def least_candidate(vote_ranking, keep=None):
+    """Return the lowest-ranked candidate not present in ``keep``."""
+    keep = () if keep is None else keep
+    for candidate in reversed(vote_ranking):
+        if candidate.candidate not in keep:
+            return candidate
+    return None
+
+
+def rank_vector_to_preference(ballot):
+    """Return candidate IDs in descending preference order from a rank vector."""
+    return sorted(
+        range(len(ballot)),
+        key=lambda candidate: ballot[candidate],
+        reverse=True,
+    )
+
+
+def finish_order_to_results(finish_order):
+    """Convert winner-first finish order to high-is-better candidate scores."""
+    results = [-1] * len(finish_order)
+    for score, candidate in enumerate(reversed(finish_order)):
+        results[candidate] = score
+    return results
+
+
 class Irv(Method):
     """Implement Instant-Runoff Voting over complete ranked ballots.
 
@@ -13,67 +95,12 @@ class Irv(Method):
 
     stratTargetFor = Method.stratTarget3
 
-    def buildPreferenceSchedule(self, ballots):
-        """Gets a dictionary of the form {ranking as tuple, vote count}."""
-
-        prefs = {}
-        for b in ballots:
-            key = tuple(b)
-            if key in prefs:
-                prefs[key] += 1
-            else:
-                prefs[key] = 1
-        return prefs
-
-    def eliminateCandidate(self, inputPrefs, toEliminate):
-        """Gets a dictionary of the form {ranking as tuple, vote count} with toEliminate removed."""
-
-        if not isinstance(toEliminate, CandidateWithCount):
-            return inputPrefs
-
-        prefs = {}
-        for ranking, votes in inputPrefs.items():
-            newranking = [
-                candidate
-                for candidate in ranking
-                if candidate != toEliminate.candidate
-            ]
-
-            if not newranking:
-                continue
-            newkey = tuple(newranking)
-            if newkey in prefs:
-                prefs[newkey] += votes
-            else:
-                prefs[newkey] = votes
-        return prefs
-
-    def candidateVotes(self, prefSchedule):
-        """Gets a list of CandidateWithCount, from highest to lowest."""
-        candidates = {}
-        for ranking, votes in prefSchedule.items():
-            candidate = ranking[0]
-            if candidate in candidates:
-                candidates[candidate].votes += votes
-            else:
-                candidates[candidate] = CandidateWithCount(candidate, votes)
-
-        # Simply for VSE which requires ranking of non-winners; in real election we don't really
-        # care
-        alternates = []
-        trackedalt = set()
-        for ranking, _votes in prefSchedule.items():
-            for alternate in ranking[1:]:
-                if (alternate not in candidates) and alternate not in trackedalt:
-                    alternates.append(CandidateWithCount(alternate, 0))
-                    trackedalt.add(alternate)
-
-        return sorted(candidates.values(), key=lambda c: (c.votes, c.candidate), reverse = True) + alternates
-
-    def getLeast(self, voteRanking, keep = {}):
-        for candidate in reversed(voteRanking):
-            if candidate.candidate not in keep:
-                return candidate
+    buildPreferenceSchedule = staticmethod(build_preference_schedule)
+    eliminateCandidate = staticmethod(eliminate_candidate)
+    candidateVotes = staticmethod(candidate_votes)
+    getLeast = staticmethod(least_candidate)
+    rankVectorToPreference = staticmethod(rank_vector_to_preference)
+    finishOrderToResults = staticmethod(finish_order_to_results)
 
     def runIrv(self, remaining, ncand):
         """IRV results."""
@@ -83,21 +110,6 @@ class Irv(Method):
             toEliminate = self.getLeast(votes)
             results[ncand - i - 1] = toEliminate.candidate
             remaining = self.eliminateCandidate(remaining, toEliminate)
-        return results
-
-    @staticmethod
-    def rankVectorToPreference(ballot):
-        """Return candidate IDs in descending preference order from a rank vector."""
-        return sorted(range(len(ballot)), key=lambda candidate: ballot[candidate],
-                      reverse=True)
-
-    @staticmethod
-    def finishOrderToResults(finishOrder):
-        """Convert winner-first finish order to high-is-better candidate scores."""
-        ncand = len(finishOrder)
-        results = [-1] * ncand
-        for score, candidate in enumerate(reversed(finishOrder)):
-            results[candidate] = score
         return results
 
     def results(self, ballots, **kwargs):

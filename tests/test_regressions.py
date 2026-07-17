@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 from scripts.recalculate_irv_pages import recalculate
-from vse_sim.core import SideTally
+from vse_sim.core import CandidateWithCount, SideTally
 from vse_sim.diagnostics import TRACE, setDebug, trace
 from vse_sim.methods import (
     Borda,
@@ -17,6 +17,12 @@ from vse_sim.methods import (
     RatedMethod,
     Schulze,
     Score,
+)
+from vse_sim.methods.irv import (
+    build_preference_schedule,
+    candidate_votes,
+    eliminate_candidate,
+    least_candidate,
 )
 from vse_sim.simulation import CsvBatch, seedRandomGenerators
 from vse_sim.strategies import ProbChooser, beHon, beStrat
@@ -114,6 +120,23 @@ def test_irv_results_keep_simulator_score_contract_for_strategy():
     assert results == [2, 0, 1]
     assert method.winner(results) == 0
     assert polls[0][0] == 0
+
+
+def test_irv_tabulation_helpers_are_stateless():
+    schedule = build_preference_schedule(
+        [[0, 1, 2], [0, 1, 2], [1, 0, 2]]
+    )
+    assert schedule == {(0, 1, 2): 2, (1, 0, 2): 1}
+
+    votes = candidate_votes(schedule)
+    assert [(candidate.candidate, candidate.votes) for candidate in votes] == [
+        (0, 2),
+        (1, 1),
+        (2, 0),
+    ]
+    assert least_candidate(votes).candidate == 2
+    assert least_candidate(votes, keep={2}).candidate == 1
+    assert eliminate_candidate(schedule, CandidateWithCount(1)) == {(0, 2): 3}
 
 
 @pytest.mark.parametrize(
