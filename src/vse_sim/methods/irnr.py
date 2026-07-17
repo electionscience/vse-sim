@@ -3,6 +3,13 @@ from .borda import RankedMethod
 
 
 class IRNR(RankedMethod):
+    """Implement Instant Runoff Normalized Ratings.
+
+    In each round, every ballot is normalized by the absolute ratings of its
+    remaining candidates. The candidate with the lowest normalized total is
+    eliminated until one remains.
+    """
+
     stratMax = 10
 
     stratTargetFor = Method.stratTarget3 # strategize in favor of third place, because second place is pointless (can't change pairwise)

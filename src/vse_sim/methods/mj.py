@@ -2,6 +2,12 @@ from .mav import Mav
 
 
 class Mj(Mav):
+    """Implement Majority Judgment using Mav's five-grade ballots.
+
+    Candidate scores refine the median grade according to the balance of
+    grades immediately above and below the median.
+    """
+
     def candScore(self, scores):
         """This formula will always give numbers within 0.5 of the raw median.
         Unfortunately, with 5 grade levels, these will tend to be within 0.1 of

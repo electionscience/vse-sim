@@ -3,6 +3,12 @@ from .schulze import Schulze
 
 
 class Rp(Schulze):
+    """Implement Ranked Pairs using Schulze's pairwise tallying interface.
+
+    Pairwise victories are considered from strongest to weakest and locked
+    unless doing so would contradict an already locked path.
+    """
+
     def resolveCycle(self, cmat, n):
         """Note: mutates cmat destructively.
 

@@ -5,9 +5,15 @@ from ..voter_models import DeterministicModel, Voter  # noqa: F401
 
 
 def Score(topRank=10, asClass=False):
+    """Create a score voting method with ratings from zero through ``topRank``.
+
+    Honest ballots linearly normalize each voter's utilities to the configured
+    scale. By default the factory returns a method instance; ``asClass=True``
+    returns the generated class for use by related method factories.
+    """
 
     class Score0to(Method):
-        """Score voting, 0-10.
+        """Implement score voting on the scale configured by :func:`Score`.
 
 
         Strategy establishes pivots

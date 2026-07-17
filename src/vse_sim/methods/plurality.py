@@ -4,6 +4,11 @@ from .borda import RankedMethod
 
 
 class Plurality(RankedMethod):
+    """Implement plurality voting with one vote for each voter's favorite.
+
+    Ballots are binary candidate-aligned vectors: the favorite receives one
+    and every other candidate receives zero.
+    """
 
     nRanks = 2
 
