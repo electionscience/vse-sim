@@ -525,37 +525,27 @@ class Irv(Method):
             remaining = self.eliminateCandidate(remaining, toEliminate)
         return results
 
-    def resultsFor(self, voters, chooser, tally=None, **kwargs):
-        """Tabulate the rank-vector ballots produced by this simulator.
-
-        IRV's public ``results`` API accepts candidate IDs in preference
-        order, including partial rankings.  The simulator's honest and
-        strategic ballot producers instead return rank vectors, so translate
-        those ballots before invoking the tabulator.
-        """
-        def orderingChooser(cls, voter, chooserTally):
-            ballot = chooser(cls, voter, chooserTally)
-            return sorted(range(len(ballot)), key=lambda candidate: ballot[candidate],
-                          reverse=True)
-
-        orderingChooser.__name__ = chooser.__name__
-        return super().resultsFor(voters, orderingChooser, tally, **kwargs)
+    @staticmethod
+    def rankVectorToPreference(ballot):
+        """Return candidate IDs in descending preference order from a rank vector."""
+        return sorted(range(len(ballot)), key=lambda candidate: ballot[candidate],
+                      reverse=True)
 
     @staticmethod
-    def winner(results):
-        """Return the winner from IRV's winner-first finish ordering.
-
-        Unlike score methods, :meth:`runIrv` returns candidate IDs ordered by
-        finish, with the winner at index zero.
-        """
-        return results[0]
+    def finishOrderToResults(finishOrder):
+        """Convert winner-first finish order to high-is-better candidate scores."""
+        ncand = len(finishOrder)
+        results = [-1] * ncand
+        for score, candidate in enumerate(reversed(finishOrder)):
+            results[candidate] = score
+        return results
 
     def results(self, ballots, **kwargs):
         """IRV results.
 
         >>> Irv().resultsFor(DeterministicModel(3)(5,3),Irv().honBallot)["results"]
-        [2, 1, 0]
-        >>> Irv().winner([2,0,1])
+        [0, 1, 2]
+        >>> Irv().results([[0,1,2]])[2]
         2
         >>> Irv().results([[0,1,2],[2,1,0]])[1]
         0
@@ -564,7 +554,9 @@ class Irv(Method):
         """
         if type(ballots) is not list:
             ballots = list(ballots)
-        return self.runIrv(self.buildPreferenceSchedule(ballots), len(ballots[0]))
+        rankings = [self.rankVectorToPreference(ballot) for ballot in ballots]
+        finishOrder = self.runIrv(self.buildPreferenceSchedule(rankings), len(ballots[0]))
+        return self.finishOrderToResults(finishOrder)
 
     @staticmethod #cls is provided explicitly, not through binding
     @rememberBallot

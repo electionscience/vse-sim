@@ -8,7 +8,7 @@ import pytest
 from scripts.recalculate_irv_pages import recalculate
 from vse_sim.core import SideTally
 from vse_sim.diagnostics import TRACE, setDebug, trace
-from vse_sim.methods import Mav, Schulze, Score
+from vse_sim.methods import Irv, Mav, Schulze, Score
 from vse_sim.simulation import CsvBatch, seedRandomGenerators
 from vse_sim.strategies import ProbChooser, beHon, beStrat
 from vse_sim.voter_models import Electorate, Voter
@@ -73,6 +73,22 @@ def test_mav_cutoffs_are_scoped_to_generated_ballot_function():
     method.honBallotFor(high_electorate)
 
     assert low_ballot(Mav, Voter([-2, -1]), SideTally()) == expected
+
+
+def test_irv_results_keep_simulator_score_contract_for_strategy():
+    method = Irv()
+    voters = Electorate(
+        [Voter([0, 1, 2])] * 4
+        + [Voter([2, 1, 0])] * 3
+        + [Voter([1, 2, 0])] * 2
+    )
+
+    results = method.resultsFor(voters, method.honBallot)["results"]
+    polls = sorted(enumerate(results), key=lambda candidate_result: -candidate_result[1])
+
+    assert results == [2, 0, 1]
+    assert method.winner(results) == 0
+    assert polls[0][0] == 0
 
 
 @pytest.mark.parametrize(
