@@ -43,10 +43,8 @@ class RankedMethod(Method):
             ballot[whichCands[i][0]] = cur
             cur -= 1
         if remainderScore is not None:
-            i += 1
-            while i < len(whichCands):
-                ballot[whichCands[i][0]] = remainderScore
-                i += 1
+            for candidate, *_ in whichCands[nSlots:]:
+                ballot[candidate] = remainderScore
 
     @staticmethod
     @rememberBallot
