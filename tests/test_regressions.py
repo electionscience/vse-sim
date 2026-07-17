@@ -8,10 +8,49 @@ import pytest
 from scripts.recalculate_irv_pages import recalculate
 from vse_sim.core import SideTally
 from vse_sim.diagnostics import TRACE, setDebug, trace
-from vse_sim.methods import Irv, Mav, Schulze, Score
+from vse_sim.methods import (
+    Borda,
+    Irv,
+    Mav,
+    Plurality,
+    RankedMethod,
+    RatedMethod,
+    Schulze,
+    Score,
+)
 from vse_sim.simulation import CsvBatch, seedRandomGenerators
 from vse_sim.strategies import ProbChooser, beHon, beStrat
 from vse_sim.voter_models import Electorate, Voter
+
+
+def test_ranked_method_is_a_base_class_separate_from_borda():
+    assert RankedMethod is not Borda
+    assert RatedMethod is RankedMethod
+    assert issubclass(Borda, RankedMethod)
+    assert issubclass(Schulze, RankedMethod)
+    assert Borda.honBallot(Borda, Voter([4, 1, 6, 3])) == [2, 0, 3, 1]
+    assert Schulze.honBallot(Schulze, Voter([4, 1, 6, 3])) == [2, 0, 3, 1]
+    assert Borda().stratBallotFor([4, 5, 2, 1])(
+        Borda, Voter([-4, -5, -2, -1])
+    ) == [3, 0, 1, 2]
+    assert Plurality().results([[1, 0], [1, 0], [0, 1]]) == [
+        pytest.approx(2 / 3),
+        pytest.approx(1 / 3),
+    ]
+
+
+def test_ranked_fill_candidates_handles_zero_slots():
+    ballot = [None, None]
+
+    RankedMethod.fillCands(
+        ballot,
+        [(0, 2), (1, 1)],
+        nSlots=0,
+        remainderScore=0,
+    )
+
+    assert ballot == [0, 0]
+    RankedMethod.fillCands([], [], nSlots=0, remainderScore=0)
 
 
 def test_schulze_uses_independent_strongest_path_rows():

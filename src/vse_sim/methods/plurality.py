@@ -1,6 +1,8 @@
+from numpy import mean
+
 from ..core import rememberBallot
 from ..voter_models import Voter  # noqa: F401
-from .borda import RankedMethod
+from .ranked import RankedMethod
 
 
 class Plurality(RankedMethod):
@@ -10,6 +12,7 @@ class Plurality(RankedMethod):
     and every other candidate receives zero.
     """
 
+    candScore = staticmethod(mean)
     nRanks = 2
 
     @staticmethod

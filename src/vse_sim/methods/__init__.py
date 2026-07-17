@@ -1,4 +1,4 @@
-from .borda import Borda, RankedMethod, RatedMethod
+from .borda import Borda
 from .bullety_approval import BulletyApprovalWith
 from .irnr import IRNR
 from .irv import Irv
@@ -6,6 +6,7 @@ from .irv_prime import IrvPrime
 from .mav import Mav, toVote
 from .mj import Mj
 from .plurality import Plurality
+from .ranked import RankedMethod, RatedMethod
 from .ranked_pairs import Rp
 from .schulze import Schulze
 from .score import Score

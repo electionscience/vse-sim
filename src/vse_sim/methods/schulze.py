@@ -1,7 +1,7 @@
 from numpy import sign
 
 from ..voter_models import DeterministicModel  # noqa: F401
-from .borda import RankedMethod
+from .ranked import RankedMethod
 
 
 class Schulze(RankedMethod):
