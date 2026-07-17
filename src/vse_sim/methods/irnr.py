@@ -1,5 +1,5 @@
 from ..core import Method, rememberBallot
-from .borda import RankedMethod
+from .ranked import RankedMethod
 
 
 class IRNR(RankedMethod):
