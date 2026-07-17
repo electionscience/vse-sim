@@ -39,6 +39,20 @@ def test_ranked_method_is_a_base_class_separate_from_borda():
     ]
 
 
+def test_ranked_fill_candidates_handles_zero_slots():
+    ballot = [None, None]
+
+    RankedMethod.fillCands(
+        ballot,
+        [(0, 2), (1, 1)],
+        nSlots=0,
+        remainderScore=0,
+    )
+
+    assert ballot == [0, 0]
+    RankedMethod.fillCands([], [], nSlots=0, remainderScore=0)
+
+
 def test_schulze_uses_independent_strongest_path_rows():
     margins = [
         [0, -3, 1],
